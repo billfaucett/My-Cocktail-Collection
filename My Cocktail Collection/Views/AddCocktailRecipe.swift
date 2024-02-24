@@ -18,13 +18,6 @@ struct AddCocktailRecipeView: View {
         ScrollView{
             VStack{
                 HStack {
-                    Button("Remove") {
-                        let drink = Drink(context: context)
-                        drink.drinkName = drinkName
-                        drink.source = Int16(selectedSource)
-                        drink.ingredients = ingredients
-                        drink.method = method
-                    }
                     Spacer()
                     Button("Save") {
                         let drink = Drink(context: context)

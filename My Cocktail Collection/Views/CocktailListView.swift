@@ -12,15 +12,19 @@ struct CocktailListView: View {
     @FetchRequest(sortDescriptors: []) var drinks: FetchedResults<Drink>
     
     var body: some View {
-        VStack {
-            List(drinks) { drink in
-                HStack {
-                    Text(drink.drinkName ?? "Unknown")
-                    Button("View"){
-                        //To Do
+        NavigationView{
+            VStack {
+                List(drinks) { drink in
+                    NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
+                        HStack {
+                            Text(drink.drinkName ?? "Unknown")
+                            Spacer()
+                            Text("View")
+                        }
                     }
                 }
             }
+            .navigationTitle("Cocktail Collection")
         }
     }
 }
