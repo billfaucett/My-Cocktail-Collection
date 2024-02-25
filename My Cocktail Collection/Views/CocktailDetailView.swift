@@ -36,7 +36,7 @@ struct CocktailDetailView: View {
                                 .padding()
                                 Spacer()
                                 NavigationLink ("Edit Drink") {
-                                    AddCocktailRecipeView(drink: drink)
+                                    AddEditCocktailRecipeView(drink: drink)
                                 }
                                 .padding()
                             }

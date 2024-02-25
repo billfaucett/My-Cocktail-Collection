@@ -27,7 +27,7 @@ struct MessageComposer: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> MFMessageComposeViewController {
         let composeVC = MFMessageComposeViewController()
         composeVC.messageComposeDelegate = context.coordinator
-        composeVC.body = "Cocktail Name: \(cocktailName)\nIngredients: \(ingredients)\nMethod: \(method)"
+        composeVC.body = "Check out this cocktail recipe: \nCocktail Name: \(cocktailName)\nIngredients: \(ingredients)\nMethod: \(method)"
         return composeVC
     }
 

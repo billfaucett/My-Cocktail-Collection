@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct AddCocktailRecipeView: View {
+struct AddEditCocktailRecipeView: View {
     @Environment(\.managedObjectContext) var context
     @State private var selectedSource: Int = 0
     @State private var drinkName: String = ""
@@ -142,7 +142,7 @@ struct AddCocktailRecipeView: View {
 
 struct AddCocktailRecipeView_Previews: PreviewProvider {
     static var previews: some View {
-        AddCocktailRecipeView()
+        AddEditCocktailRecipeView()
     }
 }
 

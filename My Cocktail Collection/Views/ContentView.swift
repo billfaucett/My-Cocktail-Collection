@@ -14,7 +14,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView{
             VStack {
-                NavigationLink(destination: AddCocktailRecipeView()){
+                NavigationLink(destination: AddEditCocktailRecipeView()){
                     Text("Add a New Cocktail")
                         .padding()
                         .background(Color.mint)
