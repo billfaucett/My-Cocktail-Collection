@@ -11,6 +11,7 @@ import CoreData
 struct CocktailDetailView: View {
     @Environment(\.managedObjectContext) var context
     let drinkID: NSManagedObjectID
+    @State private var showingAlert = false
     
     var body: some View {
         let drink = context.object(with: drinkID) as! Drink
@@ -38,12 +39,11 @@ struct CocktailDetailView: View {
                                 .font(.caption)
                                 .padding()
                             Text(drink.ingredients!)
-                                .frame(width: 300, height: 300)
+                                .padding()
                             Text("Directions:")
                                 .font(.caption)
                                 .padding(.horizontal)
                             Text(drink.method!)
-                                .frame(width: 300, height: 300)
                         }
                     }
                     .padding()
@@ -51,9 +51,14 @@ struct CocktailDetailView: View {
                         VStack {
                             HStack {
                                 Button("Delete Drink") {
-                                    context.delete(drink)
+                                    showingAlert = true
                                 }
                                 .foregroundColor(.red)
+                                .alert(isPresented: $showingAlert) {
+                                    Alert(title: Text("Confirm Deletion"), message: Text("Are you sure you want to delete this drink?"), primaryButton: .destructive(Text("Delete")) {
+                                        context.delete(drink)
+                                    }, secondaryButton: .cancel())
+                                }
                                 Spacer()
                             }
                         }
