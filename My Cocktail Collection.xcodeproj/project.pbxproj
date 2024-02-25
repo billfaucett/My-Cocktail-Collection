@@ -20,6 +20,7 @@
 		8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D92B8A79FE002807F5 /* CocktailListView.swift */; };
 		8AC142DF2B8A7C75002807F5 /* CocktailDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142DE2B8A7C75002807F5 /* CocktailDetailView.swift */; };
 		8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E02B8B9E54002807F5 /* MessageComposer.swift */; };
+		8AC142E32B8BB399002807F5 /* UIFormatingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +57,7 @@
 		8AC142D92B8A79FE002807F5 /* CocktailListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailListView.swift; sourceTree = "<group>"; };
 		8AC142DE2B8A7C75002807F5 /* CocktailDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailDetailView.swift; sourceTree = "<group>"; };
 		8AC142E02B8B9E54002807F5 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
+		8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIFormatingHelpers.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +150,7 @@
 				8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */,
 				8AC142D92B8A79FE002807F5 /* CocktailListView.swift */,
 				8AC142DE2B8A7C75002807F5 /* CocktailDetailView.swift */,
+				8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -295,6 +298,7 @@
 				8AC142D42B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld in Sources */,
 				8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */,
 				8AC142DF2B8A7C75002807F5 /* CocktailDetailView.swift in Sources */,
+				8AC142E32B8BB399002807F5 /* UIFormatingHelpers.swift in Sources */,
 				8AC142D62B8A6C83002807F5 /* DataController.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
 				8AC142AB2B8A6ACE002807F5 /* ContentView.swift in Sources */,

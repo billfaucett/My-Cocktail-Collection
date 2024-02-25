@@ -47,6 +47,12 @@ struct CocktailDetailView: View {
                             Text(drink.drinkName!)
                                 .font(/*@START_MENU_TOKEN@*/.title/*@END_MENU_TOKEN@*/)
                                 .padding()
+                            if let sourceType = SourceType(rawValue: drink.source) {
+                                Text("Source:")
+                                    .font(.caption)
+                                Text(sourceType.description)
+                                    .padding(.bottom)
+                            }
                             Text("Ingredient List:")
                                 .font(.caption)
                                 .bold()
@@ -65,7 +71,7 @@ struct CocktailDetailView: View {
                     Section {
                         VStack {
                             HStack {
-                                Button("Send Message") {
+                                Button("Share Recipe") {
                                     showingMessageComposer = true
                                 }
                                 .sheet(isPresented: $showingMessageComposer) {
@@ -84,6 +90,7 @@ struct CocktailDetailView_Previews: PreviewProvider {
     static var previews: some View {
         let context = DataController.init().container.viewContext
         let drink = Drink(context: context)
+        drink.source = 1
         drink.drinkName = "Mocktail"
         drink.ingredients = "Ingredient 1, Ingredient 2"
         drink.method = "Mix ingredients and serve chilled."
