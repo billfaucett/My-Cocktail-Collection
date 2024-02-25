@@ -16,31 +16,48 @@ struct CocktailDetailView: View {
         let drink = context.object(with: drinkID) as! Drink
         
         NavigationView{
-            VStack {
-                Section {
-                    VStack {
-                        Text(drink.drinkName!)
-                            .font(/*@START_MENU_TOKEN@*/.title/*@END_MENU_TOKEN@*/)
-                            .padding(.horizontal)
-                        Text("Ingredient List:")
-                            .font(.caption)
-                            .padding()
-                        Text(drink.ingredients!)
-                            .frame(width: 300, height: 300)
-                        Text("Directions:")
-                            .font(.caption)
-                            .padding(.horizontal)
-                        Text(drink.method!)
-                            .frame(width: 300, height: 300)
-                    }
-                }
+            ScrollView{
                 VStack {
-                    HStack {
-                        Button("Delete Drink") {
-                            context.delete(drink)
+                    Section {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                NavigationLink ("Edit") {
+                                    AddCocktailRecipeView(drink: drink)
+                                }
+                                .padding()
+                            }
                         }
-                        .foregroundColor(.red)
-                        Spacer()
+                    }
+                    Section {
+                        VStack {
+                            Text(drink.drinkName!)
+                                .font(/*@START_MENU_TOKEN@*/.title/*@END_MENU_TOKEN@*/)
+                                .padding()
+                            Text("Ingredient List:")
+                                .font(.caption)
+                                .padding()
+                            Text(drink.ingredients!)
+                                .frame(width: 300, height: 300)
+                            Text("Directions:")
+                                .font(.caption)
+                                .padding(.horizontal)
+                            Text(drink.method!)
+                                .frame(width: 300, height: 300)
+                        }
+                    }
+                    .padding()
+                    Section {
+                        VStack {
+                            HStack {
+                                Button("Delete Drink") {
+                                    context.delete(drink)
+                                }
+                                .foregroundColor(.red)
+                                Spacer()
+                            }
+                        }
+                        .padding()
                     }
                 }
                 .padding()
