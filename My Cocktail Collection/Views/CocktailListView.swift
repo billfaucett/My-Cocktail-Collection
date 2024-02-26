@@ -18,8 +18,8 @@ struct CocktailListView: View {
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
                             Text(drink.drinkName ?? "Unknown")
+                                .font(.headline)
                             Spacer()
-                            Text("View")
                         }
                     }
                 }

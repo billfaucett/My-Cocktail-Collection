@@ -14,6 +14,23 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView{
+            VStack{
+                HStack{
+                    Spacer()
+                    NavigationLink(destination: AddEditCocktailRecipeView()){
+                        Text("Add Cocktail")
+                            .padding()
+                    }
+                }
+                CocktailListView()
+            }
+            .onAppear {
+                if drinks.isEmpty && !isPreview {
+                    seedDatabase()
+                }
+            }
+        }
+        /*NavigationView{
             VStack {
                 NavigationLink(destination: CocktailListView()){
                     Text("View Cocktails")
@@ -34,12 +51,7 @@ struct ContentView: View {
                 .padding()
             }
             .padding()
-            .onAppear {
-                if drinks.isEmpty && !isPreview {
-                    seedDatabase()
-                }
-            }
-        }
+        }*/
     }
     
     func seedDatabase() {

@@ -30,7 +30,6 @@ struct AddEditCocktailRecipeView: View {
                         .disabled(isSaved)
                     }
                     .padding()
-                    
                     NavigationLink(destination: CocktailListView(), isActive: $isSaved) {
                         EmptyView()
                     }
