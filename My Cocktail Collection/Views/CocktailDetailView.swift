@@ -11,6 +11,7 @@ import MessageUI
 
 struct CocktailDetailView: View {
     @Environment(\.managedObjectContext) var context
+    @Environment(\.dismiss) private var dismiss
     let drinkID: NSManagedObjectID
     @State private var showingAlert = false
     @State private var showingMessageComposer = false
@@ -31,6 +32,12 @@ struct CocktailDetailView: View {
                                 .alert(isPresented: $showingAlert) {
                                     Alert(title: Text("Confirm Deletion"), message: Text("Are you sure you want to delete this drink?"), primaryButton: .destructive(Text("Delete")) {
                                         context.delete(drink)
+                                        do {
+                                            try context.save()
+                                            dismiss()
+                                        } catch {
+                                            print("Error deleting drink: \(error)")
+                                        }
                                     }, secondaryButton: .cancel())
                                 }
                                 .padding()
@@ -44,7 +51,7 @@ struct CocktailDetailView: View {
                     }
                     Section {
                         VStack {
-                            Text(drink.drinkName!)
+                            Text(drink.drinkName ?? "")
                                 .font(/*@START_MENU_TOKEN@*/.title/*@END_MENU_TOKEN@*/)
                                 .padding()
                             if let sourceType = SourceType(rawValue: drink.source) {
@@ -57,13 +64,13 @@ struct CocktailDetailView: View {
                                 .font(.caption)
                                 .bold()
                                 .padding(.horizontal)
-                            Text(drink.ingredients!)
+                            Text(drink.ingredients ?? "")
                                 .padding()
                             Text("How to Make:")
                                 .font(.caption)
                                 .bold()
                                 .padding(.horizontal)
-                            Text(drink.method!)
+                            Text(drink.method ?? "")
                                 .padding()
                         }
                     }
