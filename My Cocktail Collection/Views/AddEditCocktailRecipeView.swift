@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddEditCocktailRecipeView: View {
     @Environment(\.managedObjectContext) var context
+    @Environment(\.dismiss) private var dismiss
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
     @State private var selectedSource: Int = 0
     @State private var selectedBaseSpirit: Spirit?
@@ -32,9 +33,6 @@ struct AddEditCocktailRecipeView: View {
                         .disabled(isSaved)
                     }
                     .padding()
-                    NavigationLink(destination: CocktailListView(), isActive: $isSaved) {
-                        EmptyView()
-                    }
                     
                     Section {
                         VStack {
@@ -145,6 +143,7 @@ struct AddEditCocktailRecipeView: View {
             drink.ingredients = ingredients
             drink.method = method
             try? context.save()
+            dismiss()
             isSaved = true
             return
         }
@@ -155,6 +154,7 @@ struct AddEditCocktailRecipeView: View {
         drink.ingredients = ingredients
         drink.method = method
         try? context.save()
+        dismiss()
         isSaved = true
     }
 }

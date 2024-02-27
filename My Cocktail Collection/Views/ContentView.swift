@@ -85,7 +85,6 @@ struct ContentView: View {
             Liquor(name: "Rum"),
             Liquor(name: "Brandy"),
             Liquor(name: "Gin"),
-            Liquor(name: "Brandy"),
             Liquor(name: "Tequila"),
             Liquor(name: "Aquavit")
         ]

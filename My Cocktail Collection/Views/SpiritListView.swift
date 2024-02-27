@@ -16,11 +16,13 @@ struct SpiritListView: View {
             VStack {
                 List(spirits) { spirit in
                     HStack {
-                        Text(spirit.spiritName ?? "")
-                            .bold()
-                        Spacer()
-                        if let type = SpiritType(rawValue: spirit.type) {
-                            Text(type.description)
+                        NavigationLink(destination: AddEditSpirit(spirit: spirit)) {
+                            Text(spirit.spiritName ?? "")
+                                .bold()
+                            Spacer()
+                            if let type = SpiritType(rawValue: spirit.type) {
+                                Text(type.description)
+                            }
                         }
                     }
                 }

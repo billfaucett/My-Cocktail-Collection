@@ -27,7 +27,7 @@ enum SourceType: Int16, CustomStringConvertible {
     }
 }
     
-enum SpiritType: Int16, CustomStringConvertible {
+enum SpiritType: Int16, CustomStringConvertible, CaseIterable {
     case liquor = 0
     case liqueur = 1
     case wine = 2
