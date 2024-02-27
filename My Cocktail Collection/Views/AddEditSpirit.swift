@@ -54,6 +54,7 @@ struct AddEditSpirit: View {
                     Picker("Spirit Type", selection: $spiritType) {
                         ForEach(SpiritType.allCases, id: \.self) { spiritType in
                             Text(spiritType.description)
+                                .tag(spiritType as SpiritType?)
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
@@ -90,7 +91,13 @@ struct AddEditSpirit: View {
 
 struct AddEditSpirit_Previews: PreviewProvider {
     static var previews: some View {
-       AddEditSpirit()
+        let context = DataController.init().container.viewContext
+        let newSpirit = Spirit(context: context)
+        newSpirit.spiritName = "Whiskey"
+        newSpirit.type = SpiritType.liquor.rawValue
+        return AddEditSpirit(spirit: newSpirit)
+            .environment(\.managedObjectContext, context)
     }
 }
+
 
