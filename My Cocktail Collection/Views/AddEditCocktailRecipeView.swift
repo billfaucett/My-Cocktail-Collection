@@ -9,7 +9,9 @@ import SwiftUI
 
 struct AddEditCocktailRecipeView: View {
     @Environment(\.managedObjectContext) var context
+    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
     @State private var selectedSource: Int = 0
+    @State private var selectedBaseSpirit: Spirit?
     @State private var drinkName: String = ""
     @State private var ingredients: String = ""
     @State private var method: String = ""
@@ -43,14 +45,30 @@ struct AddEditCocktailRecipeView: View {
                             } .padding(.horizontal)
                             
                             Picker(selection: $selectedSource, label: Text("Source")) {
-                                Text("Original").tag(0)
+                                Text("Classic").tag(0)
                                 Text("Website").tag(1)
                                 Text("Menu").tag(2)
+                                Text("Original").tag(3)
                             }
                             .pickerStyle(SegmentedPickerStyle())
                             .onAppear {
                                 if let drink = drink {
                                     selectedSource = Int(drink.source)
+                                }
+                                if let spritId = drink?.baseSpirit {
+                                    selectedBaseSpirit = spirits.first(where: { $0.id == spritId })
+                                }
+                            }
+                            .padding()
+                            HStack {
+                                Text("Base Spirit")
+                                    .font(.caption)
+                            }.padding(.horizontal)
+                            
+                            Picker(selection: $selectedBaseSpirit, label: Text("Base Spirit")) {
+                                ForEach(spirits) { spirit in
+                                    Text(spirit.spiritName ?? "")
+                                        .tag(spirit as Spirit?)
                                 }
                             }
                         }
@@ -121,6 +139,7 @@ struct AddEditCocktailRecipeView: View {
         guard let drink = drink else {
             let drink = Drink(context: context)
             drink.id = UUID()
+            drink.baseSpirit = selectedBaseSpirit?.id
             drink.drinkName = drinkName
             drink.source = Int16(selectedSource)
             drink.ingredients = ingredients
@@ -132,6 +151,7 @@ struct AddEditCocktailRecipeView: View {
         
         drink.drinkName = drinkName
         drink.source = Int16(selectedSource)
+        drink.baseSpirit = selectedBaseSpirit?.id
         drink.ingredients = ingredients
         drink.method = method
         try? context.save()

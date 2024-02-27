@@ -21,6 +21,8 @@
 		8AC142DF2B8A7C75002807F5 /* CocktailDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142DE2B8A7C75002807F5 /* CocktailDetailView.swift */; };
 		8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E02B8B9E54002807F5 /* MessageComposer.swift */; };
 		8AC142E32B8BB399002807F5 /* UIFormatingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */; };
+		8AC142E72B8D52CB002807F5 /* AddEditSpirit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */; };
+		8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E82B8D57AD002807F5 /* SpiritListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +60,8 @@
 		8AC142DE2B8A7C75002807F5 /* CocktailDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailDetailView.swift; sourceTree = "<group>"; };
 		8AC142E02B8B9E54002807F5 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIFormatingHelpers.swift; sourceTree = "<group>"; };
+		8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditSpirit.swift; sourceTree = "<group>"; };
+		8AC142E82B8D57AD002807F5 /* SpiritListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpiritListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +155,8 @@
 				8AC142D92B8A79FE002807F5 /* CocktailListView.swift */,
 				8AC142DE2B8A7C75002807F5 /* CocktailDetailView.swift */,
 				8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */,
+				8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */,
+				8AC142E82B8D57AD002807F5 /* SpiritListView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -294,6 +300,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8AC142E72B8D52CB002807F5 /* AddEditSpirit.swift in Sources */,
 				8AC142D82B8A759B002807F5 /* AddEditCocktailRecipeView.swift in Sources */,
 				8AC142D42B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld in Sources */,
 				8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */,
@@ -303,6 +310,7 @@
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
 				8AC142AB2B8A6ACE002807F5 /* ContentView.swift in Sources */,
 				8AC142A92B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift in Sources */,
+				8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

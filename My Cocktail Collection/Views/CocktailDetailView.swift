@@ -60,6 +60,11 @@ struct CocktailDetailView: View {
                                 Text(sourceType.description)
                                     .padding(.bottom)
                             }
+                            if drink.baseSpirit != nil {
+                                @FetchRequest(sortDescriptors: []) var spirits: FetchedResults<Spirit>
+                                let myBaseSpirit = spirits.first(where: { $0.id == drink.baseSpirit })?.spiritName
+                                Text(myBaseSpirit ?? "None")
+                            }
                             Text("Ingredient List:")
                                 .font(.caption)
                                 .bold()
