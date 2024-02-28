@@ -29,8 +29,19 @@ struct CocktailListView: View {
     }
 }
 
-struct CocktailListView_Preview: PreviewProvider {
+struct CocktailListView_Previews: PreviewProvider {
     static var previews: some View {
-        CocktailListView()
+        let context = DataController.init().container.viewContext
+        
+        let drink1 = Drink(context: context)
+        drink1.drinkName = "Mojito"
+        
+        let drink2 = Drink(context: context)
+        drink2.drinkName = "Cosmopolitan"
+        
+        try? context.save()
+        
+        return CocktailListView()
+            .environment(\.managedObjectContext, context)
     }
 }
