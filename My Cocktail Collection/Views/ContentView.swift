@@ -33,11 +33,11 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                if drinks.isEmpty && !isPreview {
-                    seedCocktails()
-                }
                 if spirits.isEmpty && !isPreview {
                     seedSpirits()
+                }
+                if drinks.isEmpty && !isPreview {
+                    seedCocktails()
                 }
             }
         }
@@ -51,13 +51,14 @@ struct ContentView: View {
             var name: String
             var ingredients: String
             var method: String
+            var liquor: String
         }
         
         let classicCocktails = [
-            ClassicCocktail(name: "Margarita", ingredients: "2pt Tequila, 1pt Tripe Sec, 1pt Lime Juice", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled glass or over ice"),
-            ClassicCocktail(name: "Old Fashioned", ingredients: "2pt Bourbon, 1pt Simple Syrup, 2-4 dashes Angostura Bitters, Orange Peel", method: "Combine ingredients in a mixing glass, Add Ice and stir until chilled, Strain into a chilled glass or over ice, Express oil from orange peel over drink and use peel to garnish"),
-            ClassicCocktail(name: "Martini", ingredients: "1pt Gin, 1pt Dry Vermouth, Olive", method: "Combine ingredients in a mixing glass, Add Ice and stir until chilled, Strain into a chilled martini glass, Garnish with olive"),
-            ClassicCocktail(name: "Daquiri", ingredients: "2pt Light Rum, 1pt Lime Juice, .5pt Simple Syrup", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled coupe glass"),
+            ClassicCocktail(name: "Margarita", ingredients: "2pt Tequila, 1pt Tripe Sec, 1pt Lime Juice", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled glass or over ice", liquor: "Tequila"),
+            ClassicCocktail(name: "Old Fashioned", ingredients: "2pt Bourbon, 1pt Simple Syrup, 2-4 dashes Angostura Bitters, Orange Peel", method: "Combine ingredients in a mixing glass, Add Ice and stir until chilled, Strain into a chilled glass or over ice, Express oil from orange peel over drink and use peel to garnish", liquor: "Bourbon"),
+            ClassicCocktail(name: "Martini", ingredients: "1pt Gin, 1pt Dry Vermouth, Olive", method: "Combine ingredients in a mixing glass, Add Ice and stir until chilled, Strain into a chilled martini glass, Garnish with olive", liquor: "Gin"),
+            ClassicCocktail(name: "Daquiri", ingredients: "2pt Light Rum, 1pt Lime Juice, .5pt Simple Syrup", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled coupe glass", liquor: "Rum"),
         ]
         
         for cocktail in classicCocktails {
@@ -67,6 +68,9 @@ struct ContentView: View {
             drink.drinkName = cocktail.name
             drink.ingredients = cocktail.ingredients
             drink.method = cocktail.method
+            if let spirit = spirits.first(where: { $0.spiritName == cocktail.liquor }) {
+                drink.baseSpirit = spirit.id
+            }
         }
         
         do {
