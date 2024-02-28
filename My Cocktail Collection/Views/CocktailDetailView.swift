@@ -53,21 +53,21 @@ struct CocktailDetailView: View {
                     Text(drink.drinkName ?? "")
                         .font(.title)
                         .padding()
-                    if let sourceType = SourceType(rawValue: drink.source) {
-                        Text("Source:")
-                            .font(.caption)
-                        Text(sourceType.description)
-                            .padding(.bottom)
-                    }
                     if let base = drink.baseSpirit {
                         if let spirit = spirits.first(where: { $0.id == base }) {
                             Text("Base Spirit:")
                                 .font(.caption)
                             Text(spirit.spiritName ?? "")
-                                .padding()
+                                .padding(.bottom)
                         } else {
                             Text("No clue why this is not working")
                         }
+                    }
+                    if let sourceType = SourceType(rawValue: drink.source) {
+                        Text("Source:")
+                            .font(.caption)
+                        Text(sourceType.description)
+                            .padding(.bottom)
                     }
                     Text("Ingredient List:")
                         .font(.caption)
