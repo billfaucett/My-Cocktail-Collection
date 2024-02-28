@@ -33,8 +33,22 @@ struct SpiritListView: View {
     }
 }
 
-struct SpititListView_Previews: PreviewProvider {
+struct SpiritListView_Previews: PreviewProvider {
     static var previews: some View {
-        SpiritListView()
+        let context = DataController.init().container.viewContext
+
+        let spirit1 = Spirit(context: context)
+        spirit1.spiritName = "Whiskey"
+        spirit1.type = SpiritType.liquor.rawValue
+        
+        let spirit2 = Spirit(context: context)
+        spirit2.spiritName = "Vodka"
+        spirit2.type = SpiritType.liquor.rawValue
+        
+        try? context.save()
+        
+        return SpiritListView()
+            .environment(\.managedObjectContext, context)
     }
 }
+

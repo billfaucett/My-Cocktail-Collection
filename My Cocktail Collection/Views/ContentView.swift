@@ -12,16 +12,17 @@ struct ContentView: View {
     @FetchRequest(sortDescriptors: []) var drinks: FetchedResults<Drink>
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
     @State var isPreview = false
+    @State var addNewCocktail = false
     
     var body: some View {
         NavigationView{
             VStack{
                 HStack{
                     Spacer()
-                    NavigationLink(destination: AddEditCocktailRecipeView()){
-                        Text("Add Cocktail")
-                            .padding()
+                    Button("Add Cocktail") {
+                        addNewCocktail = true
                     }
+                    .padding()
                 }
                 CocktailListView()
                 HStack{
@@ -39,6 +40,9 @@ struct ContentView: View {
                     seedSpirits()
                 }
             }
+        }
+        .sheet(isPresented: $addNewCocktail) {
+            AddEditCocktailRecipeView()
         }
     }
     
