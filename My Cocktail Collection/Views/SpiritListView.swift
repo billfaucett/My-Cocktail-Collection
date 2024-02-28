@@ -19,6 +19,8 @@ struct SpiritListView: View {
                         NavigationLink(destination: AddEditSpirit(spirit: spirit)) {
                             Text(spirit.spiritName ?? "")
                                 .bold()
+                            Text(spirit.id?.uuidString ?? "")
+                                .font(.caption2)
                             Spacer()
                             if let type = SpiritType(rawValue: spirit.type) {
                                 Text(type.description)

@@ -20,7 +20,7 @@ struct AddEditSpirit: View {
         NavigationView {
             VStack{
                 HStack {
-                    Button("Delete") {
+                    /*Button("Delete") {
                         showingAlert = true
                     }
                     .padding()
@@ -35,7 +35,7 @@ struct AddEditSpirit: View {
                                 print("Error deleting drink: \(error)")
                             }
                         }, secondaryButton: .cancel())
-                    }
+                    }*/
                     Spacer()
                     Button("Save") {
                         saveSpirit()
@@ -65,9 +65,10 @@ struct AddEditSpirit: View {
                         }
                     }
                 }
+                Spacer()
             }
+            .navigationTitle(spirit == nil ? "Add New Spirit" : "Edit Spirit")
         }
-        .navigationTitle(spirit == nil ? "Add New Spirit" : "Edit Spirit")
     }
     
     func saveSpirit() {

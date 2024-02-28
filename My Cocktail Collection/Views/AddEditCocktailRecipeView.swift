@@ -13,6 +13,7 @@ struct AddEditCocktailRecipeView: View {
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
     @State private var selectedSource: Int = 0
     @State private var selectedBaseSpirit: Spirit?
+    @State private var selectedBaseSpiritId: UUID?
     @State private var drinkName: String = ""
     @State private var ingredients: String = ""
     @State private var method: String = ""
