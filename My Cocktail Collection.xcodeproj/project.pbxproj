@@ -24,6 +24,7 @@
 		8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E82B8D57AD002807F5 /* SpiritListView.swift */; };
 		8AC142EB2B8F98D9002807F5 /* CocktailDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */; };
 		8AFAEA962B90D17C0000A087 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEA952B90D17C0000A087 /* ImagePicker.swift */; };
+		8AFAEA982B90E1B90000A087 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,8 @@
 		8AC142E82B8D57AD002807F5 /* SpiritListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpiritListView.swift; sourceTree = "<group>"; };
 		8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailDetailView.swift; sourceTree = "<group>"; };
 		8AFAEA952B90D17C0000A087 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		8AFAEA992B90E2F40000A087 /* IMG_6665.heic */ = {isa = PBXFileReference; lastKnownFileType = file; path = IMG_6665.heic; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,6 +122,8 @@
 				8AC142DC2B8A7BB9002807F5 /* Views */,
 				8AC142DD2B8A7BDB002807F5 /* Data */,
 				8AC142AC2B8A6ACF002807F5 /* Assets.xcassets */,
+				8AFAEA992B90E2F40000A087 /* IMG_6665.heic */,
+				8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */,
 				8AC142AE2B8A6ACF002807F5 /* Preview Content */,
 			);
 			path = "My Cocktail Collection";
@@ -277,6 +282,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8AFAEA982B90E1B90000A087 /* Launch Screen.storyboard in Resources */,
 				8AC142B02B8A6ACF002807F5 /* Preview Assets.xcassets in Resources */,
 				8AC142AD2B8A6ACF002807F5 /* Assets.xcassets in Resources */,
 			);
@@ -481,11 +487,14 @@
 				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -510,11 +519,14 @@
 				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

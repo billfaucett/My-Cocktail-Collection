@@ -4,10 +4,33 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>My Cocktail Collection Beta.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
 		<key>My Cocktail Collection.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>8AC142A42B8A6ACE002807F5</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8AC142B42B8A6ACF002807F5</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>8AC142BE2B8A6ACF002807F5</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>
