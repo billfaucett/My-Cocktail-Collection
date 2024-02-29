@@ -25,6 +25,10 @@
 		8AC142EB2B8F98D9002807F5 /* CocktailDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */; };
 		8AFAEA962B90D17C0000A087 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEA952B90D17C0000A087 /* ImagePicker.swift */; };
 		8AFAEA982B90E1B90000A087 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */; };
+		8AFAEAA12B912DC10000A087 /* AddEditMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA02B912DC10000A087 /* AddEditMenuView.swift */; };
+		8AFAEAA32B9135590000A087 /* AddMenuItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */; };
+		8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA42B913F100000A087 /* MenuItemListView.swift */; };
+		8AFAEAA72B91442C0000A087 /* MenusListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA62B91442C0000A087 /* MenusListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +71,10 @@
 		8AFAEA952B90D17C0000A087 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		8AFAEA992B90E2F40000A087 /* IMG_6665.heic */ = {isa = PBXFileReference; lastKnownFileType = file; path = IMG_6665.heic; sourceTree = "<group>"; };
+		8AFAEAA02B912DC10000A087 /* AddEditMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditMenuView.swift; sourceTree = "<group>"; };
+		8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMenuItemView.swift; sourceTree = "<group>"; };
+		8AFAEAA42B913F100000A087 /* MenuItemListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuItemListView.swift; sourceTree = "<group>"; };
+		8AFAEAA62B91442C0000A087 /* MenusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenusListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,7 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				8AC142A82B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift */,
-				8AC142E02B8B9E54002807F5 /* MessageComposer.swift */,
+				8AFAEA9E2B912D750000A087 /* ViewUtilities */,
 				8AC142DC2B8A7BB9002807F5 /* Views */,
 				8AC142DD2B8A7BDB002807F5 /* Data */,
 				8AC142AC2B8A6ACF002807F5 /* Assets.xcassets */,
@@ -158,13 +166,9 @@
 			isa = PBXGroup;
 			children = (
 				8AC142AA2B8A6ACE002807F5 /* ContentView.swift */,
-				8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */,
-				8AC142D92B8A79FE002807F5 /* CocktailListView.swift */,
-				8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */,
-				8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */,
-				8AC142E82B8D57AD002807F5 /* SpiritListView.swift */,
-				8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */,
-				8AFAEA952B90D17C0000A087 /* ImagePicker.swift */,
+				8AFAEA9C2B912D1F0000A087 /* CocktailViews */,
+				8AFAEA9F2B912D8D0000A087 /* MenuViews */,
+				8AFAEA9D2B912D4F0000A087 /* SpiritViews */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -176,6 +180,46 @@
 				8AC142D52B8A6C83002807F5 /* DataController.swift */,
 			);
 			path = Data;
+			sourceTree = "<group>";
+		};
+		8AFAEA9C2B912D1F0000A087 /* CocktailViews */ = {
+			isa = PBXGroup;
+			children = (
+				8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */,
+				8AC142D92B8A79FE002807F5 /* CocktailListView.swift */,
+				8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */,
+			);
+			path = CocktailViews;
+			sourceTree = "<group>";
+		};
+		8AFAEA9D2B912D4F0000A087 /* SpiritViews */ = {
+			isa = PBXGroup;
+			children = (
+				8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */,
+				8AC142E82B8D57AD002807F5 /* SpiritListView.swift */,
+			);
+			path = SpiritViews;
+			sourceTree = "<group>";
+		};
+		8AFAEA9E2B912D750000A087 /* ViewUtilities */ = {
+			isa = PBXGroup;
+			children = (
+				8AC142E02B8B9E54002807F5 /* MessageComposer.swift */,
+				8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */,
+				8AFAEA952B90D17C0000A087 /* ImagePicker.swift */,
+			);
+			path = ViewUtilities;
+			sourceTree = "<group>";
+		};
+		8AFAEA9F2B912D8D0000A087 /* MenuViews */ = {
+			isa = PBXGroup;
+			children = (
+				8AFAEAA02B912DC10000A087 /* AddEditMenuView.swift */,
+				8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */,
+				8AFAEAA42B913F100000A087 /* MenuItemListView.swift */,
+				8AFAEAA62B91442C0000A087 /* MenusListView.swift */,
+			);
+			path = MenuViews;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -313,12 +357,16 @@
 				8AC142E72B8D52CB002807F5 /* AddEditSpirit.swift in Sources */,
 				8AC142D82B8A759B002807F5 /* AddEditCocktailRecipeView.swift in Sources */,
 				8AC142D42B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld in Sources */,
+				8AFAEAA32B9135590000A087 /* AddMenuItemView.swift in Sources */,
 				8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */,
 				8AC142E32B8BB399002807F5 /* UIFormatingHelpers.swift in Sources */,
 				8AC142D62B8A6C83002807F5 /* DataController.swift in Sources */,
+				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
 				8AC142AB2B8A6ACE002807F5 /* ContentView.swift in Sources */,
+				8AFAEAA12B912DC10000A087 /* AddEditMenuView.swift in Sources */,
 				8AFAEA962B90D17C0000A087 /* ImagePicker.swift in Sources */,
+				8AFAEAA72B91442C0000A087 /* MenusListView.swift in Sources */,
 				8AC142A92B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift in Sources */,
 				8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */,
 			);

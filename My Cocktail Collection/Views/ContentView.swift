@@ -13,6 +13,7 @@ struct ContentView: View {
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
     @State var isPreview = false
     @State var addNewCocktail = false
+    @State var createMenu = false
     
     var body: some View {
         NavigationView{
@@ -29,6 +30,13 @@ struct ContentView: View {
                     NavigationLink(destination: SpiritListView()){
                         Text("Spirit List")
                             .padding()
+                    }
+                    Button("Create a Menu") {
+                        createMenu = true
+                    }
+                    .padding()
+                    .sheet(isPresented: $createMenu) {
+                        AddEditMenuView()
                     }
                 }
             }

@@ -9,6 +9,17 @@
         <attribute name="method" optional="YES" attributeType="String"/>
         <attribute name="source" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
     </entity>
+    <entity name="Menu" representedClassName="Menu" syncable="YES" codeGenerationType="class">
+        <attribute name="dateCreated" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="menuName" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="MenuItem" representedClassName="MenuItem" syncable="YES" codeGenerationType="class">
+        <attribute name="drinkid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="menuId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="drink" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Drink"/>
+        <relationship name="menu" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Menu"/>
+    </entity>
     <entity name="Spirit" representedClassName="Spirit" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="spiritName" optional="YES" attributeType="String"/>
