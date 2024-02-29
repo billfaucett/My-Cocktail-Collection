@@ -20,22 +20,6 @@ struct AddEditSpirit: View {
         NavigationView {
             VStack{
                 HStack {
-                    /*Button("Delete") {
-                        showingAlert = true
-                    }
-                    .padding()
-                    .foregroundColor(.red)
-                    .alert(isPresented: $showingAlert) {
-                        Alert(title: Text("Confirm Deletion"), message: Text("Are you sure you want to delete this drink?"), primaryButton: .destructive(Text("Delete")) {
-                            context.delete(spirit!)
-                            do {
-                                try context.save()
-                                dismiss()
-                            } catch {
-                                print("Error deleting drink: \(error)")
-                            }
-                        }, secondaryButton: .cancel())
-                    }*/
                     Spacer()
                     Button("Save") {
                         saveSpirit()
@@ -102,3 +86,19 @@ struct AddEditSpirit_Previews: PreviewProvider {
 }
 
 
+/*Button("Delete") {
+    showingAlert = true
+}
+.padding()
+.foregroundColor(.red)
+.alert(isPresented: $showingAlert) {
+    Alert(title: Text("Confirm Deletion"), message: Text("Are you sure you want to delete this drink?"), primaryButton: .destructive(Text("Delete")) {
+        context.delete(spirit!)
+        do {
+            try context.save()
+            dismiss()
+        } catch {
+            print("Error deleting drink: \(error)")
+        }
+    }, secondaryButton: .cancel())
+}*/

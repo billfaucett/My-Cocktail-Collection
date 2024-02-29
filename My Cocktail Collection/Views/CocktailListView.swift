@@ -12,6 +12,8 @@ struct CocktailListView: View {
     @FetchRequest(sortDescriptors: []) var drinks: FetchedResults<Drink>
     @FetchRequest(sortDescriptors: []) var spirits: FetchedResults<Spirit>
     @State private var selectedBaseSpirit: Spirit?
+    @State private var searchText = ""
+    @State private var isSearching = false
     var isPreview = false
     
     var body: some View {
@@ -26,6 +28,22 @@ struct CocktailListView: View {
                             .tag(spirit as Spirit?)
                     }
                 }
+                
+              /*  Divider()
+                VStack {
+                    HStack {
+                        VStack {
+                            TextField("Search Cocktails", text: $searchText)
+                                .padding(.horizontal)
+                        }
+                        Spacer()
+                        Button ("Search") {
+                            isSearching = true
+                        }
+                    }
+                }
+                .padding() */
+                
                 List(filteredDrinks()) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
@@ -42,8 +60,14 @@ struct CocktailListView: View {
     
     private func filteredDrinks() -> [Drink] {
         if let baseSpirit = selectedBaseSpirit {
+            isSearching = false
             return drinks.filter { $0.baseSpirit == baseSpirit.id }
-        } else {
+        }
+        
+        if isSearching && !searchText.isEmpty {
+            return drinks.filter { $0.drinkName?.localizedCaseInsensitiveContains(searchText) ?? false }
+        }
+        else {
             return Array(drinks)
         }
     }
