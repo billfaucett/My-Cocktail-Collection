@@ -58,18 +58,6 @@ struct AddEditCocktailRecipeView: View {
                                     selectedBaseSpirit = spirits.first(where: { $0.id == spritId })
                                 }
                             }
-                            .padding()
-                            HStack {
-                                Text("Base Spirit")
-                                    .font(.caption)
-                            }.padding(.horizontal)
-                            
-                            Picker(selection: $selectedBaseSpirit, label: Text("Base Spirit")) {
-                                ForEach(spirits) { spirit in
-                                    Text(spirit.spiritName ?? "")
-                                        .tag(spirit as Spirit?)
-                                }
-                            }
                         }
                         .padding()
                     }
@@ -89,6 +77,18 @@ struct AddEditCocktailRecipeView: View {
                                     }
                                 }
                         }
+                        HStack {
+                            Text("Base Spirit")
+                                .font(.caption)
+                            Spacer()
+                            Picker(selection: $selectedBaseSpirit, label: Text("Base Spirit")) {
+                                ForEach(spirits) { spirit in
+                                    Text("Select a Base Spirit").tag(nil as Spirit?)
+                                    Text(spirit.spiritName ?? "")
+                                        .tag(spirit as Spirit?)
+                                }
+                            }
+                        }.padding()
                     }
                     Spacer()
                     Section {

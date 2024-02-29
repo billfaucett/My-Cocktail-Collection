@@ -9,11 +9,21 @@ import SwiftUI
 
 struct SpiritListView: View {
     @Environment(\.managedObjectContext) var context
+    @Environment(\.dismiss) private var dismiss
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
+    @State private var showAddNewSpirit = false
     
     var body: some View {
         NavigationView{
             VStack {
+                HStack {
+                    Spacer()
+                    Button("Add New Spirit") {
+                        showAddNewSpirit = true
+                    }
+                }
+                .padding()
+                
                 List(spirits) { spirit in
                     HStack {
                         NavigationLink(destination: AddEditSpirit(spirit: spirit)) {
@@ -27,6 +37,9 @@ struct SpiritListView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showAddNewSpirit) {
+            AddEditSpirit()
         }
     }
 }
