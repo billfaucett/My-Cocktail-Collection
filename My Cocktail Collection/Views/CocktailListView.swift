@@ -29,7 +29,7 @@ struct CocktailListView: View {
                     }
                 }
                 
-              /*  Divider()
+            Divider()
                 VStack {
                     HStack {
                         VStack {
@@ -37,12 +37,21 @@ struct CocktailListView: View {
                                 .padding(.horizontal)
                         }
                         Spacer()
-                        Button ("Search") {
-                            isSearching = true
+                        HStack {
+                            Button ("Search") {
+                                selectedBaseSpirit = nil
+                                isSearching = true
+                            }
+                            if isSearching && !searchText.isEmpty {
+                                Button ("Clear") {
+                                    searchText = ""
+                                    isSearching = false
+                                }
+                            }
                         }
                     }
                 }
-                .padding() */
+                .padding()
                 
                 List(filteredDrinks()) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {

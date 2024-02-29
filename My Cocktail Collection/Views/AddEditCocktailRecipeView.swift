@@ -129,7 +129,7 @@ struct AddEditCocktailRecipeView: View {
                                 }
                         }
                     }
-                  /*  Section {
+                    Section {
                         VStack {
                             HStack {
                                 Text("Add an Image")
@@ -155,7 +155,7 @@ struct AddEditCocktailRecipeView: View {
                         .sheet(isPresented: $showImagePicker) {
                             ImagePicker(selectedImage: $selectedImage)
                         }
-                    } */
+                    }
                 }
             }
             .navigationTitle(drink == nil ? "Add a New Cocktail" : "Edit Cocktail")
