@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct AddEditCocktailRecipeView: View {
     @Environment(\.managedObjectContext) var context
@@ -20,6 +21,8 @@ struct AddEditCocktailRecipeView: View {
     @State private var isSaved = false
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
+    @State private var addSpirit = false
+    
     var drink: Drink?
     
     var body: some View {
@@ -28,14 +31,14 @@ struct AddEditCocktailRecipeView: View {
                 VStack {
                     HStack {
                         Spacer()
+                        LinearGradient(gradient: Gradient(colors: [Color.white, Color.mint]), startPoint: /*@START_MENU_TOKEN@*/.leading/*@END_MENU_TOKEN@*/, endPoint: /*@START_MENU_TOKEN@*/.trailing/*@END_MENU_TOKEN@*/)
+                            .frame(height: 20)
                         Button("Save") {
                             saveRecipe()
                         }
                         .padding()
                         .disabled(isSaved)
                     }
-                    .padding()
-                    
                     Section {
                         VStack {
                             HStack{
@@ -83,11 +86,18 @@ struct AddEditCocktailRecipeView: View {
                                 .font(.caption)
                             Spacer()
                             Picker(selection: $selectedBaseSpirit, label: Text("Base Spirit")) {
+                                Text("Select a Base Spirit")
+                                    .tag(nil as Spirit?)
                                 ForEach(spirits) { spirit in
-                                    Text("Select a Base Spirit").tag(nil as Spirit?)
                                     Text(spirit.spiritName ?? "")
                                         .tag(spirit as Spirit?)
                                 }
+                            }
+                            Button("Add Spirit") {
+                                addSpirit = true
+                            }
+                            .sheet(isPresented: $addSpirit, onDismiss: refreshSpirits) {
+                                AddEditSpirit()
                             }
                         }.padding()
                     }
@@ -129,7 +139,7 @@ struct AddEditCocktailRecipeView: View {
                                 }
                         }
                     }
-                    Section {
+                   /* Section {
                         VStack {
                             HStack {
                                 Text("Add an Image")
@@ -155,11 +165,14 @@ struct AddEditCocktailRecipeView: View {
                         .sheet(isPresented: $showImagePicker) {
                             ImagePicker(selectedImage: $selectedImage)
                         }
-                    }
+                    }*/
                 }
             }
             .navigationTitle(drink == nil ? "Add a New Cocktail" : "Edit Cocktail")
         }
+    }
+    func refreshSpirits() {
+        context.refreshAllObjects()
     }
     
     func saveRecipe() {

@@ -60,14 +60,14 @@ struct AddEditSpirit: View {
             let spirit = Spirit(context: context)
             spirit.id = UUID()
             spirit.spiritName = spiritName
-            spirit.type = spiritType!.rawValue
+            spirit.type = spiritType?.rawValue ?? 0
             try? context.save()
             dismiss()
             return
         }
         
         spirit.spiritName = spiritName
-        spirit.type = spiritType!.rawValue
+        spirit.type = spiritType?.rawValue ?? 0
         try? context.save()
         dismiss()
         return
