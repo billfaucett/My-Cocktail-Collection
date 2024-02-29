@@ -18,7 +18,8 @@ struct AddEditCocktailRecipeView: View {
     @State private var ingredients: String = ""
     @State private var method: String = ""
     @State private var isSaved = false
-    
+    @State private var selectedImage: UIImage?
+    @State private var showImagePicker = false
     var drink: Drink?
     
     var body: some View {
@@ -128,6 +129,33 @@ struct AddEditCocktailRecipeView: View {
                                 }
                         }
                     }
+                  /*  Section {
+                        VStack {
+                            HStack {
+                                Text("Add an Image")
+                                    .font(.caption)
+                                    .padding()
+                                Spacer()
+                                Button("Select Image") {
+                                    showImagePicker.toggle()
+                                }
+                                .padding()
+                            }
+                            if let image = selectedImage {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 200, height: 200, alignment: .center)
+                                    .padding()
+                            } else {
+                                Text("No Image Selected")
+                                    .font(.caption)
+                            }
+                        }
+                        .sheet(isPresented: $showImagePicker) {
+                            ImagePicker(selectedImage: $selectedImage)
+                        }
+                    } */
                 }
             }
             .navigationTitle(drink == nil ? "Add a New Cocktail" : "Edit Cocktail")
@@ -143,6 +171,9 @@ struct AddEditCocktailRecipeView: View {
             drink.source = Int16(selectedSource)
             drink.ingredients = ingredients
             drink.method = method
+            if let image = selectedImage {
+                drink.image = image.pngData()
+            }
             try? context.save()
             dismiss()
             isSaved = true
@@ -154,6 +185,9 @@ struct AddEditCocktailRecipeView: View {
         drink.baseSpirit = selectedBaseSpirit?.id
         drink.ingredients = ingredients
         drink.method = method
+        if let image = selectedImage {
+            drink.image = image.pngData()
+        }
         try? context.save()
         dismiss()
         isSaved = true

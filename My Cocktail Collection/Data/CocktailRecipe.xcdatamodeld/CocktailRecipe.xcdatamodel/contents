@@ -4,6 +4,7 @@
         <attribute name="baseSpirit" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="drinkName" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="image" optional="YES" attributeType="Binary"/>
         <attribute name="ingredients" optional="YES" attributeType="String"/>
         <attribute name="method" optional="YES" attributeType="String"/>
         <attribute name="source" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>

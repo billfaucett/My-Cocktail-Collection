@@ -60,13 +60,13 @@ struct CocktailListView: View {
     
     private func filteredDrinks() -> [Drink] {
         if let baseSpirit = selectedBaseSpirit {
-            isSearching = false
             return drinks.filter { $0.baseSpirit == baseSpirit.id }
         }
         
         if isSearching && !searchText.isEmpty {
             return drinks.filter { $0.drinkName?.localizedCaseInsensitiveContains(searchText) ?? false }
         }
+        
         else {
             return Array(drinks)
         }
