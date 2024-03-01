@@ -18,6 +18,9 @@ struct AddMenuItemView: View {
     
     var body: some View {
         VStack {
+            HStack{
+                Text("Add cocktail to menu: \(menu?.menuName ?? "No Menu")")
+            }
             Picker(selection: $selectedCocktail, label: Text("Select a Cocktail")) {
                 Text("Select a Cocktail")
                     .tag(nil as Drink?)
@@ -33,11 +36,25 @@ struct AddMenuItemView: View {
     }
     
     func saveMenuItem() {
+        guard let selectedCocktail = selectedCocktail else {
+            return
+        }
+        let menuitem = MenuItem(context: context)
+        menuItem?.id = UUID()
         menuItem?.menu = menu
         menuItem?.drink = selectedCocktail
         
-        try? context.save()
-        dismiss()
+        do {
+            try context.save()
+            refreshObjects()
+            dismiss()
+        } catch {
+            print("Error saving menu item: \(error.localizedDescription)")
+        }
+    }
+    
+    func refreshObjects() {
+        context.refreshAllObjects()
     }
 }
 

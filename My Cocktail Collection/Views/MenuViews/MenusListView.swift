@@ -16,7 +16,7 @@ struct MenusListView: View {
             VStack {
                 if menus.count > 0 {
                     List(menus) { menu in
-                        NavigationLink(destination: AddEditMenuView(menu: menu)){
+                        NavigationLink(destination: CocktailMenuDetailView(menu: menu)){
                             HStack{
                                 Text(menu.menuName ?? "??")
                             }
@@ -27,6 +27,10 @@ struct MenusListView: View {
                 }
             }
         }
+    }
+    
+    func deleteMenuItems() {
+        DeleteHelper().deleteAllRowsFromEntity(entity: MenuItem.self, context: context)
     }
 }
 

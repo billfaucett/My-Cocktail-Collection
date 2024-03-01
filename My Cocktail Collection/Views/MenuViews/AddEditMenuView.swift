@@ -17,7 +17,7 @@ struct AddEditMenuView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     
-    var menu: Menu?
+    @State var menu: Menu?
     
     var body: some View {
         ScrollView {
@@ -28,51 +28,50 @@ struct AddEditMenuView: View {
                 Divider()
                 TextField("Menu Title", text: $menuTitle)
                     .padding()
-                Button("Add a Menu Item") {
-                    if !menuIsSaved {
-                        saveMenu()
-                    } else {
-                        menuIsSaved = true
-                    }
+                Button("Save Menu") {
+                    saveMenu()
                 }
                 .padding()
-                .sheet(isPresented: $menuIsSaved) {
-                    AddMenuItemView(menu: menu)
-                }
                 .alert(isPresented: $showAlert){
                     Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
                 }
-                Divider()
-                if menuIsSaved {
-                    MenuItemListView(menu: menu)
+                .sheet(item: $menu) { savedMenu in
+                    CocktailMenuDetailView(menu: savedMenu)
                 }
-            }
-        }
-        .onAppear {
-            if let menu = menu {
-                menuTitle = menu.menuName ?? ""
+                Divider()
             }
         }
     }
     
     private func saveMenu() {
-        guard menu != nil else {
-            let newMenu = Menu(context: context)
-            newMenu.id = UUID()
-            newMenu.menuName = menuTitle
-            newMenu.dateCreated = Date()
-            
-            do {
-                try context.save()
-                menuIsSaved = true
-            } catch {
-                showAlert = true
-                alertMessage = "Failed to save menu: \(error.localizedDescription)"
-            }
+        guard !menuTitle.isEmpty else {
+            showAlert = true
+            alertMessage = "Menu title cannot be empty."
             return
+        }
+        
+        guard menu == nil else {
+            showAlert = true
+            alertMessage = "Cannot save existing menu."
+            return
+        }
+        
+        let newMenu = Menu(context: context)
+        newMenu.id = UUID()
+        newMenu.menuName = menuTitle
+        newMenu.dateCreated = Date()
+        
+        do {
+            try context.save()
+            menu = newMenu
+            menuIsSaved = true
+        } catch {
+            showAlert = true
+            alertMessage = "Failed to save menu: \(error.localizedDescription)"
         }
     }
 }
+
 
 
 struct AddEditMenuView_Previews: PreviewProvider {

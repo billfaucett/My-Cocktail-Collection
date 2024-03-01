@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import CoreData
 
 struct ImagePicker: UIViewControllerRepresentable {
     @Environment(\.presentationMode) var presentationMode
@@ -42,4 +43,18 @@ struct ImagePicker: UIViewControllerRepresentable {
         // No need to implement anything here
     }
 }
+
+struct DeleteHelper {
+    func deleteAllRowsFromEntity<T: NSManagedObject>(entity: T.Type, context: NSManagedObjectContext) {
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: String(describing: entity))
+        
+        do {
+            let objects = try context.fetch(fetchRequest)
+            let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+            try context.execute(batchDeleteRequest)
+            try context.save()
+        } catch {
+            print("Error deleting all rows from \(entity): \(error.localizedDescription)")
+        }
+    }}
 
