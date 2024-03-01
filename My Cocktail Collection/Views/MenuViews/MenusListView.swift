@@ -16,7 +16,7 @@ struct MenusListView: View {
             VStack {
                 if menus.count > 0 {
                     List(menus) { menu in
-                        NavigationLink(destination: CocktailMenuDetailView(menu: menu)){
+                        NavigationLink(destination: MenuDetailView(menu: menu)){
                             HStack{
                                 Text(menu.menuName ?? "??")
                             }

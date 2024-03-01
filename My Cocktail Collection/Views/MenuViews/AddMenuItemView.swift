@@ -12,7 +12,7 @@ struct AddMenuItemView: View {
     @Environment(\.dismiss) private var dismiss
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Drink.drinkName, ascending: true)]) var drinks: FetchedResults<Drink>
     @State private var selectedCocktail: Drink?
-    @State private var menuItem: MenuItem?
+    //@State private var menuItem: MenuItem?
     
     var menu: Menu?
     
@@ -39,10 +39,10 @@ struct AddMenuItemView: View {
         guard let selectedCocktail = selectedCocktail else {
             return
         }
-        let menuitem = MenuItem(context: context)
-        menuItem?.id = UUID()
-        menuItem?.menu = menu
-        menuItem?.drink = selectedCocktail
+        let menuItem = MenuItem(context: context)
+        menuItem.id = UUID()
+        menuItem.menu = menu
+        menuItem.drink = selectedCocktail
         
         do {
             try context.save()

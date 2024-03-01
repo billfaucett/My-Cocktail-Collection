@@ -19,6 +19,10 @@ struct ContentView: View {
         NavigationView{
             VStack{
                 HStack{
+                    /*Button("Delete Menu Data"){
+                        deleteStuff()
+                    }
+                    .padding()*/
                     Spacer()
                     Button("Add Cocktail") {
                         addNewCocktail = true
@@ -56,6 +60,11 @@ struct ContentView: View {
         .sheet(isPresented: $addNewCocktail) {
             AddEditCocktailRecipeView()
         }
+    }
+    
+    func deleteStuff() {
+        DeleteHelper().deleteAllRowsFromEntity(entity: MenuItem.self, context: context)
+        DeleteHelper().deleteAllRowsFromEntity(entity: Menu.self, context: context)
     }
     
     func seedCocktails() {

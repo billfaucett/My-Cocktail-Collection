@@ -7,8 +7,10 @@
 
 import SwiftUI
 
-struct CocktailMenuDetailView: View {
+struct MenuDetailView: View {
     @Environment(\.managedObjectContext) var context
+    @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
+    @State var addNewDrink = false
     var menu: Menu?
     
     var body: some View {
@@ -25,9 +27,15 @@ struct CocktailMenuDetailView: View {
                 }
                 Spacer()
                 Divider()
-                VStack {
-                    
+                Button("Add Cocktail to Menu") {
+                    addNewDrink = true
                 }
+                .sheet(isPresented: $addNewDrink){
+                    AddMenuItemView(menu: menu)
+                }
+                MenuItemListView(menu: menu)
+                Spacer()
+                Divider()
             }
         }
     }
@@ -35,6 +43,6 @@ struct CocktailMenuDetailView: View {
 
 struct CocktailMenuDetailView_Preview: PreviewProvider {
     static var previews: some View {
-        CocktailMenuDetailView()
+        MenuDetailView()
     }
 }

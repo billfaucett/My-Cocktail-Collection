@@ -11,6 +11,7 @@ struct AddEditMenuView: View {
     @Environment(\.managedObjectContext) var context
     @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) var presentationMode
     
     @State private var menuIsSaved = false
     @State private var menuTitle: String = ""
@@ -36,7 +37,10 @@ struct AddEditMenuView: View {
                     Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
                 }
                 .sheet(item: $menu) { savedMenu in
-                    CocktailMenuDetailView(menu: savedMenu)
+                    MenuDetailView(menu: savedMenu)
+                        .onDisappear {
+                            presentationMode.wrappedValue.dismiss()
+                        }
                 }
                 Divider()
             }

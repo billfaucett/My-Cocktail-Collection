@@ -15,20 +15,21 @@ struct MenuItemListView: View {
     var body: some View {
         VStack {
             Text("Menu: \(menu?.menuName ?? "None")")
-            Text("count of drinks \(String(menuItems.count))")
+            Text("Number of Cocktails: \(String(menuItems.count))")
+                .font(.caption2)
             let myMenuItems = menuItems.filter({ $0.menu == menu })
-            Text(menuItems.first?.menu?.menuName ?? "??")
-            Text(menuItems.first?.drink?.drinkName ?? "??")
-            Text(menuItems.first?.id?.uuidString ?? "no Id")
-            List(menuItems) { item in
-                HStack {
-                    Text(item.menu?.menuName ?? "menu")
-                    Text(item.drink?.drinkName ?? "drink" )
-                }
-            }
+        
             List(myMenuItems) { item in
-                HStack {
-                    Text(item.drink?.drinkName ?? "Where is my Drink Name?" )
+                VStack{
+                    HStack {
+                        Text(item.drink?.drinkName ?? "Where is my Drink Name?" )
+                            .padding()
+                    }
+                    Text(item.drink?.ingredients ?? "")
+                        .padding()
+                        .font(.caption)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
         }
