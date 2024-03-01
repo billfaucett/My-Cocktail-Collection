@@ -12,8 +12,10 @@ struct AddEditMenuView: View {
     @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
     @Environment(\.dismiss) private var dismiss
     
-    @State var menuIsSaved = false
-    @State var menuTitle: String = ""
+    @State private var menuIsSaved = false
+    @State private var menuTitle: String = ""
+    @State private var showAlert = false
+    @State private var alertMessage = ""
     
     var menu: Menu?
     
@@ -35,7 +37,10 @@ struct AddEditMenuView: View {
                 }
                 .padding()
                 .sheet(isPresented: $menuIsSaved) {
-                    AddMenuItemView(menuId: menu?.id)
+                    AddMenuItemView(menu: menu)
+                }
+                .alert(isPresented: $showAlert){
+                    Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
                 }
                 Divider()
                 if menuIsSaved {
@@ -43,22 +48,32 @@ struct AddEditMenuView: View {
                 }
             }
         }
+        .onAppear {
+            if let menu = menu {
+                menuTitle = menu.menuName ?? ""
+            }
+        }
     }
     
-    func saveMenu() {
-        guard let menu = menu else {
-            menu?.id = UUID()
-            menu?.menuName = menuTitle
-            menu?.dateCreated = Date()
+    private func saveMenu() {
+        guard menu != nil else {
+            let newMenu = Menu(context: context)
+            newMenu.id = UUID()
+            newMenu.menuName = menuTitle
+            newMenu.dateCreated = Date()
             
-            try? context.save()
-            menuIsSaved = true
+            do {
+                try context.save()
+                menuIsSaved = true
+            } catch {
+                showAlert = true
+                alertMessage = "Failed to save menu: \(error.localizedDescription)"
+            }
             return
         }
-        
-        menu.menuName = menuTitle
     }
 }
+
 
 struct AddEditMenuView_Previews: PreviewProvider {
     static var previews: some View {

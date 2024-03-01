@@ -27,6 +27,10 @@ struct ContentView: View {
                 }
                 CocktailListView()
                 HStack{
+                    NavigationLink(destination: MenusListView()) {
+                        Text("Menus")
+                            .padding()
+                    }
                     NavigationLink(destination: SpiritListView()){
                         Text("Spirit List")
                             .padding()

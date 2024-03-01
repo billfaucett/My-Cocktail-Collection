@@ -13,11 +13,13 @@ struct MenuItemListView: View {
     var menu: Menu?
     
     var body: some View {
-        let myMenuItems = menuItems.filter({ $0.menuId == menu?.id })
-        List(myMenuItems) { item in
-            HStack {
-                //Text(item.menu?.menuName ?? "")
-                Text(item.drink?.drinkName ?? "" )
+        NavigationView {
+            let myMenuItems = menuItems.filter({ $0.menu == menu })
+            List(myMenuItems) { item in
+                HStack {
+                    //Text(item.menu?.menuName ?? "")
+                    Text(item.drink?.drinkName ?? "" )
+                }
             }
         }
     }

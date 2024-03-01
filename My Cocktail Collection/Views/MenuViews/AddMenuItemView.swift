@@ -14,7 +14,7 @@ struct AddMenuItemView: View {
     @State private var selectedCocktail: Drink?
     @State private var menuItem: MenuItem?
     
-    var menuId: UUID?
+    var menu: Menu?
     
     var body: some View {
         VStack {
@@ -30,11 +30,10 @@ struct AddMenuItemView: View {
                 saveMenuItem()
             }
         }
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
     }
     
     func saveMenuItem() {
-        menuItem?.menuId = menuId
+        menuItem?.menu = menu
         menuItem?.drink = selectedCocktail
         
         try? context.save()

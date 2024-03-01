@@ -15,8 +15,7 @@
         <attribute name="menuName" optional="YES" attributeType="String"/>
     </entity>
     <entity name="MenuItem" representedClassName="MenuItem" syncable="YES" codeGenerationType="class">
-        <attribute name="drinkid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="menuId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <relationship name="drink" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Drink"/>
         <relationship name="menu" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Menu"/>
     </entity>
