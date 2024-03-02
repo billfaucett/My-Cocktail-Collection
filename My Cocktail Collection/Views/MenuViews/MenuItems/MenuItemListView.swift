@@ -27,7 +27,6 @@ struct MenuItemListView: View {
                     }
                     Text(item.drink?.ingredients ?? "")
                         .padding()
-                        .font(.caption)
                         .lineLimit(nil)
                         .fixedSize(horizontal: true, vertical: false)
                 }

@@ -104,6 +104,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8AB706332B93C776009A2EC3 /* Menus */ = {
+			isa = PBXGroup;
+			children = (
+				8AFAEAA62B91442C0000A087 /* MenusListView.swift */,
+				8AB706312B926F4D009A2EC3 /* MenuDetailView.swift */,
+				8AFAEAA02B912DC10000A087 /* AddEditMenuView.swift */,
+			);
+			path = Menus;
+			sourceTree = "<group>";
+		};
+		8AB706342B93C7D3009A2EC3 /* MenuItems */ = {
+			isa = PBXGroup;
+			children = (
+				8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */,
+				8AFAEAA42B913F100000A087 /* MenuItemListView.swift */,
+			);
+			path = MenuItems;
+			sourceTree = "<group>";
+		};
 		8AC1429C2B8A6ACE002807F5 = {
 			isa = PBXGroup;
 			children = (
@@ -216,11 +235,8 @@
 		8AFAEA9F2B912D8D0000A087 /* MenuViews */ = {
 			isa = PBXGroup;
 			children = (
-				8AFAEAA02B912DC10000A087 /* AddEditMenuView.swift */,
-				8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */,
-				8AFAEAA42B913F100000A087 /* MenuItemListView.swift */,
-				8AFAEAA62B91442C0000A087 /* MenusListView.swift */,
-				8AB706312B926F4D009A2EC3 /* MenuDetailView.swift */,
+				8AB706342B93C7D3009A2EC3 /* MenuItems */,
+				8AB706332B93C776009A2EC3 /* Menus */,
 			);
 			path = MenuViews;
 			sourceTree = "<group>";
