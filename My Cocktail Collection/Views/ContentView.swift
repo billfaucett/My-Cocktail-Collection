@@ -14,15 +14,41 @@ struct ContentView: View {
     @State var isPreview = false
     @State var addNewCocktail = false
     @State var createMenu = false
+    @State var isMenuSelected = false
     
     var body: some View {
         NavigationView{
             VStack{
                 HStack{
-                    /*Button("Delete Menu Data"){
-                        deleteStuff()
+                    VStack {
+                        Image(systemName: "list.bullet.rectangle")
+                            .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
+                            .padding()
+                            .onTapGesture {
+                                isMenuSelected.toggle()
+                            }
+                            .contextMenu {
+                                Button("Add Cocktail") {
+                                    addNewCocktail = true
+                                }
+                                NavigationLink(destination: SpiritListView()){
+                                    Text("View Spirit List")
+                                        .padding()
+                                }
+                                NavigationLink(destination: MenusListView()) {
+                                    Text("View Menus")
+                                        .padding()
+                                }
+                                Button("Create a Menu") {
+                                    createMenu = true
+                                }
+                                Button("Delete Menu Data"){
+                                    deleteStuff()
+                                }
+                                .foregroundColor(.red)
+                            }
                     }
-                    .padding()*/
+                    .padding()
                     Spacer()
                     Button("Add Cocktail") {
                         addNewCocktail = true
