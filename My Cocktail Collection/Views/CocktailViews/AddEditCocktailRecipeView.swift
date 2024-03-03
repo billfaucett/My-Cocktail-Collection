@@ -30,6 +30,10 @@ struct AddEditCocktailRecipeView: View {
             ScrollView {
                 VStack {
                     HStack {
+                        Button("Dismiss") {
+                            dismiss()
+                        }
+                        .padding()
                         Spacer()
                         LinearGradient(gradient: Gradient(colors: [Color.white, Color.mint]), startPoint: /*@START_MENU_TOKEN@*/.leading/*@END_MENU_TOKEN@*/, endPoint: /*@START_MENU_TOKEN@*/.trailing/*@END_MENU_TOKEN@*/)
                             .frame(height: 20)

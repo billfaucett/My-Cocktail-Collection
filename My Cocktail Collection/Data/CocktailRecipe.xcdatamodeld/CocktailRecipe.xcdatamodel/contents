@@ -19,6 +19,9 @@
         <relationship name="drink" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Drink"/>
         <relationship name="menu" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Menu"/>
     </entity>
+    <entity name="ModelState" representedClassName="ModelState" syncable="YES" codeGenerationType="class">
+        <attribute name="favoritesAdded" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+    </entity>
     <entity name="Spirit" representedClassName="Spirit" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="spiritName" optional="YES" attributeType="String"/>
