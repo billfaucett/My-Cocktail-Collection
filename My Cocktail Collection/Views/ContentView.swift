@@ -15,13 +15,16 @@ struct ContentView: View {
     @State var addNewCocktail = false
     @State var createMenu = false
     @State var isMenuSelected = false
+    @State var viewSpirits = false
+    @State var viewMenus = false
     
     var body: some View {
         NavigationView{
             VStack{
                 HStack{
+                    Spacer()
                     VStack {
-                        Image(systemName: "list.bullet.rectangle")
+                        Image(systemName: "filemenu.and.cursorarrow")
                             .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
                             .padding()
                             .onTapGesture {
@@ -31,13 +34,11 @@ struct ContentView: View {
                                 Button("Add Cocktail") {
                                     addNewCocktail = true
                                 }
-                                NavigationLink(destination: SpiritListView()){
-                                    Text("View Spirit List")
-                                        .padding()
+                                Button("View Spirit List") {
+                                    viewSpirits.toggle()
                                 }
-                                NavigationLink(destination: MenusListView()) {
-                                    Text("View Menus")
-                                        .padding()
+                                Button("View Menus") {
+                                    viewMenus.toggle()
                                 }
                                 Button("Create a Menu") {
                                     createMenu = true
@@ -49,29 +50,11 @@ struct ContentView: View {
                             }
                     }
                     .padding()
-                    Spacer()
-                    Button("Add Cocktail") {
-                        addNewCocktail = true
-                    }
-                    .padding()
                 }
                 CocktailListView()
                 HStack{
-                    NavigationLink(destination: MenusListView()) {
-                        Text("Menus")
-                            .padding()
-                    }
-                    NavigationLink(destination: SpiritListView()){
-                        Text("Spirit List")
-                            .padding()
-                    }
-                    Button("Create a Menu") {
-                        createMenu = true
-                    }
-                    .padding()
-                    .sheet(isPresented: $createMenu) {
-                        AddEditMenuView()
-                    }
+                    LinearGradient(gradient: Gradient(colors: [Color.white, Color.red]), startPoint: /*@START_MENU_TOKEN@*/.leading/*@END_MENU_TOKEN@*/, endPoint: /*@START_MENU_TOKEN@*/.trailing/*@END_MENU_TOKEN@*/)
+                        .frame(height: 20)
                 }
             }
             .onAppear {
@@ -85,6 +68,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $addNewCocktail) {
             AddEditCocktailRecipeView()
+        }
+        .sheet(isPresented: $viewMenus) {
+            MenusListView()
+        }
+        .sheet(isPresented: $viewSpirits) {
+            SpiritListView()
         }
     }
     
