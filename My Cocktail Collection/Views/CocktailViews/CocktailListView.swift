@@ -37,6 +37,9 @@ struct CocktailListView: View {
                             TextField("Search Cocktails", text: $searchText)
                                 .padding(.horizontal)
                         }
+                        .onTapGesture {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
                         Spacer()
                         HStack {
                             Button ("Search") {
