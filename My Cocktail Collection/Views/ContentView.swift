@@ -85,6 +85,9 @@ struct ContentView: View {
         .sheet(isPresented: $viewSpirits) {
             SpiritListView()
         }
+        .sheet(isPresented: $createMenu) {
+            AddEditMenuView()
+        }
     }
 }
 
