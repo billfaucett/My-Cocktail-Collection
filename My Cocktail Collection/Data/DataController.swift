@@ -25,7 +25,7 @@ class DataController: ObservableObject {
         DeleteHelper().deleteAllRowsFromEntity(entity: Menu.self, context: context)
     }
     
-    func seedCocktails(context: NSManagedObjectContext) {
+    func seedCocktails(context: NSManagedObjectContext, spirits: FetchedResults<Spirit>) {
         struct ClassicCocktail {
             var name: String
             var ingredients: String
@@ -41,7 +41,7 @@ class DataController: ObservableObject {
             ClassicCocktail(name: "Cosmopolitan", ingredients: "2pt Vodka, 1pt Triple Sec, 1pt Cranberry Juice, .5pt Lime Juice, Orange Twist", method: "Combine ingredients in a shaker and top with ice, Shake for 10-15 seconds untile chilled, Strain into a chilled martini glass, garnisg with orange twist", liquor: "Vodka")
         ]
         
-        @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
+        //@FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
         
         for cocktail in classicCocktails {
             let drink = Drink(context: context)
@@ -92,7 +92,7 @@ class DataController: ObservableObject {
         }
     }
     
-    func addBillsFaves(context: NSManagedObjectContext) {
+    func addBillsFaves(context: NSManagedObjectContext, spirits: FetchedResults<Spirit>, loadedDrinks: FetchedResults<Drink>) {
         struct ClassicCocktail {
             var name: String
             var ingredients: String
@@ -108,9 +108,6 @@ class DataController: ObservableObject {
             ClassicCocktail(name: "Chocolate Peanutbutter Sundae", ingredients: "2 parts Vodka, 1 part Creme de Cacao, .5 parts Peanut butter Whiskey, .5 parts Heavy Cream", method: "Add ingredients to a shaker, cover with ice and shake until chilled, strain ingredients into a chilled martini glass lined with a swirl of chocolate sauce, garnish with a luxardo cherry, and for an extra flourish float a touch of Luxardo Liqueur or Kirschwasser on top", liquor: "Vodka"),
             ClassicCocktail(name: "Cherry Bourbon Sour", ingredients: "2 parts bourbon, 1 part lemon juice, 3-4 Luxardo or bourbon soaked cherries, .5 parts simple syrup (if desired)", method: "To and old fashioned glass add the cherries and simple syrup, mull the cherries to a pulp, add a cube of lce to the glass and pour in the bourbon and lemon juice, stir with a bar spoon until combined and chilled, garnish with a cherry and lemon twist", liquor: "Bourbon")
         ]
-        
-        @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
-        @FetchRequest(sortDescriptors: []) var loadedDrinks: FetchedResults<Drink>
         
         for cocktail in billsFaves {
             let isloaded = loadedDrinks.contains { $0.drinkName == cocktail.name }

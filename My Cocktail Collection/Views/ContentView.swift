@@ -18,14 +18,19 @@ struct ContentView: View {
     @State var viewSpirits = false
     @State var viewMenus = false
     
+    let billsFaves = ["Cherry Bourbon Sour", "Blood Orange Margarita", "Irish Whiskey Sour", "Ranch Water", "Chocolate Peanutbutter Sundae", "Bourbon Renewal"]
+    @State var areFavesAdded = false
+    
     var body: some View {
         NavigationView{
             VStack{
                 HStack{
-                    Button("Add Our Favorite Cocktails") {
-                        DataController().addBillsFaves(context: context)
+                    if !areFavesAdded {
+                        Button("Add Our Favorite Cocktails") {
+                            DataController().addBillsFaves(context: context, spirits: spirits, loadedDrinks: drinks)
+                        }
+                        .padding()
                     }
-                    .padding()
                     Spacer()
                     VStack {
                         Image(systemName: "filemenu.and.cursorarrow")
@@ -66,8 +71,9 @@ struct ContentView: View {
                     DataController().seedSpirits(context: context)
                 }
                 if drinks.isEmpty && !isPreview {
-                    DataController().seedCocktails(context: context)
+                    DataController().seedCocktails(context: context, spirits: spirits)
                 }
+                areFavesAdded = drinks.contains { drink in billsFaves.contains(drink.drinkName ?? "") }
             }
         }
         .sheet(isPresented: $addNewCocktail) {

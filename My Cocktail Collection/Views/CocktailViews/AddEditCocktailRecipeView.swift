@@ -79,6 +79,9 @@ struct AddEditCocktailRecipeView: View {
                             } .padding(.horizontal)
                             TextField("Drink Name", text: $drinkName)
                                 .padding(.horizontal)
+                                .onTapGesture {
+                                    hideKeyboard()
+                                }
                                 .onAppear {
                                     if let drink = drink {
                                         drinkName = drink.drinkName!
@@ -117,6 +120,9 @@ struct AddEditCocktailRecipeView: View {
                                 .border(Color.gray, width: 1)
                                 .frame(height: 200)
                                 .padding(.horizontal)
+                                .onTapGesture {
+                                    hideKeyboard()
+                                }
                                 .onAppear {
                                     if let drink = drink {
                                         ingredients = drink.ingredients!
@@ -136,6 +142,9 @@ struct AddEditCocktailRecipeView: View {
                                 .border(Color.gray, width: 1)
                                 .frame(height: 200)
                                 .padding(.horizontal)
+                                .onTapGesture {
+                                    hideKeyboard()
+                                }
                                 .onAppear {
                                     if let drink = drink {
                                         method = drink.method!
@@ -171,10 +180,18 @@ struct AddEditCocktailRecipeView: View {
                         }
                     }*/
                 }
+                .onTapGesture {
+                    hideKeyboard()
+                }
             }
             .navigationTitle(drink == nil ? "Add a New Cocktail" : "Edit Cocktail")
         }
     }
+    
+    func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
     func refreshSpirits() {
         context.refreshAllObjects()
     }
