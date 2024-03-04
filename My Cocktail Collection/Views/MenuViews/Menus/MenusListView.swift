@@ -46,17 +46,7 @@ struct MenusListView: View {
                     List(menus) { menu in
                         NavigationLink(destination: MenuDetailView(menu: menu)){
                             HStack{
-                                Text(menu.menuName ?? "??")
-                                    .contextMenu {
-                                        Button(action: {
-                                            deleteMenu.toggle()
-                                            context.delete(menu)
-                                            try? context.save()
-                                        }) {
-                                            Text("Delete")
-                                            Image(systemName: "trash")
-                                        }
-                                    }
+                                MenuListRow(menu: menu)
                             }
                         }
                     }
