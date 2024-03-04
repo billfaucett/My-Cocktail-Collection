@@ -14,6 +14,7 @@ struct CocktailListView: View {
     @State private var selectedBaseSpirit: Spirit?
     @State private var searchText = ""
     @State private var isSearching = false
+    @State var addDrink = false
     var isPreview = false
     
     var body: some View {
@@ -53,6 +54,19 @@ struct CocktailListView: View {
                 }
                 .padding()
                 
+                Divider()
+                HStack{
+                    Spacer()
+                    Image(systemName: "plus")
+                        .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
+                        .padding()
+                        .onTapGesture {
+                            addDrink = true
+                        }
+                        .sheet(isPresented: $addDrink) {
+                            AddEditCocktailRecipeView()
+                        }
+                }
                 List(filteredDrinks()) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
