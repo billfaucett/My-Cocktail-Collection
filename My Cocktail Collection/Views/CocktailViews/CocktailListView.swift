@@ -56,6 +56,9 @@ struct CocktailListView: View {
                 
                 Divider()
                 HStack{
+                    Text("Add new cocktail")
+                        .padding()
+                        .font(.subheadline)
                     Spacer()
                     Image(systemName: "plus")
                         .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
@@ -67,6 +70,8 @@ struct CocktailListView: View {
                             AddEditCocktailRecipeView()
                         }
                 }
+                .frame(height: 25)
+                Divider()
                 List(filteredDrinks()) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
