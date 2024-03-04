@@ -34,6 +34,9 @@ struct ContentView: View {
                     Spacer()
                     VStack {
                         Image(systemName: "filemenu.and.cursorarrow")
+                            .resizable()
+                            .frame(width: 30, height: 30
+                            )
                             .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
                             .padding()
                             .onTapGesture {
@@ -58,7 +61,7 @@ struct ContentView: View {
                                 .foregroundColor(.red)
                             }
                     }
-                    .padding()
+                    .padding(.horizontal)
                 }
                 CocktailListView()
                 HStack{

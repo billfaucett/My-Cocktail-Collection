@@ -9,16 +9,54 @@ import SwiftUI
 
 struct MenusListView: View {
     @Environment(\.managedObjectContext) var context
+    @Environment(\.dismiss) private var dismiss
     @FetchRequest(sortDescriptors: []) var menus: FetchedResults<Menu>
+    @State var addMenu = false
+    @State var deleteMenu = false
     
     var body: some View {
         NavigationView{
             VStack {
+                VStack {
+                    HStack {
+                        Button("Close") {
+                            dismiss()
+                        }
+                        .padding(.horizontal)
+                        .padding(.top)
+                        Spacer()
+                    }
+                    HStack {
+                        Text("Create a Menu")
+                            .padding()
+                        Spacer()
+                        Image(systemName: "plus")
+                            .padding(.horizontal)
+                            .foregroundColor(.blue)
+                            .onTapGesture {
+                                addMenu = true
+                            }
+                            .sheet(isPresented: $addMenu) {
+                                AddEditMenuView()
+                            }
+                    }
+                    Divider()
+                }
                 if menus.count > 0 {
                     List(menus) { menu in
                         NavigationLink(destination: MenuDetailView(menu: menu)){
                             HStack{
                                 Text(menu.menuName ?? "??")
+                                    .contextMenu {
+                                        Button(action: {
+                                            deleteMenu.toggle()
+                                            context.delete(menu)
+                                            try? context.save()
+                                        }) {
+                                            Text("Delete")
+                                            Image(systemName: "trash")
+                                        }
+                                    }
                             }
                         }
                     }
@@ -26,7 +64,7 @@ struct MenusListView: View {
                     Text("No Menus Found...")
                 }
             }
-        }
+        }.navigationTitle("Your Cocktail Menus")
     }
     
     func deleteMenuItems() {

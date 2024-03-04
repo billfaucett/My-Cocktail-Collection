@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MenuDetailView: View {
     @Environment(\.managedObjectContext) var context
+    @Environment(\.dismiss) private var dismiss
     @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
     @State var addNewDrink = false
     var menu: Menu?
@@ -16,6 +17,15 @@ struct MenuDetailView: View {
     var body: some View {
         Section {
             VStack {
+                VStack {
+                    HStack {
+                        Button("Close"){
+                            dismiss()
+                        }
+                        .padding(.horizontal)
+                        Spacer()
+                    }
+                }
                 Text("Menu Details")
                     .font(.title)
                     .padding()
@@ -27,12 +37,13 @@ struct MenuDetailView: View {
                 }
                 Spacer()
                 Divider()
-                Button("Add Cocktail to Menu") {
+                Button("Add Cocktail") {
                     addNewDrink = true
                 }
                 .sheet(isPresented: $addNewDrink){
                     AddMenuItemView(menu: menu)
                 }
+                Divider()
                 MenuItemListView(menu: menu)
                 Spacer()
                 Divider()

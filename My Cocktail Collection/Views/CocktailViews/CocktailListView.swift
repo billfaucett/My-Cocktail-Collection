@@ -52,7 +52,7 @@ struct CocktailListView: View {
                         }
                     }
                 }
-                .padding()
+                .padding(.horizontal)
                 
                 Divider()
                 HStack{
