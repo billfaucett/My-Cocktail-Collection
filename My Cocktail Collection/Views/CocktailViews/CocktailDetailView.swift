@@ -57,11 +57,13 @@ struct CocktailDetailView: View {
                         Image(uiImage: uiImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
+                            .scaledToFit()
                             .frame(width: 200, height: 200)
                     } else {
-                        Image("whiskey")
+                        Image("martini")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
+                            .scaledToFit()
                             .frame(width: 200, height: 200)
                     }
                     if let base = drink.baseSpirit {

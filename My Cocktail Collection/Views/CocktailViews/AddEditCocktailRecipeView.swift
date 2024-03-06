@@ -21,6 +21,7 @@ struct AddEditCocktailRecipeView: View {
     @State private var method: String = ""
     @State private var isSaved = false
     @State private var selectedImage: UIImage?
+    @State private var displayImage: UIImage?
     @State private var showImagePicker = false
     @State private var addSpirit = false
     
@@ -78,16 +79,44 @@ struct AddEditCocktailRecipeView: View {
                                     .font(.caption)
                                 Spacer()
                             } .padding(.horizontal)
-                            TextField("Drink Name", text: $drinkName)
-                                .padding(.horizontal)
-                                .onTapGesture {
-                                    hideKeyboard()
-                                }
-                                .onAppear {
-                                    if let drink = drink {
-                                        drinkName = drink.drinkName!
+                            HStack {
+                                TextField("Drink Name", text: $drinkName)
+                                    .padding(.horizontal)
+                                    .onTapGesture {
+                                        hideKeyboard()
                                     }
+                                    .onAppear {
+                                        if let drink = drink {
+                                            drinkName = drink.drinkName!
+                                        }
+                                    }
+                                VStack {
+                                    var img = setDisplayImage()
+                                    Button(action: {
+                                        showImagePicker.toggle()
+                                        img = selectedImage ?? UIImage()
+                                    }){
+                                        if let image = selectedImage {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 50, height: 50)
+                                                .padding(.horizontal)
+                                        } else {
+                                            Image(uiImage: img)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .scaledToFit()
+                                                .frame(width: 50, height: 50)
+                                                .padding(.horizontal)
+                                        }
+                                    }
+                                    Text("Touch to Change")
+                                    .font(.caption2)
+                                    .padding(.horizontal)
                                 }
+                            }
+                            Spacer()
                         }
                         HStack {
                             Text("Base Spirit")
@@ -153,43 +182,8 @@ struct AddEditCocktailRecipeView: View {
                                 }
                         }
                     }
-                    
-                    Section {
-                        VStack {
-                            HStack {
-                                Text("Add an Image")
-                                    .font(.caption)
-                                    .padding()
-                                Spacer()
-                                Button("Select Image") {
-                                    showImagePicker.toggle()
-                                }
-                                .padding()
-                            }
-                            if let image = selectedImage {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 200, height: 200, alignment: .center)
-                                    .padding()
-                            } else {
-                                if let drink = drink {
-                                    if let image = drink.image, let uiImage = UIImage(data: image) {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 200, height: 200)
-                                            .padding()
-                                    }
-                                } else {
-                                    Text("No Image Selected")
-                                        .font(.caption)
-                                }
-                            }
-                        }
-                        .sheet(isPresented: $showImagePicker) {
-                            ImagePicker(selectedImage: $selectedImage)
-                        }
+                    .sheet(isPresented: $showImagePicker) {
+                        ImagePicker(selectedImage: $selectedImage)
                     }
                 }
                 .onTapGesture {
@@ -197,6 +191,15 @@ struct AddEditCocktailRecipeView: View {
                 }
             }
             .navigationTitle(drink == nil ? "Add a New Cocktail" : "Edit Cocktail")
+        }
+    }
+    
+    func setDisplayImage() -> UIImage {
+        if let drink = drink, let uiImage = UIImage(data: drink.image ?? Data()) {
+            return uiImage
+        } else {
+            let image = UIImage(imageLiteralResourceName: "martini")
+            return image
         }
     }
     
@@ -218,7 +221,7 @@ struct AddEditCocktailRecipeView: View {
             drink.ingredients = ingredients
             drink.method = method
             if let image = selectedImage {
-                let resized = image.resized(to: CGSize(width: 300, height: 300))
+                _ = image.resized(to: CGSize(width: 300, height: 300))
                 drink.image = image.pngData()
             }
             try? context.save()

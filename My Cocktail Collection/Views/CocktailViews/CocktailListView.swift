@@ -81,11 +81,13 @@ struct CocktailListView: View {
                             if let image = drink.image, let uiImage = UIImage(data: image) {
                                 Image(uiImage: uiImage)
                                     .resizable()
+                                    .scaledToFit()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 50, height: 50)
                             } else {
-                                Image("whiskey", bundle: Bundle.main)
+                                Image("martini", bundle: Bundle.main)
                                     .resizable()
+                                    .scaledToFit()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 50, height: 50)
                             }
