@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import UIKit
 
 struct AddEditCocktailRecipeView: View {
     @Environment(\.managedObjectContext) var context
@@ -152,7 +153,8 @@ struct AddEditCocktailRecipeView: View {
                                 }
                         }
                     }
-                   /* Section {
+                    
+                    Section {
                         VStack {
                             HStack {
                                 Text("Add an Image")
@@ -171,14 +173,24 @@ struct AddEditCocktailRecipeView: View {
                                     .frame(width: 200, height: 200, alignment: .center)
                                     .padding()
                             } else {
-                                Text("No Image Selected")
-                                    .font(.caption)
+                                if let drink = drink {
+                                    if let image = drink.image, let uiImage = UIImage(data: image) {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 200, height: 200)
+                                            .padding()
+                                    }
+                                } else {
+                                    Text("No Image Selected")
+                                        .font(.caption)
+                                }
                             }
                         }
                         .sheet(isPresented: $showImagePicker) {
                             ImagePicker(selectedImage: $selectedImage)
                         }
-                    }*/
+                    }
                 }
                 .onTapGesture {
                     hideKeyboard()
@@ -206,6 +218,7 @@ struct AddEditCocktailRecipeView: View {
             drink.ingredients = ingredients
             drink.method = method
             if let image = selectedImage {
+                let resized = image.resized(to: CGSize(width: 300, height: 300))
                 drink.image = image.pngData()
             }
             try? context.save()
@@ -220,7 +233,8 @@ struct AddEditCocktailRecipeView: View {
         drink.ingredients = ingredients
         drink.method = method
         if let image = selectedImage {
-            drink.image = image.pngData()
+            let resized = image.resized(to: CGSize(width: 300, height: 300))
+            drink.image = resized.pngData()
         }
         try? context.save()
         dismiss()
@@ -234,3 +248,11 @@ struct AddCocktailRecipeView_Previews: PreviewProvider {
     }
 }
 
+extension UIImage {
+    func resized(to targetSize: CGSize) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            self.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+    }
+}

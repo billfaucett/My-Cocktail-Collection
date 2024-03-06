@@ -78,6 +78,17 @@ struct CocktailListView: View {
                 List(filteredDrinks()) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
+                            if let image = drink.image, let uiImage = UIImage(data: image) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 50, height: 50)
+                            } else {
+                                Image("whiskey", bundle: Bundle.main)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 50, height: 50)
+                            }
                             Text(drink.drinkName ?? "Unknown")
                                 .font(.headline)
                             Spacer()

@@ -53,6 +53,17 @@ struct CocktailDetailView: View {
                     Text(drink.drinkName ?? "")
                         .font(.title)
                         .padding()
+                    if let image = drink.image, let uiImage = UIImage(data: image) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 200, height: 200)
+                    } else {
+                        Image("whiskey")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 200, height: 200)
+                    }
                     if let base = drink.baseSpirit {
                         if let spirit = spirits.first(where: { $0.id == base }) {
                             Text("Base Spirit:")

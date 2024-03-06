@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8A0139A32B97D1820079F240 /* tropical.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A0139A02B97D1820079F240 /* tropical.png */; };
+		8A0139A42B97D1820079F240 /* lowball.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A0139A12B97D1820079F240 /* lowball.png */; };
+		8A0139A72B97D31A0079F240 /* martini-310425_1280.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A0139A52B97D31A0079F240 /* martini-310425_1280.png */; };
+		8A0139A82B97D31A0079F240 /* whiskey.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A0139A62B97D31A0079F240 /* whiskey.png */; };
 		8A82CF802B9672B90049096A /* MenuListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A82CF7F2B9672B90049096A /* MenuListRow.swift */; };
 		8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB706312B926F4D009A2EC3 /* MenuDetailView.swift */; };
 		8AC142A92B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142A82B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift */; };
@@ -51,6 +55,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		8A0139A02B97D1820079F240 /* tropical.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tropical.png; sourceTree = "<group>"; };
+		8A0139A12B97D1820079F240 /* lowball.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = lowball.png; sourceTree = "<group>"; };
+		8A0139A52B97D31A0079F240 /* martini-310425_1280.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "martini-310425_1280.png"; sourceTree = "<group>"; };
+		8A0139A62B97D31A0079F240 /* whiskey.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = whiskey.png; sourceTree = "<group>"; };
 		8A82CF7F2B9672B90049096A /* MenuListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuListRow.swift; sourceTree = "<group>"; };
 		8AB706312B926F4D009A2EC3 /* MenuDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuDetailView.swift; sourceTree = "<group>"; };
 		8AC142A52B8A6ACE002807F5 /* My Cocktail Collection.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "My Cocktail Collection.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -106,6 +114,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8A01399E2B97CFBF0079F240 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				8A0139A62B97D31A0079F240 /* whiskey.png */,
+				8A0139A12B97D1820079F240 /* lowball.png */,
+				8A0139A02B97D1820079F240 /* tropical.png */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		8AB706332B93C776009A2EC3 /* Menus */ = {
 			isa = PBXGroup;
 			children = (
@@ -154,6 +172,7 @@
 				8AC142DC2B8A7BB9002807F5 /* Views */,
 				8AC142DD2B8A7BDB002807F5 /* Data */,
 				8AC142AC2B8A6ACF002807F5 /* Assets.xcassets */,
+				8A0139A52B97D31A0079F240 /* martini-310425_1280.png */,
 				8AFAEA992B90E2F40000A087 /* IMG_6665.heic */,
 				8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */,
 				8AC142AE2B8A6ACF002807F5 /* Preview Content */,
@@ -193,6 +212,7 @@
 				8AFAEA9C2B912D1F0000A087 /* CocktailViews */,
 				8AFAEA9F2B912D8D0000A087 /* MenuViews */,
 				8AFAEA9D2B912D4F0000A087 /* SpiritViews */,
+				8A01399E2B97CFBF0079F240 /* Resources */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -348,8 +368,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8A0139A72B97D31A0079F240 /* martini-310425_1280.png in Resources */,
 				8AFAEA982B90E1B90000A087 /* Launch Screen.storyboard in Resources */,
+				8A0139A32B97D1820079F240 /* tropical.png in Resources */,
 				8AC142B02B8A6ACF002807F5 /* Preview Assets.xcassets in Resources */,
+				8A0139A42B97D1820079F240 /* lowball.png in Resources */,
+				8A0139A82B97D31A0079F240 /* whiskey.png in Resources */,
 				8AC142AD2B8A6ACF002807F5 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
