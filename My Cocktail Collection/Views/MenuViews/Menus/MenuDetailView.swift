@@ -10,7 +10,6 @@ import SwiftUI
 struct MenuDetailView: View {
     @Environment(\.managedObjectContext) var context
     @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
     @State var addNewDrink = false
     var menu: Menu?
     

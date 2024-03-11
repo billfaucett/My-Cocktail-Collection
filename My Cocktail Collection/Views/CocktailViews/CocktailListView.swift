@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct CocktailListView: View {
     @Environment(\.managedObjectContext) var context
@@ -101,7 +102,7 @@ struct CocktailListView: View {
             .navigationTitle("My Cocktail Collection")
         }
     }
-    
+        
     private func filteredDrinks() -> [Drink] {
         if let baseSpirit = selectedBaseSpirit {
             return drinks.filter { $0.baseSpirit == baseSpirit.id }
