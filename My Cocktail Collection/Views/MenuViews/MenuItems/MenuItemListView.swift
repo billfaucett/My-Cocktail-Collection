@@ -23,7 +23,7 @@ struct MenuItemListView: View {
             if myMenuItems.count > 1 {
                 HStack{
                     Spacer()
-                    Button ("Export") {
+                    Button ("Save") {
                         exportNotes(items: menuItems, menuName: menuName)
                     }
                     .padding(.horizontal)
@@ -56,7 +56,7 @@ struct MenuItemListView: View {
             let name = item.drink?.drinkName
             let ing = item.drink?.ingredients
             
-            let output = ("\(String(describing: name))/n\(ing ?? "")")
+            let output = ("\(name ?? "cocktail") - \(ing ?? "")")
             notes.append(output)
             notes.append("\n\n")
         }
@@ -73,7 +73,8 @@ struct MenuItemListView: View {
             }
         }
         
-        let note_directory = note_path.appendingPathComponent(menuName + ".txt")
+        let escapedMenuName = menuName.replacingOccurrences(of: "/", with: "")
+        let note_directory = note_path.appendingPathComponent(escapedMenuName + ".txt")
         
         print(note_directory.absoluteString)
         
