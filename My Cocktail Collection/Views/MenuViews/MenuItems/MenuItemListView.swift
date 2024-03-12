@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct MenuItemListView: View {
     @Environment(\.managedObjectContext) var context
     @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
+    @State private var isSaved = false
     var menu: Menu?
     
     var body: some View {
@@ -27,6 +29,11 @@ struct MenuItemListView: View {
                         exportNotes(items: menuItems, menuName: menuName)
                     }
                     .padding(.horizontal)
+                    .alert(isPresented: $isSaved) {
+                        Alert(title: Text("Menu Saved"),
+                        message: Text("Your Menu was saved to the Menus folder."),
+                        dismissButton: .default(Text("OK")))
+                    }
                 }
             }
         
@@ -83,14 +90,17 @@ struct MenuItemListView: View {
             print("menu saved")
             let input = try String(contentsOf: note_directory)
             print(input)
-            openFile(fileDir: note_directory)
+            isSaved = true
+            //openFile(fileDir: note_directory)
         } catch {
             print("Error saving file \(error)")
         }
     }
     
     func openFile(fileDir: URL) {
-        UIApplication.shared.open(fileDir)
+        let interactionController = UIDocumentInteractionController(url: fileDir)
+                interactionController.delegate = UIApplication.shared.delegate as? UIDocumentInteractionControllerDelegate
+                interactionController.presentOpenInMenu(from: .zero, in: UIApplication.shared.windows.first!, animated: true)
     }
 }
 
