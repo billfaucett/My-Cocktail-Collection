@@ -54,15 +54,15 @@ struct MenuItemListView: View {
         
         for item in items {
             let name = item.drink?.drinkName
-            let ing = item.drink?.ingredients
+            let ingredientList = item.drink?.ingredients
             
-            let output = ("\(name ?? "cocktail") - \(ing ?? "")")
+            let output = ("\(name ?? "cocktail") - \(ingredientList ?? "")")
             notes.append(output)
             notes.append("\n\n")
         }
         
         let note_path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("directory", isDirectory: true)
+            .appendingPathComponent("Menus", isDirectory: true)
         
         if !FileManager.default.fileExists(atPath: note_path.path) {
             do {
