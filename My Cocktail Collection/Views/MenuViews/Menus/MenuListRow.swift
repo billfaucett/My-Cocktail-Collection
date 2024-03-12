@@ -36,13 +36,6 @@ struct MenuListRow: View {
                     }
                 Spacer()
             }
-            /*let menuItems = menuItems.filter({ $0.menu == menu })
-            if !menuItems.isEmpty {
-                List(menuItems) { item in
-                    Text(item.drink?.drinkName ?? "drink")
-                        .font(.caption)
-                }
-            }*/
         }
     }
 }

@@ -29,6 +29,7 @@
 		8AC142E72B8D52CB002807F5 /* AddEditSpirit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */; };
 		8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E82B8D57AD002807F5 /* SpiritListView.swift */; };
 		8AC142EB2B8F98D9002807F5 /* CocktailDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */; };
+		8AC369D32BA0E2E000516C03 /* My-Cocktail-Collection-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8AC369D22BA0E2E000516C03 /* My-Cocktail-Collection-Info.plist */; };
 		8AFAEA962B90D17C0000A087 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEA952B90D17C0000A087 /* ImagePicker.swift */; };
 		8AFAEA982B90E1B90000A087 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */; };
 		8AFAEAA12B912DC10000A087 /* AddEditMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA02B912DC10000A087 /* AddEditMenuView.swift */; };
@@ -38,13 +39,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		8AC142B62B8A6ACF002807F5 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8AC1429D2B8A6ACE002807F5 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8AC142A42B8A6ACE002807F5;
-			remoteInfo = "My Cocktail Collection";
-		};
 		8AC142C02B8A6ACF002807F5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8AC1429D2B8A6ACE002807F5 /* Project object */;
@@ -80,6 +74,7 @@
 		8AC142E62B8D52CB002807F5 /* AddEditSpirit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditSpirit.swift; sourceTree = "<group>"; };
 		8AC142E82B8D57AD002807F5 /* SpiritListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpiritListView.swift; sourceTree = "<group>"; };
 		8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailDetailView.swift; sourceTree = "<group>"; };
+		8AC369D22BA0E2E000516C03 /* My-Cocktail-Collection-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "My-Cocktail-Collection-Info.plist"; sourceTree = "<group>"; };
 		8AFAEA952B90D17C0000A087 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		8AFAEA972B90E1B90000A087 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		8AFAEA992B90E2F40000A087 /* IMG_6665.heic */ = {isa = PBXFileReference; lastKnownFileType = file; path = IMG_6665.heic; sourceTree = "<group>"; };
@@ -167,6 +162,7 @@
 		8AC142A72B8A6ACE002807F5 /* My Cocktail Collection */ = {
 			isa = PBXGroup;
 			children = (
+				8AC369D22BA0E2E000516C03 /* My-Cocktail-Collection-Info.plist */,
 				8AC142A82B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift */,
 				8AFAEA9E2B912D750000A087 /* ViewUtilities */,
 				8AC142DC2B8A7BB9002807F5 /* Views */,
@@ -295,7 +291,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				8AC142B72B8A6ACF002807F5 /* PBXTargetDependency */,
 			);
 			name = "My Cocktail CollectionTests";
 			productName = "My Cocktail CollectionTests";
@@ -374,6 +369,7 @@
 				8AC142B02B8A6ACF002807F5 /* Preview Assets.xcassets in Resources */,
 				8A0139A42B97D1820079F240 /* lowball.png in Resources */,
 				8A0139A82B97D31A0079F240 /* whiskey.png in Resources */,
+				8AC369D32BA0E2E000516C03 /* My-Cocktail-Collection-Info.plist in Resources */,
 				8AC142AD2B8A6ACF002807F5 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -440,11 +436,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		8AC142B72B8A6ACF002807F5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8AC142A42B8A6ACE002807F5 /* My Cocktail Collection */;
-			targetProxy = 8AC142B62B8A6ACF002807F5 /* PBXContainerItemProxy */;
-		};
 		8AC142C12B8A6ACF002807F5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 8AC142A42B8A6ACE002807F5 /* My Cocktail Collection */;
@@ -583,8 +574,10 @@
 				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "My-Cocktail-Collection-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Cocktail Collection";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -616,8 +609,10 @@
 				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "My-Cocktail-Collection-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Cocktail Collection";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

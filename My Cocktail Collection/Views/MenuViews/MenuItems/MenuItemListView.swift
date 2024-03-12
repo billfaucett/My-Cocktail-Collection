@@ -10,12 +10,12 @@ import SwiftUI
 struct MenuItemListView: View {
     @Environment(\.managedObjectContext) var context
     @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
-    @State var menuNotesText: String = "This will hold the menu items for notes"
     var menu: Menu?
     
     var body: some View {
         VStack {
-            Text("Menu: \(menu?.menuName ?? "None")")
+            let menuName = menu?.menuName ?? "None"
+            Text("Menu: \(menuName)")
             Text("Number of Cocktails: \(String(menuItems.count))")
                 .font(.caption2)
             let myMenuItems = menuItems.filter({ $0.menu == menu })
@@ -24,7 +24,7 @@ struct MenuItemListView: View {
                 HStack{
                     Spacer()
                     Button ("Export") {
-                        exportNotes(items: menuItems)
+                        exportNotes(items: menuItems, menuName: menuName)
                     }
                     .padding(.horizontal)
                 }
@@ -45,8 +45,13 @@ struct MenuItemListView: View {
         }
     }
     
-    func exportNotes(items: FetchedResults<MenuItem>) {
+    func exportNotes(items: FetchedResults<MenuItem>, menuName: String) {
         var notes =  ""
+        print(menuName)
+        if #available(iOS 16.0, *) {
+            print("Doc Dir: \(URL.documentsDirectory)")
+        }
+        
         for item in items {
             let name = item.drink?.drinkName
             let ing = item.drink?.ingredients
@@ -56,19 +61,35 @@ struct MenuItemListView: View {
             notes.append("\n\n")
         }
         
-        if let notesURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("menu_items.txt") {
+        let note_path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("directory", isDirectory: true)
+        
+        if !FileManager.default.fileExists(atPath: note_path.path) {
             do {
-                try notes.write(to: notesURL, atomically: true, encoding: .utf8)
-                print(notes)
-                let interactController = UIDocumentInteractionController(url: notesURL)
-                interactController.presentOptionsMenu(from: CGRect.zero, in: UIApplication.shared.keyWindow!.rootViewController!.view, animated: true)
-
+                try FileManager.default.createDirectory(at: note_path, withIntermediateDirectories: true, attributes: nil)
+                print("Directory created successfully")
             } catch {
-                print("Failed: \(error)")
+                print("Error creating Directory: \(error)")
             }
-        } else {
-            print("Failed to get directory URL")
         }
+        
+        let note_directory = note_path.appendingPathComponent(menuName + ".txt")
+        
+        print(note_directory.absoluteString)
+        
+        do {
+            try notes.write(to: note_directory, atomically: true, encoding: .utf8)
+            print("menu saved")
+            let input = try String(contentsOf: note_directory)
+            print(input)
+            openFile(fileDir: note_directory)
+        } catch {
+            print("Error saving file \(error)")
+        }
+    }
+    
+    func openFile(fileDir: URL) {
+        UIApplication.shared.open(fileDir)
     }
 }
 
