@@ -30,7 +30,7 @@ struct MenuItemListView: View {
             if myMenuItems.count > 1 {
                 HStack{
                     Spacer()
-                    Button ("Save As Text") {
+                    Button ("Save To Files") {
                         exportNotes(items: menuItems, menuName: menuName)
                     }
                     .padding(.horizontal)
@@ -38,24 +38,6 @@ struct MenuItemListView: View {
                         Alert(title: Text("Menu Saved"),
                         message: Text("Your Menu was saved to \(filePath)."),
                         dismissButton: .default(Text("OK")))
-                    }
-                    Spacer()
-                    Button("Browse") {
-                        if #available(iOS 16.0, *) {
-                            openFile(fileDir: URL.documentsDirectory)
-                        } else {
-                            print("no can do kimosabe")
-                        }
-                    }
-                    .padding(.horizontal)
-                    .sheet(isPresented: $browse) {
-                        if #available(iOS 16.0, *) {
-                            DocPicker(url: URL.documentsDirectory)
-                        } else {
-                            let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-                            let documentsURL = paths[0] as NSURL
-                            DocPicker(url: documentsURL as URL)
-                        }
                     }
                 }
             }

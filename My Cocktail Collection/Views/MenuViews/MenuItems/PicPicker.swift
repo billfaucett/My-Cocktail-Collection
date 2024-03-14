@@ -14,7 +14,7 @@ struct PicPicker: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {
-    
+        //not implemented
     }
 }
 
@@ -28,7 +28,7 @@ struct DocPicker : UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
-    
+        //not implemented
     }
 }
     
