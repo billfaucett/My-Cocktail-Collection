@@ -17,6 +17,7 @@ struct ContentView: View {
     @State var isMenuSelected = false
     @State var viewSpirits = false
     @State var viewMenus = false
+    @State var viewInFiles =  false
     
     let billsFaves = ["Cherry Bourbon Sour", "Blood Orange Margarita", "Irish Whiskey Sour", "Ranch Water", "Chocolate Peanutbutter Sundae", "Bourbon Renewal"]
     @State var areFavesAdded = false
@@ -55,6 +56,9 @@ struct ContentView: View {
                                 Button("Create a Menu") {
                                     createMenu = true
                                 }
+                                Button("View Saved Files") {
+                                    viewInFiles.toggle()
+                                }
                                 Button("Delete Menu Data"){
                                     DataController().deleteStuff(context: context)
                                 }
@@ -90,6 +94,16 @@ struct ContentView: View {
         }
         .sheet(isPresented: $createMenu) {
             AddEditMenuView()
+        }
+        .sheet(isPresented: $viewInFiles) {
+            if #available(iOS 16.0, *) {
+                DocPicker(url: URL.documentsDirectory)
+            }
+            else {
+                let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+                let documentsURL = paths[0] as NSURL
+                DocPicker(url: documentsURL as URL)
+            }
         }
     }
 }

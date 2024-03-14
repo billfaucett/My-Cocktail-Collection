@@ -10,8 +10,13 @@ import UIKit
 
 struct MenuItemListView: View {
     @Environment(\.managedObjectContext) var context
+    @Environment(\.dismiss) private var dismiss
     @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
     @State private var isSaved = false
+    @State private var dismissView = false
+    @State private var filePath = "Files/Cocktail Collection/Menus"
+    @State private var browse = false
+    
     var menu: Menu?
     
     var body: some View {
@@ -25,14 +30,32 @@ struct MenuItemListView: View {
             if myMenuItems.count > 1 {
                 HStack{
                     Spacer()
-                    Button ("Save") {
+                    Button ("Save As Text") {
                         exportNotes(items: menuItems, menuName: menuName)
                     }
                     .padding(.horizontal)
                     .alert(isPresented: $isSaved) {
                         Alert(title: Text("Menu Saved"),
-                        message: Text("Your Menu was saved to the Menus folder."),
+                        message: Text("Your Menu was saved to \(filePath)."),
                         dismissButton: .default(Text("OK")))
+                    }
+                    Spacer()
+                    Button("Browse") {
+                        if #available(iOS 16.0, *) {
+                            openFile(fileDir: URL.documentsDirectory)
+                        } else {
+                            print("no can do kimosabe")
+                        }
+                    }
+                    .padding(.horizontal)
+                    .sheet(isPresented: $browse) {
+                        if #available(iOS 16.0, *) {
+                            DocPicker(url: URL.documentsDirectory)
+                        } else {
+                            let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+                            let documentsURL = paths[0] as NSURL
+                            DocPicker(url: documentsURL as URL)
+                        }
                     }
                 }
             }
@@ -56,7 +79,7 @@ struct MenuItemListView: View {
         var notes =  ""
         print(menuName)
         if #available(iOS 16.0, *) {
-            print("Doc Dir: \(URL.documentsDirectory)")
+            print("Doc Dir: \(URL.documentsDirectory.absoluteString)")
         }
         
         for item in items {
@@ -91,16 +114,15 @@ struct MenuItemListView: View {
             let input = try String(contentsOf: note_directory)
             print(input)
             isSaved = true
-            //openFile(fileDir: note_directory)
         } catch {
             print("Error saving file \(error)")
         }
     }
     
     func openFile(fileDir: URL) {
-        let interactionController = UIDocumentInteractionController(url: fileDir)
-                interactionController.delegate = UIApplication.shared.delegate as? UIDocumentInteractionControllerDelegate
-                interactionController.presentOpenInMenu(from: .zero, in: UIApplication.shared.windows.first!, animated: true)
+        //let doc = UIDocument(fileURL: fileDir)
+        //try? doc.load(fromContents: fileDir, ofType: ".txt")
+        browse = true
     }
 }
 
