@@ -16,6 +16,7 @@ struct CocktailListView: View {
     @State private var searchText = ""
     @State private var isSearching = false
     @State var addDrink = false
+    @State var sendMessage = false
     var isPreview = false
     
     var body: some View {
@@ -95,6 +96,13 @@ struct CocktailListView: View {
                             Text(drink.drinkName ?? "Unknown")
                                 .font(.headline)
                                 .swipeActions {
+                                    /*Button("Share") {
+                                        sendMessage = true
+                                    }
+                                    .sheet(isPresented: $sendMessage) {
+                                        MessageComposer(isShowing: $sendMessage, cocktailName: drink.drinkName!, ingredients: drink.ingredients!, method: drink.method!)
+                                    }
+                                    .tint(.blue)*/
                                     Button("Delete") {
                                         context.delete(drink)
                                         try? context.save()
