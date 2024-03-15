@@ -94,6 +94,13 @@ struct CocktailListView: View {
                             }
                             Text(drink.drinkName ?? "Unknown")
                                 .font(.headline)
+                                .swipeActions {
+                                    Button("Delete") {
+                                        context.delete(drink)
+                                        try? context.save()
+                                    }
+                                    .tint(.red)
+                                }
                             Spacer()
                         }
                     }

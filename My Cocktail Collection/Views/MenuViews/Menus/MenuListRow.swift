@@ -24,6 +24,17 @@ struct MenuListRow: View {
                 Text(menu?.menuName ?? "this is a menu name")
                     .padding()
                     .font(.headline)
+                    .swipeActions {
+                        Button(action: {
+                            deleteMenu.toggle()
+                            context.delete(menu!)
+                            try? context.save()
+                        }) {
+                            Text("Delete")
+                            Image(systemName: "trash")
+                        }
+                        .tint(.red)
+                    }
                     .contextMenu {
                         Button(action: {
                             deleteMenu.toggle()

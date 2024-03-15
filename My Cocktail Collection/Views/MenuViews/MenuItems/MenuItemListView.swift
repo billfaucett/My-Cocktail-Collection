@@ -15,7 +15,6 @@ struct MenuItemListView: View {
     @State private var isSaved = false
     @State private var dismissView = false
     @State private var filePath = "Files/Cocktail Collection/Menus"
-    @State private var browse = false
     
     var menu: Menu?
     
@@ -25,7 +24,7 @@ struct MenuItemListView: View {
             Text("Menu: \(menuName)")
             Text("Number of Cocktails: \(String(menuItems.count))")
                 .font(.caption2)
-            let myMenuItems = menuItems.filter({ $0.menu == menu })
+            var myMenuItems = menuItems.filter({ $0.menu == menu })
             
             if myMenuItems.count > 1 {
                 HStack{
@@ -52,6 +51,13 @@ struct MenuItemListView: View {
                         .padding()
                         .lineLimit(nil)
                         .fixedSize(horizontal: true, vertical: false)
+                        .swipeActions {
+                            Button("Delete") {
+                                context.delete(item)
+                                try? context.save()
+                            }
+                            .tint(.red)
+                        }
                 }
             }
         }
@@ -99,12 +105,6 @@ struct MenuItemListView: View {
         } catch {
             print("Error saving file \(error)")
         }
-    }
-    
-    func openFile(fileDir: URL) {
-        //let doc = UIDocument(fileURL: fileDir)
-        //try? doc.load(fromContents: fileDir, ofType: ".txt")
-        browse = true
     }
 }
 
