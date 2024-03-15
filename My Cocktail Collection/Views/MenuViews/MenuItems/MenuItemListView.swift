@@ -24,7 +24,7 @@ struct MenuItemListView: View {
             Text("Menu: \(menuName)")
             Text("Number of Cocktails: \(String(menuItems.count))")
                 .font(.caption2)
-            var myMenuItems = menuItems.filter({ $0.menu == menu })
+            let myMenuItems = menuItems.filter({ $0.menu == menu })
             
             if myMenuItems.count > 1 {
                 HStack{
