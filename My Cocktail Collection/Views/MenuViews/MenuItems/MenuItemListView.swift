@@ -50,7 +50,6 @@ struct MenuItemListView: View {
                     Text(item.drink?.ingredients ?? "")
                         .padding()
                         .lineLimit(nil)
-                        .fixedSize(horizontal: true, vertical: false)
                         .swipeActions {
                             Button("Delete") {
                                 context.delete(item)
