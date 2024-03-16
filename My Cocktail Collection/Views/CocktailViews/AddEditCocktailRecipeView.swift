@@ -152,6 +152,11 @@ struct AddEditCocktailRecipeView: View {
                                 }
                             }
                             .padding(.horizontal)
+                            .onAppear {
+                                if let drink = drink {
+                                    ratingValue = drink.rating
+                                }
+                            }
                         }
                     }
                     Spacer()
