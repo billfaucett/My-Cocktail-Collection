@@ -24,6 +24,7 @@ struct AddEditCocktailRecipeView: View {
     @State private var displayImage: UIImage?
     @State private var showImagePicker = false
     @State private var addSpirit = false
+    @State var ratingValue: Int16 = 0
     
     var drink: Drink?
     
@@ -137,6 +138,21 @@ struct AddEditCocktailRecipeView: View {
                                 AddEditSpirit()
                             }
                         }.padding()
+                        HStack {
+                            Text("Cocktail Rating")
+                                .font(.caption)
+                                .padding(.horizontal)
+                            Spacer()
+                            let ratingOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                            Picker(selection: $ratingValue, label: Text("Add Rating")) {
+                                Text("Add Rating")
+                                    .tag(nil as Int16?)
+                                ForEach(ratingOptions.indices, id: \.self) { index in
+                                    Text(String(ratingOptions[index])) .tag(Int16(ratingOptions[index]) as Int16)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
                     }
                     Spacer()
                     Section {
@@ -220,6 +236,7 @@ struct AddEditCocktailRecipeView: View {
             drink.source = Int16(selectedSource)
             drink.ingredients = ingredients
             drink.method = method
+            drink.rating = ratingValue
             if let image = selectedImage {
                 _ = image.resized(to: CGSize(width: 300, height: 300))
                 drink.image = image.pngData()
@@ -235,6 +252,7 @@ struct AddEditCocktailRecipeView: View {
         drink.baseSpirit = selectedBaseSpirit?.id
         drink.ingredients = ingredients
         drink.method = method
+        drink.rating = ratingValue
         if let image = selectedImage {
             let resized = image.resized(to: CGSize(width: 300, height: 300))
             drink.image = resized.pngData()

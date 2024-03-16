@@ -53,6 +53,13 @@ struct CocktailDetailView: View {
                     Text(drink.drinkName ?? "")
                         .font(.title)
                         .padding()
+                    if drink.rating > 0 {
+                        HStack {
+                            Text("Drink Rating:")
+                            Text("\(drink.rating)")
+                                .padding(.horizontal)
+                        }
+                    }
                     if let image = drink.image, let uiImage = UIImage(data: image) {
                         Image(uiImage: uiImage)
                             .resizable()
@@ -127,6 +134,7 @@ struct CocktailDetailView_Previews: PreviewProvider {
         drink.drinkName = "Mocktail"
         drink.ingredients = "Ingredient 1, Ingredient 2"
         drink.method = "Mix ingredients and serve chilled."
+        drink.rating = 9
         
         // Add mock data for spirits
         let spirit = Spirit(context: context)
