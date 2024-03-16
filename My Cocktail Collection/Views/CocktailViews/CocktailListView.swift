@@ -109,6 +109,11 @@ struct CocktailListView: View {
                                     }
                                     .tint(.red)
                                 }
+                            if drink.rating > 0 {
+                                let rate = String(drink.rating)
+                                Text("Rating: \(rate)")
+                                    .font(.caption)
+                            }
                             Spacer()
                         }
                     }
@@ -147,9 +152,11 @@ struct CocktailListView_Previews: PreviewProvider {
         let drink1 = Drink(context: context)
         drink1.drinkName = "Mojito"
         drink1.baseSpirit = spirit1.id
+        drink1.rating = 10
         let drink2 = Drink(context: context)
         drink2.drinkName = "Cosmopolitan"
         drink2.baseSpirit = spirit2.id
+        drink2.rating = 5
         
         try? context.save()
         
