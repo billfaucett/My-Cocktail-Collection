@@ -17,6 +17,7 @@ struct CocktailListView: View {
     @State private var isSearching = false
     @State var addDrink = false
     @State var sendMessage = false
+    @State var showAlert = false
     var isPreview = false
     
     var body: some View {
@@ -96,18 +97,21 @@ struct CocktailListView: View {
                             Text(drink.drinkName ?? "Unknown")
                                 .font(.headline)
                                 .swipeActions {
-                                    /*Button("Share") {
-                                        sendMessage = true
-                                    }
-                                    .sheet(isPresented: $sendMessage) {
-                                        MessageComposer(isShowing: $sendMessage, cocktailName: drink.drinkName!, ingredients: drink.ingredients!, method: drink.method!)
-                                    }
-                                    .tint(.blue)*/
                                     Button("Delete") {
-                                        context.delete(drink)
-                                        try? context.save()
+                                        showAlert = true
                                     }
                                     .tint(.red)
+                                }
+                                .alert(isPresented: $showAlert) {
+                                    Alert (
+                                        title: Text("Confrim Delete"),
+                                        message: Text("Are you sure you want to delete this coctail?"),
+                                        primaryButton: .destructive(Text("Delete")) {
+                                            context.delete(drink)
+                                            try? context.save()
+                                        },
+                                        secondaryButton: .cancel()
+                                    )
                                 }
                             if drink.rating > 0 {
                                 let rate = String(drink.rating)
