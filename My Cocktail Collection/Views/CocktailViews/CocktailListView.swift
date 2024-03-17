@@ -137,8 +137,7 @@ struct CocktailListView: View {
                                     )
                                 }
                             if drink.rating > 0 {
-                                let rate = String(drink.rating)
-                                Text("Rating: \(rate)")
+                                StarRatingView(rating: getRatingStars(rating: drink.rating))
                                     .font(.caption)
                             }
                             Spacer()
@@ -171,6 +170,10 @@ struct CocktailListView: View {
         case .rating:
             return drink1.rating > drink2.rating
         }
+    }
+    
+    private func getRatingStars(rating: Int16) -> Double {
+        return Double(rating / 2)
     }
 }
 

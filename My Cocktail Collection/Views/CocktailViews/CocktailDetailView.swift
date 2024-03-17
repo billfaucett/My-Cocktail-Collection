@@ -56,7 +56,7 @@ struct CocktailDetailView: View {
                     if drink.rating > 0 {
                         HStack {
                             Text("Drink Rating:")
-                            Text("\(drink.rating)")
+                            StarRatingView(rating: getRatingStars(rating: drink.rating))
                                 .padding(.horizontal)
                         }
                     }
@@ -121,6 +121,10 @@ struct CocktailDetailView: View {
             }
         }
         .id(refreshId)
+    }
+    
+    private func getRatingStars(rating: Int16) -> Double {
+        return Double(rating / 2)
     }
 }
 
