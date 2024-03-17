@@ -18,18 +18,26 @@ struct CocktailListView: View {
     @State var addDrink = false
     @State var sendMessage = false
     @State var showAlert = false
+    @State private var selectedSortOption = SortingOption.name
     var isPreview = false
     
     var body: some View {
         NavigationView{
             VStack {
-                Text("Filter by Base Spirit")
-                    .font(.caption)
-                Picker ("Selected Base Spirit", selection: $selectedBaseSpirit) {
-                    Text("Show All").tag(nil as Spirit?)
-                    ForEach(spirits) { spirit in
-                        Text(spirit.spiritName ?? "")
-                            .tag(spirit as Spirit?)
+                VStack {
+                    HStack {
+                        VStack{
+                            Text("Filter by Base Spirit")
+                                .font(.caption)
+                            Picker ("Selected Base Spirit", selection: $selectedBaseSpirit) {
+                                Text("Show All").tag(nil as Spirit?)
+                                ForEach(spirits) { spirit in
+                                    Text(spirit.spiritName ?? "")
+                                        .tag(spirit as Spirit?)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
                 
@@ -78,7 +86,22 @@ struct CocktailListView: View {
                 }
                 .frame(height: 25)
                 Divider()
-                List(filteredDrinks()) { drink in
+                HStack {
+                    Spacer()
+                    Text("Sort By")
+                        .font(.caption)
+                        .padding(.horizontal)
+                    Picker("Sort Cocktails", selection: $selectedSortOption) {
+                        ForEach(SortingOption.allCases, id: \.self) { option in
+                            Text(option.rawValue)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                }
+                .frame(height: 25)
+                Divider()
+                List(filteredDrinks().sorted(by: sortingComparator)) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
                             if let image = drink.image, let uiImage = UIImage(data: image) {
@@ -105,7 +128,7 @@ struct CocktailListView: View {
                                 .alert(isPresented: $showAlert) {
                                     Alert (
                                         title: Text("Confrim Delete"),
-                                        message: Text("Are you sure you want to delete this coctail?"),
+                                        message: Text("Are you sure you want to delete this cocktail?"),
                                         primaryButton: .destructive(Text("Delete")) {
                                             context.delete(drink)
                                             try? context.save()
@@ -140,6 +163,20 @@ struct CocktailListView: View {
             return Array(drinks)
         }
     }
+    
+    private func sortingComparator(_ drink1: Drink, _ drink2: Drink) -> Bool {
+        switch selectedSortOption {
+        case .name:
+            return drink1.drinkName ?? "" < drink2.drinkName ?? ""
+        case .rating:
+            return drink1.rating > drink2.rating
+        }
+    }
+}
+
+enum SortingOption: String, CaseIterable {
+    case name = "Name"
+    case rating = "Rating"
 }
 
 struct CocktailListView_Previews: PreviewProvider {
