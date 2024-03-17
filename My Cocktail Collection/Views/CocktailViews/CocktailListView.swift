@@ -173,7 +173,9 @@ struct CocktailListView: View {
     }
     
     private func getRatingStars(rating: Int16) -> Double {
-        return Double(rating) / 2.0
+        let ratingToReturn = Double(rating) / 2.0
+        print(String(ratingToReturn))
+        return ratingToReturn
     }
 }
 
