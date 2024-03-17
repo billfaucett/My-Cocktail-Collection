@@ -21,8 +21,6 @@ struct StarRatingView: View {
                 } else if Double(index) - 0.5 == rating {
                     Image(systemName: "star.leadinghalf.fill")
                         .foregroundColor(.yellow)
-                    Image(systemName: "star.trailinghalf.fill")
-                        .foregroundColor(.yellow)
                 } else {
                     Image(systemName: "star")
                         .foregroundColor(.yellow)
