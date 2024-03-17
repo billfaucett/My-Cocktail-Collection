@@ -26,7 +26,7 @@ struct CocktailListView: View {
             VStack {
                 VStack {
                     HStack {
-                        VStack{
+                        HStack{
                             Text("Filter by Base Spirit")
                                 .font(.caption)
                             Picker ("Selected Base Spirit", selection: $selectedBaseSpirit) {
@@ -38,6 +38,7 @@ struct CocktailListView: View {
                             }
                         }
                         .padding(.horizontal)
+                        .frame(height: 25)
                     }
                 }
                 
@@ -67,8 +68,24 @@ struct CocktailListView: View {
                     }
                 }
                 .padding(.horizontal)
-                
                 Divider()
+                
+                HStack {
+                    Spacer()
+                    Text("Sort By")
+                        .font(.caption)
+                        .padding(.horizontal)
+                    Picker("Sort Cocktails", selection: $selectedSortOption) {
+                        ForEach(SortingOption.allCases, id: \.self) { option in
+                            Text(option.rawValue)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                }
+                .frame(height: 25)
+                Divider()
+                
                 HStack{
                     Text("Add new cocktail")
                         .padding()
@@ -86,21 +103,7 @@ struct CocktailListView: View {
                 }
                 .frame(height: 25)
                 Divider()
-                HStack {
-                    Spacer()
-                    Text("Sort By")
-                        .font(.caption)
-                        .padding(.horizontal)
-                    Picker("Sort Cocktails", selection: $selectedSortOption) {
-                        ForEach(SortingOption.allCases, id: \.self) { option in
-                            Text(option.rawValue)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
-                }
-                .frame(height: 25)
-                Divider()
+                
                 List(filteredDrinks().sorted(by: sortingComparator)) { drink in
                     NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
                         HStack {
