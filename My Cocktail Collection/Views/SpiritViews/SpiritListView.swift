@@ -17,12 +17,22 @@ struct SpiritListView: View {
         NavigationView{
             VStack {
                 HStack {
+                    Button("Close") {
+                        dismiss()
+                    }
                     Spacer()
                     Button("Add New Spirit") {
                         showAddNewSpirit = true
                     }
                 }
                 .padding()
+                Divider()
+                
+                VStack {
+                    Text("Base Spirits")
+                        .font(.title)
+                    Divider()
+                }
                 
                 List(spirits) { spirit in
                     HStack {

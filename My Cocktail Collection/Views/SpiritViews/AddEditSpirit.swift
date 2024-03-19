@@ -20,11 +20,15 @@ struct AddEditSpirit: View {
         NavigationView {
             VStack{
                 HStack {
+                    Button("Close") {
+                        dismiss()
+                    }
+                    .padding()
+                    
                     Spacer()
                     Button("Save") {
                         saveSpirit()
                     }
-                    .padding()
                     .padding()
                 }
                 HStack{
