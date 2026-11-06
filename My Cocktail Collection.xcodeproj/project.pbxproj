@@ -38,6 +38,9 @@
 		8AFAEAA32B9135590000A087 /* AddMenuItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */; };
 		8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA42B913F100000A087 /* MenuItemListView.swift */; };
 		8AFAEAA72B91442C0000A087 /* MenusListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA62B91442C0000A087 /* MenusListView.swift */; };
+		A7C0FFEE0000000000000003 /* Inventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C0FFEE0000000000000002 /* Inventory.swift */; };
+		B0771E000000000000000003 /* InventoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000002 /* InventoryListView.swift */; };
+		B0771E000000000000000005 /* AddEditBottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000004 /* AddEditBottleView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +89,10 @@
 		8AFAEAA22B9135590000A087 /* AddMenuItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMenuItemView.swift; sourceTree = "<group>"; };
 		8AFAEAA42B913F100000A087 /* MenuItemListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuItemListView.swift; sourceTree = "<group>"; };
 		8AFAEAA62B91442C0000A087 /* MenusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenusListView.swift; sourceTree = "<group>"; };
+		A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2.xcdatamodel"; sourceTree = "<group>"; };
+		A7C0FFEE0000000000000002 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
+		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
+		B0771E000000000000000004 /* AddEditBottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditBottleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -212,6 +219,7 @@
 				8AFAEA9C2B912D1F0000A087 /* CocktailViews */,
 				8AFAEA9F2B912D8D0000A087 /* MenuViews */,
 				8AFAEA9D2B912D4F0000A087 /* SpiritViews */,
+				B0771E000000000000000001 /* InventoryViews */,
 				8A01399E2B97CFBF0079F240 /* Resources */,
 			);
 			path = Views;
@@ -222,6 +230,7 @@
 			children = (
 				8AC142D22B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld */,
 				8AC142D52B8A6C83002807F5 /* DataController.swift */,
+				A7C0FFEE0000000000000002 /* Inventory.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -264,6 +273,15 @@
 				8AB706332B93C776009A2EC3 /* Menus */,
 			);
 			path = MenuViews;
+			sourceTree = "<group>";
+		};
+		B0771E000000000000000001 /* InventoryViews */ = {
+			isa = PBXGroup;
+			children = (
+				B0771E000000000000000004 /* AddEditBottleView.swift */,
+				B0771E000000000000000002 /* InventoryListView.swift */,
+			);
+			path = InventoryViews;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -329,7 +347,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1520;
-				LastUpgradeCheck = 1520;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					8AC142A42B8A6ACE002807F5 = {
 						CreatedOnToolsVersion = 15.2;
@@ -411,6 +429,7 @@
 				8AC369E12BA380E900516C03 /* PicPicker.swift in Sources */,
 				8A82CF802B9672B90049096A /* MenuListRow.swift in Sources */,
 				8AC142D62B8A6C83002807F5 /* DataController.swift in Sources */,
+				A7C0FFEE0000000000000003 /* Inventory.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
@@ -421,6 +440,8 @@
 				8AFAEAA72B91442C0000A087 /* MenusListView.swift in Sources */,
 				8AC142A92B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift in Sources */,
 				8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */,
+				B0771E000000000000000003 /* InventoryListView.swift in Sources */,
+				B0771E000000000000000005 /* AddEditBottleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -487,6 +508,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -510,6 +532,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -550,6 +573,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -566,6 +590,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -579,7 +604,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"My Cocktail Collection/Preview Content\"";
-				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "My-Cocktail-Collection-Info.plist";
@@ -593,7 +617,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -615,7 +639,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"My Cocktail Collection/Preview Content\"";
-				DEVELOPMENT_TEAM = 72D92MZCWN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "My-Cocktail-Collection-Info.plist";
@@ -629,7 +652,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -646,11 +669,9 @@
 		8AC142CD2B8A6ACF002807F5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 72D92MZCWN;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				MARKETING_VERSION = 1.0;
@@ -666,11 +687,9 @@
 		8AC142CE2B8A6ACF002807F5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 72D92MZCWN;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				MARKETING_VERSION = 1.0;
@@ -686,10 +705,8 @@
 		8AC142D02B8A6ACF002807F5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 72D92MZCWN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Lemursoft.My-Cocktail-CollectionUITests";
@@ -704,10 +721,8 @@
 		8AC142D12B8A6ACF002807F5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 72D92MZCWN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Lemursoft.My-Cocktail-CollectionUITests";
@@ -765,8 +780,9 @@
 			isa = XCVersionGroup;
 			children = (
 				8AC142D32B8A6C01002807F5 /* CocktailRecipe.xcdatamodel */,
+				A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */,
 			);
-			currentVersion = 8AC142D32B8A6C01002807F5 /* CocktailRecipe.xcdatamodel */;
+			currentVersion = A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */;
 			path = CocktailRecipe.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

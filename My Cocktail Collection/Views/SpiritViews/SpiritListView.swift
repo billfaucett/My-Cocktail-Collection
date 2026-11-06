@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct SpiritListView: View {
     @Environment(\.managedObjectContext) var context

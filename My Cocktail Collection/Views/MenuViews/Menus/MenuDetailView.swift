@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct MenuDetailView: View {
     @Environment(\.managedObjectContext) var context

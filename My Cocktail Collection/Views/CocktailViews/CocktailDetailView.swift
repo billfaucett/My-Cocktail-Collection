@@ -15,7 +15,6 @@ struct CocktailDetailView: View {
     @FetchRequest(sortDescriptors: []) var spirits: FetchedResults<Spirit>
     let drinkID: NSManagedObjectID
     @State private var showingAlert = false
-    @State private var showingMessageComposer = false
     @State private var showEdit = false
     @State private var refreshId = UUID()
     
@@ -106,11 +105,8 @@ struct CocktailDetailView: View {
                 Section {
                     VStack {
                         HStack {
-                            Button("Share Recipe") {
-                                showingMessageComposer = true
-                            }
-                            .sheet(isPresented: $showingMessageComposer) {
-                                MessageComposer(isShowing: $showingMessageComposer, cocktailName: drink.drinkName ?? "", ingredients: drink.ingredients ?? "", method: drink.method ?? "")
+                            ShareLink(item: shareText(for: drink)) {
+                                Label("Share Recipe", systemImage: "square.and.arrow.up")
                             }
                         }
                     }
@@ -125,6 +121,10 @@ struct CocktailDetailView: View {
     
     private func getRatingStars(rating: Int16) -> Double {
         return Double(rating) / 2.0
+    }
+    
+    private func shareText(for drink: Drink) -> String {
+        "Check out this cocktail recipe: \nCocktail Name: \(drink.drinkName ?? "")\nIngredients: \(drink.ingredients ?? "")\nMethod: \(drink.method ?? "")"
     }
 }
 

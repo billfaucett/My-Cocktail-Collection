@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct AddEditSpirit: View {
     @Environment(\.managedObjectContext) var context

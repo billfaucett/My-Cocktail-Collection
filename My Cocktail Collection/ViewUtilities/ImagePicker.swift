@@ -46,12 +46,12 @@ struct ImagePicker: UIViewControllerRepresentable {
 
 struct DeleteHelper {
     func deleteAllRowsFromEntity<T: NSManagedObject>(entity: T.Type, context: NSManagedObjectContext) {
-        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: String(describing: entity))
+        let fetchRequest = NSFetchRequest<T>(entityName: String(describing: entity))
         
         do {
+            // Deleting through the context (rather than a batch delete) keeps the on-screen lists in sync.
             let objects = try context.fetch(fetchRequest)
-            let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-            try context.execute(batchDeleteRequest)
+            objects.forEach { context.delete($0) }
             try context.save()
         } catch {
             print("Error deleting all rows from \(entity): \(error.localizedDescription)")

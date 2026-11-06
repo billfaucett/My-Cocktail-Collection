@@ -10,9 +10,26 @@ import Foundation
 import SwiftUI
 
 class DataController: ObservableObject {
-    let container = NSPersistentContainer(name: "CocktailRecipe")
+    /// The data model is loaded once and shared. If the app and its tests each loaded their own copy,
+    /// Core Data could get confused about which entity a class like `Drink` belongs to.
+    static let model: NSManagedObjectModel = {
+        guard let url = Bundle(for: DataController.self).url(forResource: "CocktailRecipe", withExtension: "momd"),
+              let model = NSManagedObjectModel(contentsOf: url) else {
+            fatalError("Could not load the CocktailRecipe data model")
+        }
+        return model
+    }()
     
-    init() {
+    let container: NSPersistentContainer
+    
+    /// - Parameter inMemory: When true, data lives only in memory and nothing is written to disk.
+    ///   Used by tests so they never touch your real recipes.
+    init(inMemory: Bool = false) {
+        // Keeping the name "CocktailRecipe" keeps the same database file, so existing data is untouched.
+        container = NSPersistentContainer(name: "CocktailRecipe", managedObjectModel: DataController.model)
+        if inMemory {
+            container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+        }
         container.loadPersistentStores { description, error in
             if let error = error {
                 print("Core Data faled to load: \(error.localizedDescription)")
@@ -20,12 +37,57 @@ class DataController: ObservableObject {
         }
     }
     
-    func deleteStuff(context: NSManagedObjectContext) {
+    /// Seeds spirits and classic cocktails on first launch, then repairs any seeded drinks missing a base spirit.
+    static func seedIfNeeded(context: NSManagedObjectContext) {
+        let spiritCount = (try? context.count(for: NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? 0
+        if spiritCount == 0 {
+            seedSpirits(context: context)
+        }
+        let drinkCount = (try? context.count(for: NSFetchRequest<Drink>(entityName: "Drink"))) ?? 0
+        if drinkCount == 0 {
+            seedCocktails(context: context)
+        }
+        linkMissingBaseSpirits(context: context)
+    }
+    
+    /// Earlier versions could save the built-in cocktails before the spirit list was ready,
+    /// leaving them without a base spirit. This links them up. Drinks you created are not touched.
+    static func linkMissingBaseSpirits(context: NSManagedObjectContext) {
+        let seededSpirits = [
+            "Margarita": "Tequila", "Old Fashioned": "Bourbon", "Martini": "Gin",
+            "Daquiri": "Rum", "Cosmopolitan": "Vodka",
+            "Blood Orange Margarita": "Tequila", "Irish Whiskey Sour": "Whiskey",
+            "Ranch Water": "Tequila", "Bourbon Renewal": "Bourbon",
+            "Chocolate Peanutbutter Sundae": "Vodka", "Cherry Bourbon Sour": "Bourbon"
+        ]
+        let request = NSFetchRequest<Drink>(entityName: "Drink")
+        request.predicate = NSPredicate(format: "baseSpirit == nil")
+        guard let drinks = try? context.fetch(request), !drinks.isEmpty else { return }
+        let spirits = (try? context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? []
+        
+        var changed = false
+        for drink in drinks {
+            guard let liquor = seededSpirits[drink.drinkName ?? ""],
+                  let spirit = spirits.first(where: { $0.spiritName == liquor }) else { continue }
+            drink.baseSpirit = spirit.id
+            changed = true
+        }
+        if changed {
+            do {
+                try context.save()
+            } catch {
+                print("error linking base spirits: \(error)")
+            }
+        }
+    }
+    
+    static func deleteStuff(context: NSManagedObjectContext) {
         DeleteHelper().deleteAllRowsFromEntity(entity: MenuItem.self, context: context)
         DeleteHelper().deleteAllRowsFromEntity(entity: Menu.self, context: context)
     }
     
-    func seedCocktails(context: NSManagedObjectContext, spirits: FetchedResults<Spirit>) {
+    static func seedCocktails(context: NSManagedObjectContext) {
+        let spirits = (try? context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? []
         struct ClassicCocktail {
             var name: String
             var ingredients: String
@@ -40,8 +102,6 @@ class DataController: ObservableObject {
             ClassicCocktail(name: "Daquiri", ingredients: "2pt Light Rum, 1pt Lime Juice, .5pt Simple Syrup", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled coupe glass", liquor: "Rum"),
             ClassicCocktail(name: "Cosmopolitan", ingredients: "2pt Vodka, 1pt Triple Sec, 1pt Cranberry Juice, .5pt Lime Juice, Orange Twist", method: "Combine ingredients in a shaker and top with ice, Shake for 10-15 seconds untile chilled, Strain into a chilled martini glass, garnisg with orange twist", liquor: "Vodka")
         ]
-        
-        //@FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
         
         for cocktail in classicCocktails {
             let drink = Drink(context: context)
@@ -62,7 +122,7 @@ class DataController: ObservableObject {
         }
     }
     
-    func seedSpirits(context: NSManagedObjectContext) {
+    static func seedSpirits(context: NSManagedObjectContext) {
         struct Liquor {
             var name: String
         }
@@ -92,7 +152,9 @@ class DataController: ObservableObject {
         }
     }
     
-    func addBillsFaves(context: NSManagedObjectContext, spirits: FetchedResults<Spirit>, loadedDrinks: FetchedResults<Drink>) {
+    static func addBillsFaves(context: NSManagedObjectContext) {
+        let spirits = (try? context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? []
+        let loadedDrinks = (try? context.fetch(NSFetchRequest<Drink>(entityName: "Drink"))) ?? []
         struct ClassicCocktail {
             var name: String
             var ingredients: String

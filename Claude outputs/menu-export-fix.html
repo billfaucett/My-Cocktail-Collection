@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Menu Export Fix</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1d1d1f;--muted:#6e6e73;--card:#fff;--line:#e5e2dc;--del:#fde8e8;--delfg:#a3262a;--add:#e3f5e8;--addfg:#1d6b35;--code:#f4f2ee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161617;--fg:#f2f2f2;--muted:#9a9aa0;--card:#1f1f21;--line:#333;--del:#3a1d1f;--delfg:#ff9a9e;--add:#16301f;--addfg:#8fe0a8;--code:#262628}}
+:root[data-theme="dark"]{--bg:#161617;--fg:#f2f2f2;--muted:#9a9aa0;--card:#1f1f21;--line:#333;--del:#3a1d1f;--delfg:#ff9a9e;--add:#16301f;--addfg:#8fe0a8;--code:#262628}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 48px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 24px;font-size:14px}
+h2{font-size:17px;margin:28px 0 8px}
+p,li{font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.file{font:12px ui-monospace,Menlo,monospace;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line)}
+pre{margin:0;overflow-x:auto;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre span{display:block;padding:0 12px;white-space:pre}
+.d{background:var(--del);color:var(--delfg)}.a{background:var(--add);color:var(--addfg)}.h{color:var(--muted);background:var(--code)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:13px}
+</style></head><body><main>
+<h1>Fix: menu export showed every menu's drinks</h1>
+<p class="sub">MenuItemListView.swift · 5 lines changed · not yet committed</p>
+
+<h2>What was wrong</h2>
+<ul>
+<li>The <strong>Save To Files</strong> button gave the export every menu item from every menu, so one menu's text file included drinks from all your menus.</li>
+<li><strong>Number of Cocktails</strong> counted every menu item in the app, not just the ones in this menu.</li>
+<li>The Save button only appeared once a menu had <em>two or more</em> drinks (<code>count &gt; 1</code>).</li>
+</ul>
+
+<h2>The change</h2>
+<div class="card"><div class="file">My Cocktail Collection/Views/MenuViews/MenuItems/MenuItemListView.swift</div>
+<pre><span class="h">@@ line 22 @@</span><span>        VStack {</span><span>            let menuName = menu?.menuName ?? "None"</span><span class="a">+           let myMenuItems = menuItems.filter({ $0.menu == menu })</span><span>            Text("Menu: \(menuName)")</span><span class="d">-           Text("Number of Cocktails: \(String(menuItems.count))")</span><span class="a">+           Text("Number of Cocktails: \(String(myMenuItems.count))")</span><span>                .font(.caption2)</span><span class="d">-           let myMenuItems = menuItems.filter({ $0.menu == menu })</span><span> </span><span class="d">-           if myMenuItems.count > 1 {</span><span class="a">+           if !myMenuItems.isEmpty {</span><span>                HStack{</span><span>                    Spacer()</span><span>                    Button ("Save To Files") {</span><span class="d">-                       exportNotes(items: menuItems, menuName: menuName)</span><span class="a">+                       exportNotes(items: myMenuItems, menuName: menuName)</span><span>                    }</span><span class="h">@@ line 63 @@</span><span class="d">-   func exportNotes(items: FetchedResults&lt;MenuItem&gt;, menuName: String) {</span><span class="a">+   func exportNotes(items: [MenuItem], menuName: String) {</span><span>        var notes =  ""</span></pre></div>
+
+<h2>Why each line changed</h2>
+<ul>
+<li><strong>Filter moved up:</strong> <code>myMenuItems</code> is now created before the count, so the count can use it.</li>
+<li><strong>Count:</strong> it now counts only this menu's drinks.</li>
+<li><strong>Button visibility:</strong> Save To Files now appears as soon as a menu has at least one drink.</li>
+<li><strong>Export call:</strong> it now passes only this menu's drinks.</li>
+<li><strong>Function signature:</strong> filtering produces a plain array (<code>[MenuItem]</code>), so <code>exportNotes</code> now takes one. Nothing inside the function had to change.</li>
+</ul>
+
+<h2>How to test</h2>
+<ol>
+<li>Create two menus and add different drinks to each.</li>
+<li>Open one menu and check that the count matches its drinks.</li>
+<li>Tap Save To Files, then open <em>Files › On My iPhone › My Cocktail Collection › Menus</em>. The file should list only that menu's drinks.</li>
+<li>Make a menu with one drink and check that the Save button appears.</li>
+</ol>
+</main></body></html>

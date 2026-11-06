@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 import UIKit
 
 struct CocktailListView: View {
@@ -17,7 +18,7 @@ struct CocktailListView: View {
     @State private var isSearching = false
     @State var addDrink = false
     @State var sendMessage = false
-    @State var showAlert = false
+    @State private var drinkToDelete: Drink?
     @State private var selectedSortOption = SortingOption.name
     var isPreview = false
     
@@ -124,20 +125,9 @@ struct CocktailListView: View {
                                 .font(.headline)
                                 .swipeActions {
                                     Button("Delete") {
-                                        showAlert = true
+                                        drinkToDelete = drink
                                     }
                                     .tint(.red)
-                                }
-                                .alert(isPresented: $showAlert) {
-                                    Alert (
-                                        title: Text("Confrim Delete"),
-                                        message: Text("Are you sure you want to delete this cocktail?"),
-                                        primaryButton: .destructive(Text("Delete")) {
-                                            context.delete(drink)
-                                            try? context.save()
-                                        },
-                                        secondaryButton: .cancel()
-                                    )
                                 }
                             if drink.rating > 0 {
                                 StarRatingView(rating: getRatingStars(rating: drink.rating))
@@ -147,6 +137,21 @@ struct CocktailListView: View {
                         }
                     }
                 }
+            }
+            .alert("Confirm Delete", isPresented: Binding(
+                get: { drinkToDelete != nil },
+                set: { if !$0 { drinkToDelete = nil } }
+            ), presenting: drinkToDelete) { drink in
+                Button("Delete", role: .destructive) {
+                    context.delete(drink)
+                    try? context.save()
+                    drinkToDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    drinkToDelete = nil
+                }
+            } message: { drink in
+                Text("Are you sure you want to delete \(drink.drinkName ?? "this cocktail")?")
             }
             .navigationTitle("My Cocktail Collection")
         }

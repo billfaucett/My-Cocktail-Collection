@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 import UIKit
 
 struct MenuItemListView: View {
@@ -21,16 +22,16 @@ struct MenuItemListView: View {
     var body: some View {
         VStack {
             let menuName = menu?.menuName ?? "None"
-            Text("Menu: \(menuName)")
-            Text("Number of Cocktails: \(String(menuItems.count))")
-                .font(.caption2)
             let myMenuItems = menuItems.filter({ $0.menu == menu })
+            Text("Menu: \(menuName)")
+            Text("Number of Cocktails: \(String(myMenuItems.count))")
+                .font(.caption2)
             
-            if myMenuItems.count > 1 {
+            if !myMenuItems.isEmpty {
                 HStack{
                     Spacer()
                     Button ("Save To Files") {
-                        exportNotes(items: menuItems, menuName: menuName)
+                        exportNotes(items: myMenuItems, menuName: menuName)
                     }
                     .padding(.horizontal)
                     .alert(isPresented: $isSaved) {
@@ -62,7 +63,7 @@ struct MenuItemListView: View {
         }
     }
     
-    func exportNotes(items: FetchedResults<MenuItem>, menuName: String) {
+    func exportNotes(items: [MenuItem], menuName: String) {
         var notes =  ""
         print(menuName)
         if #available(iOS 16.0, *) {

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) var context
@@ -14,13 +15,14 @@ struct ContentView: View {
     @State var isPreview = false
     @State var addNewCocktail = false
     @State var createMenu = false
-    @State var isMenuSelected = false
     @State var viewSpirits = false
     @State var viewMenus = false
     @State var viewInFiles =  false
+    @State private var viewInventory = false
     
     let billsFaves = ["Cherry Bourbon Sour", "Blood Orange Margarita", "Irish Whiskey Sour", "Ranch Water", "Chocolate Peanutbutter Sundae", "Bourbon Renewal"]
     @State var areFavesAdded = false
+    @State private var confirmDeleteMenus = false
     
     var body: some View {
         NavigationView{
@@ -28,42 +30,44 @@ struct ContentView: View {
                 HStack{
                     if !areFavesAdded {
                         Button("Add Our Favorite Cocktails") {
-                            DataController().addBillsFaves(context: context, spirits: spirits, loadedDrinks: drinks)
+                            DataController.addBillsFaves(context: context)
+                            areFavesAdded = true
                         }
                         .padding()
                     }
                     Spacer()
                     VStack {
-                        Image(systemName: "filemenu.and.cursorarrow")
-                            .resizable()
-                            .frame(width: 30, height: 30
-                            )
-                            .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
-                            .padding()
-                            .onTapGesture {
-                                isMenuSelected.toggle()
+                        // "SwiftUI." is needed because the app's Core Data entity is also named Menu.
+                        SwiftUI.Menu {
+                            Button("Add Cocktail") {
+                                addNewCocktail = true
                             }
-                            .contextMenu {
-                                Button("Add Cocktail") {
-                                    addNewCocktail = true
-                                }
-                                Button("View Spirit List") {
-                                    viewSpirits.toggle()
-                                }
-                                Button("View Menus") {
-                                    viewMenus.toggle()
-                                }
-                                Button("Create a Menu") {
-                                    createMenu = true
-                                }
-                                Button("View Saved Files") {
-                                    viewInFiles.toggle()
-                                }
-                                Button("Delete Menu Data"){
-                                    DataController().deleteStuff(context: context)
-                                }
-                                .foregroundColor(.red)
+                            Button("View Spirit List") {
+                                viewSpirits.toggle()
                             }
+                            Button("View Inventory") {
+                                viewInventory = true
+                            }
+                            Button("View Menus") {
+                                viewMenus.toggle()
+                            }
+                            Button("Create a Menu") {
+                                createMenu = true
+                            }
+                            Button("View Saved Files") {
+                                viewInFiles.toggle()
+                            }
+                            Button("Delete Menu Data", role: .destructive) {
+                                confirmDeleteMenus = true
+                            }
+                        } label: {
+                            Image(systemName: "filemenu.and.cursorarrow")
+                                .resizable()
+                                .frame(width: 30, height: 30)
+                                .foregroundColor(.blue)
+                                .padding()
+                                .accessibilityLabel("Menu")
+                        }
                     }
                     .padding(.horizontal)
                 }
@@ -74,14 +78,19 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                if spirits.isEmpty && !isPreview {
-                    DataController().seedSpirits(context: context)
-                }
-                if drinks.isEmpty && !isPreview {
-                    DataController().seedCocktails(context: context, spirits: spirits)
+                if !isPreview {
+                    DataController.seedIfNeeded(context: context)
                 }
                 areFavesAdded = drinks.contains { drink in billsFaves.contains(drink.drinkName ?? "") }
             }
+        }
+        .alert("Delete All Menus?", isPresented: $confirmDeleteMenus) {
+            Button("Delete", role: .destructive) {
+                DataController.deleteStuff(context: context)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This removes every menu and its cocktail list. Your cocktail recipes are not affected.")
         }
         .sheet(isPresented: $addNewCocktail) {
             AddEditCocktailRecipeView()
@@ -91,6 +100,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $viewSpirits) {
             SpiritListView()
+        }
+        .sheet(isPresented: $viewInventory) {
+            InventoryListView()
         }
         .sheet(isPresented: $createMenu) {
             AddEditMenuView()

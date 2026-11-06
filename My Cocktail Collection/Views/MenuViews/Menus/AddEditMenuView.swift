@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct AddEditMenuView: View {
     @Environment(\.managedObjectContext) var context

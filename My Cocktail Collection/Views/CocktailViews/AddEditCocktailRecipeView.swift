@@ -88,7 +88,7 @@ struct AddEditCocktailRecipeView: View {
                                     }
                                     .onAppear {
                                         if let drink = drink {
-                                            drinkName = drink.drinkName!
+                                            drinkName = drink.drinkName ?? ""
                                         }
                                     }
                                 VStack {
@@ -176,7 +176,7 @@ struct AddEditCocktailRecipeView: View {
                                 }
                                 .onAppear {
                                     if let drink = drink {
-                                        ingredients = drink.ingredients!
+                                        ingredients = drink.ingredients ?? ""
                                     }
                                 }
                         }
@@ -198,7 +198,7 @@ struct AddEditCocktailRecipeView: View {
                                 }
                                 .onAppear {
                                     if let drink = drink {
-                                        method = drink.method!
+                                        method = drink.method ?? ""
                                     }
                                 }
                         }
@@ -243,8 +243,7 @@ struct AddEditCocktailRecipeView: View {
             drink.method = method
             drink.rating = ratingValue
             if let image = selectedImage {
-                _ = image.resized(to: CGSize(width: 300, height: 300))
-                drink.image = image.pngData()
+                drink.setPhoto(image)
             }
             try? context.save()
             dismiss()
@@ -259,8 +258,7 @@ struct AddEditCocktailRecipeView: View {
         drink.method = method
         drink.rating = ratingValue
         if let image = selectedImage {
-            let resized = image.resized(to: CGSize(width: 300, height: 300))
-            drink.image = resized.pngData()
+            drink.setPhoto(image)
         }
         try? context.save()
         dismiss()
@@ -275,10 +273,29 @@ struct AddCocktailRecipeView_Previews: PreviewProvider {
 }
 
 extension UIImage {
-    func resized(to targetSize: CGSize) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: targetSize)
+    /// Shrinks the image so its longest side is at most `maxDimension` pixels, keeping its proportions.
+    func scaledToFit(maxDimension: CGFloat) -> UIImage {
+        let longestSide = max(size.width, size.height)
+        guard longestSide > maxDimension else { return self }
+        let scale = maxDimension / longestSide
+        let targetSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
         return renderer.image { _ in
             self.draw(in: CGRect(origin: .zero, size: targetSize))
         }
+    }
+    
+    /// Data for storing a cocktail photo: at most 600px on the longest side, saved as 80% quality JPEG.
+    func cocktailPhotoData() -> Data? {
+        scaledToFit(maxDimension: 600).jpegData(compressionQuality: 0.8)
+    }
+}
+
+extension Drink {
+    /// Stores a photo for this drink, shrunk and compressed by `cocktailPhotoData()`.
+    func setPhoto(_ photo: UIImage) {
+        image = photo.cocktailPhotoData()
     }
 }
