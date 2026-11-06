@@ -18,6 +18,10 @@ struct MenuDetailView: View {
     @State private var showRename = false
     @State private var savedFileMessage: String?
     @State private var saveErrorMessage: String?
+    @State private var favoritesOnly = false
+    /// Bumped when a cocktail's favorite changes, so the filtered list refreshes.
+    /// (The menu's fetch only watches menu items, not the cocktails they point to.)
+    @State private var favoriteChanges = 0
 
     init(menu: Menu) {
         _menu = ObservedObject(wrappedValue: menu)
@@ -30,10 +34,15 @@ struct MenuDetailView: View {
 
     private var menuName: String { menu.menuName ?? "Menu" }
 
+    private var visibleItems: [MenuItem] {
+        _ = favoriteChanges
+        return favoritesOnly ? items.filter { $0.drink?.isFavorite == true } : Array(items)
+    }
+
     var body: some View {
         ListScreen(
             menuName,
-            isEmpty: items.isEmpty,
+            isEmpty: visibleItems.isEmpty,
             emptyState: EmptyState(
                 title: "No Cocktails Yet",
                 systemImage: "wineglass",
@@ -41,11 +50,18 @@ struct MenuDetailView: View {
                 actionTitle: "Add Cocktails"
             ),
             addLabel: "Add Cocktails",
-            onAdd: { showAddCocktails = true }
+            onAdd: { showAddCocktails = true },
+            favoritesOnly: $favoritesOnly
         ) {
             Section {
-                ForEach(items) { item in
+                ForEach(visibleItems) { item in
                     MenuItemRow(item: item)
+                        .favoriteSwipeAction(isFavorite: item.drink?.isFavorite ?? false) {
+                            if let drink = item.drink {
+                                DataController.toggleFavorite(drink, context: context)
+                                favoriteChanges += 1
+                            }
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
                                 remove(item)

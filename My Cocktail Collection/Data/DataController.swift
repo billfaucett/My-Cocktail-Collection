@@ -49,6 +49,12 @@ class DataController: ObservableObject {
         context.saveOrRollback()
     }
     
+    /// Marks a cocktail as a favorite, or removes it from favorites, and saves.
+    static func toggleFavorite(_ drink: Drink, context: NSManagedObjectContext) {
+        drink.isFavorite.toggle()
+        context.saveOrRollback()
+    }
+    
     static func deleteStuff(context: NSManagedObjectContext) {
         DeleteHelper().deleteAllRowsFromEntity(entity: MenuItem.self, context: context)
         DeleteHelper().deleteAllRowsFromEntity(entity: Menu.self, context: context)
@@ -89,12 +95,13 @@ class DataController: ObservableObject {
         linkMissingBaseSpirits(context: context)
     }
     
-    /// Adds the house favorites that aren't already in the collection.
+    /// Adds the house favorites that aren't already in the collection, marked as favorites.
     static func addBillsFaves(context: NSManagedObjectContext) {
         let existing = Set(fetchAll(Drink.self, context: context).compactMap { $0.drinkName?.lowercased() })
         let spirits = fetchAll(Spirit.self, context: context)
         for cocktail in SeedData.favorites where !existing.contains(cocktail.name.lowercased()) {
-            insert(cocktail, source: .original, spirits: spirits, context: context)
+            let drink = insert(cocktail, source: .original, spirits: spirits, context: context)
+            drink.isFavorite = true
         }
         context.saveOrRollback()
     }
@@ -191,7 +198,8 @@ class DataController: ObservableObject {
         }
     }
     
-    private static func insert(_ cocktail: SeedCocktail, source: SourceType, spirits: [Spirit], context: NSManagedObjectContext) {
+    @discardableResult
+    private static func insert(_ cocktail: SeedCocktail, source: SourceType, spirits: [Spirit], context: NSManagedObjectContext) -> Drink {
         let drink = Drink(context: context)
         drink.id = UUID()
         drink.source = source.rawValue
@@ -199,6 +207,7 @@ class DataController: ObservableObject {
         drink.ingredients = cocktail.ingredientsText
         drink.method = cocktail.methodText
         drink.baseSpirit = findSpirit(named: cocktail.spirit, in: spirits)?.id
+        return drink
     }
     
     private static func findSpirit(named name: String, in spirits: [Spirit]) -> Spirit? {

@@ -20,6 +20,7 @@ struct AddEditCocktailRecipeView: View {
     @State private var source: SourceType = .classic
     @State private var baseSpirit: Spirit?
     @State private var rating = 0
+    @State private var isFavorite = false
     @State private var ingredients = ""
     @State private var method = ""
     @State private var photo: UIImage?
@@ -54,6 +55,7 @@ struct AddEditCocktailRecipeView: View {
             }
 
             Section("Rating") {
+                Toggle("Favorite", isOn: $isFavorite)
                 RatingPicker(rating: $rating)
             }
 
@@ -84,6 +86,7 @@ struct AddEditCocktailRecipeView: View {
             baseSpirit = spirits.first { $0.id == spiritID }
         }
         rating = Int(drink.rating)
+        isFavorite = drink.isFavorite
         ingredients = drink.ingredients ?? ""
         method = drink.method ?? ""
         photo = drink.image.flatMap(UIImage.init(data:))
@@ -98,6 +101,7 @@ struct AddEditCocktailRecipeView: View {
         target.source = source.rawValue
         target.baseSpirit = baseSpirit?.id
         target.rating = Int16(rating)
+        target.isFavorite = isFavorite
         target.ingredients = ingredients
         target.method = method
         if photoChanged {

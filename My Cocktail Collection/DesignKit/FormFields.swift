@@ -94,6 +94,24 @@ struct RatingPicker: View {
     }
 }
 
+// MARK: - Favorites toggle
+
+/// A "Favorites Only" switch for filtering a list inside a form.
+struct FavoritesToggle: View {
+    @Binding private var isOn: Bool
+
+    init(isOn: Binding<Bool>) {
+        _isOn = isOn
+    }
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            Label("Favorites Only", systemImage: isOn ? "heart.fill" : "heart")
+        }
+        .tint(Theme.favorite)
+    }
+}
+
 // MARK: - Spirit picker
 
 /// Picks a spirit category, with a button to add a new one. New spirits appear in the picker right away.

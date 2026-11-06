@@ -19,6 +19,7 @@ struct AddMenuItemView: View {
 
     @State private var selected: Set<Drink> = []
     @State private var searchText = ""
+    @State private var favoritesOnly = false
 
     init(menu: Menu) {
         self.menu = menu
@@ -30,8 +31,9 @@ struct AddMenuItemView: View {
     }
 
     private var visibleDrinks: [Drink] {
-        guard !searchText.isEmpty else { return Array(drinks) }
-        return drinks.filter {
+        let candidates = favoritesOnly ? drinks.filter(\.isFavorite) : Array(drinks)
+        guard !searchText.isEmpty else { return candidates }
+        return candidates.filter {
             ($0.drinkName ?? "").localizedCaseInsensitiveContains(searchText)
                 || ($0.ingredients ?? "").localizedCaseInsensitiveContains(searchText)
         }
@@ -45,8 +47,12 @@ struct AddMenuItemView: View {
             onSave: save
         ) {
             Section {
+                FavoritesToggle(isOn: $favoritesOnly)
+            }
+
+            Section {
                 if visibleDrinks.isEmpty {
-                    Text(drinks.isEmpty ? "Your collection has no cocktails yet." : "No cocktails match your search.")
+                    Text(emptyMessage)
                         .foregroundStyle(.secondary)
                 }
                 ForEach(visibleDrinks) { drink in
@@ -58,7 +64,8 @@ struct AddMenuItemView: View {
                         ItemRow(
                             drink.drinkName ?? "Unnamed Cocktail",
                             subtitle: isOnMenu ? "Already on this menu" : nil,
-                            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail)
+                            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail),
+                            isFavorite: drink.isFavorite
                         ) {
                             Image(systemName: isChecked ? "checkmark.circle.fill" : "circle")
                                 .font(.title3)
@@ -73,6 +80,12 @@ struct AddMenuItemView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search names and ingredients")
+    }
+
+    private var emptyMessage: String {
+        if drinks.isEmpty { return "Your collection has no cocktails yet." }
+        if favoritesOnly && searchText.isEmpty { return "You haven't marked any cocktails as favorites yet." }
+        return favoritesOnly ? "No favorite cocktails match your search." : "No cocktails match your search."
     }
 
     private func toggle(_ drink: Drink) {

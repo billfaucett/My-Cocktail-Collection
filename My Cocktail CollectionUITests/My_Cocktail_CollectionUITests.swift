@@ -71,6 +71,33 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(aviation.waitForExistence(timeout: 2))
     }
 
+    /// Swipe right to favorite a cocktail, then Show Favorites lists only favorites until turned off.
+    func testShowFavoritesFiltersTheCocktailList() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let aviation = app.staticTexts["Aviation"]
+        let aperolSpritz = app.staticTexts["Aperol Spritz"]
+        XCTAssertTrue(aviation.waitForExistence(timeout: 5))
+        XCTAssertTrue(aperolSpritz.exists)
+
+        // A full swipe favorites immediately; a shorter one reveals the Favorite button.
+        aviation.swipeRight()
+        let favoriteButton = app.buttons["Favorite"]
+        if favoriteButton.waitForExistence(timeout: 1) {
+            favoriteButton.tap()
+        }
+
+        app.buttons["Show Favorites"].tap()
+        XCTAssertTrue(aviation.waitForExistence(timeout: 2), "The favorite should still be listed")
+        let hidden = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: aperolSpritz)
+        wait(for: [hidden], timeout: 3)
+
+        app.buttons["Show All"].tap()
+        XCTAssertTrue(aperolSpritz.waitForExistence(timeout: 2), "Show All should bring every cocktail back")
+    }
+
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.

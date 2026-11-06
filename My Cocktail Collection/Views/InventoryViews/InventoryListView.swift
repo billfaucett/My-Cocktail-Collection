@@ -16,12 +16,17 @@ struct InventoryListView: View {
     @State private var showAddBottle = false
     @State private var bottleToEdit: Bottle?
     @State private var bottleToDelete: Bottle?
+    @State private var favoritesOnly = false
+
+    private var visibleBottles: [Bottle] {
+        favoritesOnly ? bottles.filter(\.isFavorite) : Array(bottles)
+    }
 
     var body: some View {
         NavigationStack {
             ListScreen(
                 "Spirit Inventory",
-                isEmpty: bottles.isEmpty,
+                isEmpty: visibleBottles.isEmpty,
                 emptyState: EmptyState(
                     title: "No Bottles Yet",
                     systemImage: "wineglass",
@@ -29,9 +34,10 @@ struct InventoryListView: View {
                     actionTitle: "Add a Bottle"
                 ),
                 addLabel: "Add Bottle",
-                onAdd: { showAddBottle = true }
+                onAdd: { showAddBottle = true },
+                favoritesOnly: $favoritesOnly
             ) {
-                ForEach(bottles) { bottle in
+                ForEach(visibleBottles) { bottle in
                     Button {
                         bottleToEdit = bottle
                     } label: {
@@ -39,6 +45,9 @@ struct InventoryListView: View {
                     }
                     .foregroundStyle(.primary)
                     .deleteSwipeAction { bottleToDelete = bottle }
+                    .favoriteSwipeAction(isFavorite: bottle.isFavorite) {
+                        try? Inventory(context: context).setFavorite(!bottle.isFavorite, for: bottle)
+                    }
                 }
             }
             .sheet(isPresented: $showAddBottle) {

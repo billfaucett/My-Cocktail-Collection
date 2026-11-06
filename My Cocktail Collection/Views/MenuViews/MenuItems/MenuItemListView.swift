@@ -8,15 +8,29 @@
 import SwiftUI
 import CoreData
 
-/// One cocktail on a menu: photo, name and ingredients.
+/// One cocktail on a menu: photo, name, ingredients and favorite heart.
 struct MenuItemRow: View {
     @ObservedObject var item: MenuItem
 
     var body: some View {
+        if let drink = item.drink {
+            MenuDrinkRow(drink: drink)
+        } else {
+            ItemRow("Deleted Cocktail", thumbnail: Thumbnail(image: nil, placeholder: .cocktail))
+        }
+    }
+}
+
+/// Watches the cocktail itself, so edits and favorites show up right away.
+private struct MenuDrinkRow: View {
+    @ObservedObject var drink: Drink
+
+    var body: some View {
         ItemRow(
-            item.drink?.drinkName ?? "Deleted Cocktail",
-            subtitle: item.drink?.ingredients,
-            thumbnail: Thumbnail(data: item.drink?.image, placeholder: .cocktail)
+            drink.drinkName ?? "Unnamed Cocktail",
+            subtitle: drink.ingredients,
+            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail),
+            isFavorite: drink.isFavorite
         )
     }
 }

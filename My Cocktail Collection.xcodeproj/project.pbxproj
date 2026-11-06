@@ -99,6 +99,7 @@
 		8AFAEAA42B913F100000A087 /* MenuItemListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuItemListView.swift; sourceTree = "<group>"; };
 		8AFAEAA62B91442C0000A087 /* MenusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenusListView.swift; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2.xcdatamodel"; sourceTree = "<group>"; };
+		A7C0FFEE0000000000000004 /* CocktailRecipe 3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 3.xcdatamodel"; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000002 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
 		5EEDDA7A0000000000000001 /* SeedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedData.swift; sourceTree = "<group>"; };
 		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
@@ -809,8 +810,9 @@
 			children = (
 				8AC142D32B8A6C01002807F5 /* CocktailRecipe.xcdatamodel */,
 				A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */,
+				A7C0FFEE0000000000000004 /* CocktailRecipe 3.xcdatamodel */,
 			);
-			currentVersion = A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */;
+			currentVersion = A7C0FFEE0000000000000004 /* CocktailRecipe 3.xcdatamodel */;
 			path = CocktailRecipe.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

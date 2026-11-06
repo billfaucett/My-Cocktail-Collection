@@ -84,6 +84,13 @@ struct CocktailDetailView: View {
                 } label: {
                     Label("More", systemImage: "ellipsis.circle")
                 }
+                Button {
+                    DataController.toggleFavorite(drink, context: context)
+                } label: {
+                    Label(drink.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                          systemImage: drink.isFavorite ? "heart.fill" : "heart")
+                }
+                .tint(drink.isFavorite ? Theme.favorite : nil)
                 Button("Edit") {
                     showEdit = true
                 }

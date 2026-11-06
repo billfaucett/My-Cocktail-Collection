@@ -488,6 +488,63 @@ final class ModelUpgradeTests: XCTestCase {
         XCTAssertEqual(bourbon.bottles?.count, 1)
     }
 
+    /// Version 2 added the inventory; version 3 adds cocktail favorites.
+    /// Checks a version 2 database (with recipes and bottles) upgrades with nothing lost.
+    func testVersion2DatabaseUpgradesToFavoritesModel() throws {
+        let bundle = Bundle(for: DataController.self)
+        let v2URL = try XCTUnwrap(
+            bundle.url(forResource: "CocktailRecipe 2", withExtension: "mom", subdirectory: "CocktailRecipe.momd"),
+            "Version 2 of the model should be in the app bundle"
+        )
+        let v2 = try XCTUnwrap(NSManagedObjectModel(contentsOf: v2URL))
+        XCTAssertNil(v2.entitiesByName["Drink"]?.attributesByName["isFavorite"], "Version 2 has no cocktail favorites")
+        v2.entities.forEach { $0.managedObjectClassName = NSStringFromClass(NSManagedObject.self) }
+
+        let storeURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("upgrade-v2-test-\(UUID().uuidString).sqlite")
+        defer {
+            for suffix in ["", "-wal", "-shm"] {
+                try? FileManager.default.removeItem(at: URL(fileURLWithPath: storeURL.path + suffix))
+            }
+        }
+
+        // 1. A version 2 database with a recipe, a spirit and a bottle.
+        let oldContainer = NSPersistentContainer(name: "CocktailRecipe", managedObjectModel: v2)
+        oldContainer.persistentStoreDescriptions = [NSPersistentStoreDescription(url: storeURL)]
+        try load(oldContainer)
+        let oldContext = oldContainer.viewContext
+        let spirit = NSEntityDescription.insertNewObject(forEntityName: "Spirit", into: oldContext)
+        spirit.setValue(UUID(), forKey: "id")
+        spirit.setValue("Bourbon", forKey: "spiritName")
+        let bottle = NSEntityDescription.insertNewObject(forEntityName: "Bottle", into: oldContext)
+        bottle.setValue(UUID(), forKey: "id")
+        bottle.setValue("Buffalo Trace", forKey: "brand")
+        bottle.setValue(spirit, forKey: "spirit")
+        let drink = NSEntityDescription.insertNewObject(forEntityName: "Drink", into: oldContext)
+        drink.setValue(UUID(), forKey: "id")
+        drink.setValue("Old Fashioned", forKey: "drinkName")
+        try oldContext.save()
+        for store in oldContainer.persistentStoreCoordinator.persistentStores {
+            try oldContainer.persistentStoreCoordinator.remove(store)
+        }
+
+        // 2. Open it with the current model.
+        let newContainer = NSPersistentContainer(name: "CocktailRecipe", managedObjectModel: DataController.model)
+        newContainer.persistentStoreDescriptions = [NSPersistentStoreDescription(url: storeURL)]
+        try load(newContainer)
+        let context = newContainer.viewContext
+
+        let upgradedDrink = try XCTUnwrap(try context.fetch(NSFetchRequest<Drink>(entityName: "Drink")).first)
+        XCTAssertEqual(upgradedDrink.drinkName, "Old Fashioned")
+        XCTAssertFalse(upgradedDrink.isFavorite, "Existing cocktails start as not favorite")
+        let upgradedBottle = try XCTUnwrap(try context.fetch(NSFetchRequest<Bottle>(entityName: "Bottle")).first)
+        XCTAssertEqual(upgradedBottle.brand, "Buffalo Trace")
+        XCTAssertEqual(upgradedBottle.spirit?.spiritName, "Bourbon")
+
+        upgradedDrink.isFavorite = true
+        XCTAssertNoThrow(try context.save())
+    }
+
     private func load(_ container: NSPersistentContainer) throws {
         var loadError: Error?
         container.loadPersistentStores { _, error in loadError = error }
@@ -681,6 +738,7 @@ final class SeedDataTests: XCTestCase {
         let favorites = try drinks().filter { DataController.favoriteCocktailNames.contains($0.drinkName ?? "") }
         XCTAssertEqual(favorites.count, SeedData.favorites.count)
         XCTAssertTrue(favorites.allSatisfy { $0.source == SourceType.original.rawValue })
+        XCTAssertTrue(favorites.allSatisfy(\.isFavorite), "House favorites should be marked as favorites")
         let whiskey = try XCTUnwrap(try spirits().first { $0.spiritName == "Whiskey" })
         XCTAssertEqual(favorites.first { $0.drinkName == "Irish Whiskey Sour" }?.baseSpirit, whiskey.id)
     }
@@ -717,5 +775,69 @@ final class SeedDataTests: XCTestCase {
 
     private func spirits() throws -> [Spirit] {
         try context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))
+    }
+}
+
+// MARK: - Cocktail favorites
+
+final class CocktailFavoriteTests: XCTestCase {
+    private var dataController: DataController!
+    private var context: NSManagedObjectContext!
+
+    override func setUpWithError() throws {
+        dataController = DataController(inMemory: true)
+        context = dataController.container.viewContext
+    }
+
+    override func tearDownWithError() throws {
+        context = nil
+        dataController = nil
+    }
+
+    func testNewCocktailIsNotAFavorite() throws {
+        let drink = makeDrink("Martini")
+        try context.save()
+        XCTAssertFalse(drink.isFavorite)
+    }
+
+    func testToggleFavoriteSavesBothWays() throws {
+        let drink = makeDrink("Martini")
+        try context.save()
+
+        DataController.toggleFavorite(drink, context: context)
+        XCTAssertTrue(drink.isFavorite)
+        XCTAssertFalse(context.hasChanges, "Toggling should save")
+
+        DataController.toggleFavorite(drink, context: context)
+        XCTAssertFalse(drink.isFavorite)
+        XCTAssertFalse(context.hasChanges)
+    }
+
+    func testFavoritesCanBeFetched() throws {
+        let martini = makeDrink("Martini")
+        makeDrink("Negroni")
+        DataController.toggleFavorite(martini, context: context)
+
+        let request = NSFetchRequest<Drink>(entityName: "Drink")
+        request.predicate = NSPredicate(format: "isFavorite == YES")
+        XCTAssertEqual(try context.fetch(request), [martini])
+    }
+
+    func testSeedingDoesNotChangeFavorites() throws {
+        DataController.seedIfNeeded(context: context, defaults: UserDefaults(suiteName: "CocktailFavoriteTests-\(UUID().uuidString)")!)
+        let negroni = try XCTUnwrap(try context.fetch(NSFetchRequest<Drink>(entityName: "Drink")).first { $0.drinkName == "Negroni" })
+        XCTAssertFalse(negroni.isFavorite, "Classics start as not favorite")
+
+        DataController.toggleFavorite(negroni, context: context)
+        DataController.applySeedCorrections(context: context)
+        XCTAssertTrue(negroni.isFavorite, "Corrections must not reset favorites")
+    }
+
+    @discardableResult
+    private func makeDrink(_ name: String) -> Drink {
+        let drink = Drink(context: context)
+        drink.id = UUID()
+        drink.drinkName = name
+        return drink
     }
 }

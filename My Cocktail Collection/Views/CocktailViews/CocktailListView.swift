@@ -18,6 +18,7 @@ struct CocktailListView: View {
     @State private var searchText = ""
     @State private var spiritFilter: Spirit?
     @State private var sortOption = SortingOption.name
+    @State private var favoritesOnly = false
     @State private var showAddDrink = false
     @State private var drinkToDelete: Drink?
 
@@ -31,13 +32,17 @@ struct CocktailListView: View {
                 isEmpty: visible.isEmpty,
                 emptyState: emptyState,
                 addLabel: "Add Cocktail",
-                onAdd: { showAddDrink = true }
+                onAdd: { showAddDrink = true },
+                favoritesOnly: $favoritesOnly
             ) {
                 ForEach(visible) { drink in
                     NavigationLink(value: drink) {
                         CocktailRow(drink: drink, spiritName: drink.baseSpirit.flatMap { spiritNames[$0] })
                     }
                     .deleteSwipeAction { drinkToDelete = drink }
+                    .favoriteSwipeAction(isFavorite: drink.isFavorite) {
+                        DataController.toggleFavorite(drink, context: context)
+                    }
                 }
             } moreMenu: {
                 Picker(selection: $sortOption) {
@@ -87,6 +92,9 @@ struct CocktailListView: View {
 
     private var visibleDrinks: [Drink] {
         var result = Array(drinks)
+        if favoritesOnly {
+            result = result.filter(\.isFavorite)
+        }
         if let spiritID = spiritFilter?.id {
             result = result.filter { $0.baseSpirit == spiritID }
         }
@@ -150,7 +158,8 @@ struct CocktailRow: View {
         ItemRow(
             drink.drinkName ?? "Unnamed Cocktail",
             subtitle: spiritName,
-            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail)
+            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail),
+            isFavorite: drink.isFavorite
         ) {
             if drink.rating > 0 {
                 StarRatingView(rating: Double(drink.rating) / 2.0)

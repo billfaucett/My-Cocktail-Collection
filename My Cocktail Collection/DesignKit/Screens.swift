@@ -102,7 +102,7 @@ struct EmptyState {
     var actionTitle: String? = nil
 }
 
-/// Wraps a list: title, an optional "…" menu and + button, and an empty state.
+/// Wraps a list: title, an optional Show Favorites button, "…" menu and + button, and an empty state.
 /// Place it inside a `NavigationStack` (root screens) or push it onto one.
 ///
 ///     ListScreen("Spirits", isEmpty: spirits.isEmpty, emptyState: empty, onAdd: { showAdd = true }) {
@@ -110,12 +110,17 @@ struct EmptyState {
 ///     } moreMenu: {
 ///         Button("Something Else") { … }
 ///     }
+///
+/// Pass `favoritesOnly` for lists whose items can be favorites. The screen adds a heart button that
+/// turns the filter on and off, and a "No Favorites" state with a Show All button. The list itself
+/// filters its items using the same binding.
 struct ListScreen<Content: View, MoreItems: View>: View {
     private let title: String
     private let isEmpty: Bool
     private let emptyState: EmptyState
     private let addLabel: String
     private let onAdd: (() -> Void)?
+    private let favoritesOnly: Binding<Bool>?
     private let content: Content
     private let moreItems: MoreItems
 
@@ -125,6 +130,7 @@ struct ListScreen<Content: View, MoreItems: View>: View {
         emptyState: EmptyState,
         addLabel: String = "Add",
         onAdd: (() -> Void)? = nil,
+        favoritesOnly: Binding<Bool>? = nil,
         @ViewBuilder content: () -> Content,
         @ViewBuilder moreMenu: () -> MoreItems
     ) {
@@ -133,13 +139,29 @@ struct ListScreen<Content: View, MoreItems: View>: View {
         self.emptyState = emptyState
         self.addLabel = addLabel
         self.onAdd = onAdd
+        self.favoritesOnly = favoritesOnly
         self.content = content()
         self.moreItems = moreMenu()
     }
 
+    private var isShowingFavoritesOnly: Bool { favoritesOnly?.wrappedValue ?? false }
+
     var body: some View {
         Group {
-            if isEmpty {
+            if isEmpty && isShowingFavoritesOnly {
+                ContentUnavailableView {
+                    Label("No Favorites", systemImage: "heart")
+                } description: {
+                    Text("Nothing here is a favorite yet, or no favorites match. Swipe right on an item to make it a favorite.")
+                } actions: {
+                    Button("Show All") {
+                        if let favoritesOnly {
+                            favoritesOnly.wrappedValue = false
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else if isEmpty {
                 ContentUnavailableView {
                     Label(emptyState.title, systemImage: emptyState.systemImage)
                 } description: {
@@ -159,6 +181,15 @@ struct ListScreen<Content: View, MoreItems: View>: View {
         .navigationTitle(title)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                if let favoritesOnly {
+                    Button {
+                        favoritesOnly.wrappedValue = !favoritesOnly.wrappedValue
+                    } label: {
+                        Label(favoritesOnly.wrappedValue ? "Show All" : "Show Favorites",
+                              systemImage: favoritesOnly.wrappedValue ? "heart.fill" : "heart")
+                    }
+                    .tint(favoritesOnly.wrappedValue ? Theme.favorite : nil)
+                }
                 if MoreItems.self != EmptyView.self {
                     // "SwiftUI." is needed because the app's Core Data entity is also named Menu.
                     SwiftUI.Menu {
@@ -185,10 +216,11 @@ extension ListScreen where MoreItems == EmptyView {
         emptyState: EmptyState,
         addLabel: String = "Add",
         onAdd: (() -> Void)? = nil,
+        favoritesOnly: Binding<Bool>? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.init(title, isEmpty: isEmpty, emptyState: emptyState, addLabel: addLabel, onAdd: onAdd,
-                  content: content, moreMenu: { EmptyView() })
+                  favoritesOnly: favoritesOnly, content: content, moreMenu: { EmptyView() })
     }
 }
 
@@ -202,6 +234,16 @@ extension View {
                 Label("Delete", systemImage: "trash")
             }
             .tint(.red)
+        }
+    }
+
+    /// A heart swipe action on the leading edge (swipe right) to favorite or unfavorite a row.
+    func favoriteSwipeAction(isFavorite: Bool, _ action: @escaping () -> Void) -> some View {
+        swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button(action: action) {
+                Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "heart.slash" : "heart")
+            }
+            .tint(Theme.favorite)
         }
     }
 
