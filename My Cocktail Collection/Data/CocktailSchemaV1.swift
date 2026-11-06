@@ -50,7 +50,7 @@ enum CocktailSchemaV1: VersionedSchema {
     static let versionIdentifier = Schema.Version(1, 0, 0)
 
     static var models: [any PersistentModel.Type] {
-        [SpiritStyle.self, Bottle.self, Cocktail.self, RecipeIngredient.self, Menu.self, MenuEntry.self]
+        [SpiritStyle.self, Bottle.self, Cocktail.self, RecipeIngredient.self, Menu.self, MenuEntry.self, ImportRecord.self]
     }
 
     // MARK: Spirit style
@@ -240,6 +240,24 @@ enum CocktailSchemaV1: VersionedSchema {
 
         init(position: Int) {
             self.position = position
+        }
+    }
+
+    // MARK: Import record
+
+    /// Written once, in the same save as the imported data, when the old database has been copied in.
+    /// Its presence means the import never runs again.
+    @Model
+    final class ImportRecord {
+        var completedAt: Date = Date()
+        var cocktailCount: Int = 0
+        var bottleCount: Int = 0
+        var menuCount: Int = 0
+
+        init(cocktailCount: Int, bottleCount: Int, menuCount: Int) {
+            self.cocktailCount = cocktailCount
+            self.bottleCount = bottleCount
+            self.menuCount = menuCount
         }
     }
 }

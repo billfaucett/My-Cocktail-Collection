@@ -1200,8 +1200,8 @@ final class SwiftDataModelTests: XCTestCase {
 
     // MARK: Schema
 
-    func testSchemaHasSixModelsAtVersionOne() {
-        XCTAssertEqual(V1.models.count, 6)
+    func testSchemaHasSevenModelsAtVersionOne() {
+        XCTAssertEqual(V1.models.count, 7)
         XCTAssertEqual(V1.versionIdentifier, Schema.Version(1, 0, 0))
         XCTAssertEqual(CocktailMigrationPlan.schemas.count, 1)
     }
@@ -1732,6 +1732,314 @@ final class ModelSeederTests: XCTestCase {
         XCTAssertTrue(favorites.allSatisfy { $0.isFavorite && $0.source == .original })
         XCTAssertEqual(favorites.first { $0.name == "Irish Whiskey Sour" }?.baseStyle?.name, "Irish Whiskey")
         XCTAssertFalse(favorites.contains { $0.needsIngredientReview })
+    }
+}
+
+// MARK: - Legacy importer (data model refactor, phase 4)
+
+final class LegacyImporterTests: XCTestCase {
+    private var container: ModelContainer!
+    private var context: ModelContext!
+    private var folder: URL!
+    private var storeURL: URL { folder.appendingPathComponent("CocktailRecipe.sqlite") }
+
+    override func setUpWithError() throws {
+        container = try CocktailModelContainer.make(inMemory: true)
+        context = ModelContext(container)
+        folder = FileManager.default.temporaryDirectory.appendingPathComponent("LegacyImporterTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: folder)
+        context = nil
+        container = nil
+    }
+
+    // MARK: Version 3 (today's database)
+
+    func testVersion3DatabaseImportsEverything() throws {
+        let photo = Data([1, 2, 3, 4])
+        try makeLegacyStore(version: "CocktailRecipe 3") { old in
+            let bourbon = self.spirit("Bourbon", in: old)
+            let whiskey = self.spirit("Whiskey", in: old)
+            let aperol = self.spirit("Aperol", type: .liqueur, in: old)
+            _ = self.spirit("Amaro", type: .liqueur, in: old)
+            _ = self.spirit("Japanese Whiskey Blend", in: old)
+
+            let oldFashioned = self.drink("Old Fashioned", base: bourbon, ingredients: "2pt Bourbon, 1pt Simple Syrup, 2-4 dashes Angostura Bitters, Orange Peel", in: old)
+            oldFashioned.setValue(Int16(9), forKey: "rating")
+            oldFashioned.setValue(true, forKey: "isFavorite")
+            oldFashioned.setValue(photo, forKey: "image")
+            oldFashioned.setValue(Int16(SourceType.classic.rawValue), forKey: "source")
+            _ = self.drink("Irish Whiskey Sour", base: whiskey, ingredients: "2 parts Irish Whiskey, 1 part Lemon Juice, Egg White", in: old)
+            let manhattan = self.drink("Manhattan", base: nil, ingredients: "2 oz Rye Whiskey\n1 oz Sweet Vermouth", in: old)
+            _ = self.drink("Metric Martini", base: nil, ingredients: "60 ml Gin\n10 ml Dry Vermouth", in: old)
+
+            let buffalo = self.bottle("Buffalo Trace", spirit: bourbon, in: old)
+            buffalo.setValue(StockLevel.low.rawValue, forKey: "stockLevel")
+            buffalo.setValue(Int16(2), forKey: "bottleCount")
+            buffalo.setValue(true, forKey: "isFavorite")
+            buffalo.setValue(Int16(8), forKey: "rating")
+            buffalo.setValue("Go-to", forKey: "notes")
+            _ = self.bottle("Aperol", spirit: aperol, in: old)
+
+            let friday = self.menu("Friday Night", in: old)
+            self.menuItem(menu: friday, drink: oldFashioned, in: old)
+            self.menuItem(menu: friday, drink: manhattan, in: old)
+            self.menuItem(menu: friday, drink: oldFashioned, in: old) // duplicate
+            self.menuItem(menu: friday, drink: nil, in: old)          // orphan
+            self.menuItem(menu: nil, drink: manhattan, in: old)       // no menu
+        }
+
+        let summary = try importer().runImport()
+
+        XCTAssertEqual(summary, ImportSummary(cocktails: 4, bottles: 2, menus: 1, menuEntries: 2, customStyles: 1, cocktailsNeedingReview: 1))
+
+        let oldFashioned = try cocktail("Old Fashioned")
+        XCTAssertEqual(oldFashioned.baseStyle?.name, "Bourbon")
+        XCTAssertEqual(oldFashioned.rating, 9)
+        XCTAssertTrue(oldFashioned.isFavorite)
+        XCTAssertEqual(oldFashioned.photo, photo)
+        XCTAssertEqual(oldFashioned.source, .classic)
+        XCTAssertEqual(oldFashioned.originalIngredientsText, "2pt Bourbon, 1pt Simple Syrup, 2-4 dashes Angostura Bitters, Orange Peel")
+        XCTAssertEqual(oldFashioned.orderedIngredients.map(\.name), ["Bourbon", "Simple Syrup", "Angostura Bitters", "Orange Peel"])
+        XCTAssertEqual(oldFashioned.orderedIngredients.map(\.unit), [.part, .part, .dash, .piece])
+        XCTAssertEqual(oldFashioned.orderedIngredients.first?.style?.name, "Bourbon")
+        XCTAssertFalse(oldFashioned.needsIngredientReview)
+
+        XCTAssertEqual(try cocktail("Irish Whiskey Sour").baseStyle?.name, "Irish Whiskey")
+        XCTAssertEqual(try cocktail("Manhattan").baseStyle?.name, "Rye", "A built-in classic with no link takes its seed style")
+        XCTAssertTrue(try cocktail("Metric Martini").needsIngredientReview)
+        XCTAssertNil(try cocktail("Metric Martini").baseStyle)
+
+        let bottles = try context.fetch(FetchDescriptor<V1.Bottle>())
+        let buffalo = try XCTUnwrap(bottles.first { $0.brand == "Buffalo Trace" })
+        XCTAssertEqual(buffalo.style?.name, "Bourbon")
+        XCTAssertEqual(buffalo.stock, .low)
+        XCTAssertEqual(buffalo.bottleCount, 2)
+        XCTAssertTrue(buffalo.isFavorite)
+        XCTAssertEqual(buffalo.rating, 8)
+        XCTAssertEqual(buffalo.notes, "Go-to")
+        XCTAssertEqual(bottles.first { $0.brand == "Aperol" }?.style?.name, "Aperitivo")
+
+        let menu = try XCTUnwrap(try context.fetch(FetchDescriptor<V1.Menu>()).first)
+        XCTAssertEqual(menu.orderedEntries.compactMap { $0.cocktail?.name }, ["Manhattan", "Old Fashioned"])
+
+        let styles = StyleStore(context: context)
+        XCTAssertEqual(try styles.style(named: "Japanese Whiskey Blend")?.family, .whiskey)
+        XCTAssertEqual(try styles.style(named: "Amaro")?.isBuiltIn, true, "Amaro matches the built-in style")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.SpiritStyle>()), SpiritTaxonomy.builtInStyles.count + 1)
+        XCTAssertTrue(importer().hasImported)
+    }
+
+    // MARK: Older databases
+
+    func testVersion1DatabaseImports() throws {
+        try makeLegacyStore(version: "CocktailRecipe") { old in
+            let gin = self.spirit("Gin", in: old)
+            let martini = self.drink("Martini", base: gin, ingredients: "1pt Gin, 1pt Dry Vermouth, Olive", in: old)
+            martini.setValue(Int16(7), forKey: "rating")
+            let menu = self.menu("Date Night", in: old)
+            self.menuItem(menu: menu, drink: martini, in: old)
+        }
+
+        let summary = try importer().runImport()
+
+        XCTAssertEqual(summary.cocktails, 1)
+        XCTAssertEqual(summary.bottles, 0)
+        XCTAssertEqual(summary.menuEntries, 1)
+        let martini = try cocktail("Martini")
+        XCTAssertEqual(martini.baseStyle?.name, "London Dry")
+        XCTAssertEqual(martini.rating, 7)
+        XCTAssertFalse(martini.isFavorite, "Version 1 had no favorites")
+        XCTAssertTrue(martini.orderedIngredients.last?.isGarnish ?? false)
+    }
+
+    func testVersion2DatabaseImports() throws {
+        try makeLegacyStore(version: "CocktailRecipe 2") { old in
+            let rum = self.spirit("Rum", in: old)
+            _ = self.drink("Daquiri", base: rum, ingredients: "2pt Light Rum, 1pt Lime Juice, .5pt Simple Syrup", in: old)
+            _ = self.bottle("Plantation 3 Stars", spirit: rum, in: old)
+        }
+
+        let summary = try importer().runImport()
+
+        XCTAssertEqual(summary.cocktails, 1)
+        XCTAssertEqual(summary.bottles, 1)
+        let daquiri = try cocktail("Daquiri")
+        XCTAssertEqual(daquiri.baseStyle?.name, "Rum", "Rum maps to the general style")
+        XCTAssertEqual(daquiri.orderedIngredients.first?.style?.name, "White Rum")
+        XCTAssertEqual(try context.fetch(FetchDescriptor<V1.Bottle>()).first?.style?.name, "Rum")
+    }
+
+    // MARK: Safety
+
+    func testImportRunsOnlyOnce() throws {
+        try makeLegacyStore(version: "CocktailRecipe 3") { old in
+            _ = self.drink("Negroni", base: nil, ingredients: "1 oz Gin\n1 oz Campari\n1 oz Sweet Vermouth", in: old)
+        }
+
+        XCTAssertNotNil(try importer().importIfNeeded())
+        XCTAssertNil(try importer().importIfNeeded(), "Second launch does nothing")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.Cocktail>()), 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.ImportRecord>()), 1)
+    }
+
+    func testNoOldDatabaseMeansNothingToImport() throws {
+        XCTAssertNil(try importer().importIfNeeded())
+        XCTAssertFalse(importer().hasImported)
+    }
+
+    func testOldDatabaseIsNeverModified() throws {
+        try makeLegacyStore(version: "CocktailRecipe 2") { old in
+            _ = self.drink("Gimlet", base: nil, ingredients: "2 oz Gin\n¾ oz Lime Juice", in: old)
+        }
+        let before = try storeFiles()
+
+        try importer().runImport()
+
+        XCTAssertEqual(try storeFiles(), before, "The old database files are byte-for-byte unchanged")
+    }
+
+    func testLargeBottlePhotosComeAcross() throws {
+        // Big enough that Core Data stores it outside the database file, in the support folder.
+        let largePhoto = Data((0..<400_000).map { UInt8($0 % 251) })
+        try makeLegacyStore(version: "CocktailRecipe 3") { old in
+            let bottle = self.bottle("Buffalo Trace", spirit: nil, in: old)
+            bottle.setValue(largePhoto, forKey: "image")
+        }
+
+        try importer().runImport()
+
+        let bottle = try XCTUnwrap(try context.fetch(FetchDescriptor<V1.Bottle>()).first)
+        XCTAssertEqual(bottle.photo?.count, largePhoto.count)
+        XCTAssertEqual(bottle.photo, largePhoto)
+    }
+
+    func testFailedImportLeavesNothingBehind() throws {
+        try Data("not a database".utf8).write(to: storeURL)
+
+        XCTAssertThrowsError(try importer().runImport())
+
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.Cocktail>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.SpiritStyle>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.ImportRecord>()), 0, "No marker, so it can try again")
+    }
+
+    func testEmptyNamesGetFallbacks() throws {
+        try makeLegacyStore(version: "CocktailRecipe 3") { old in
+            _ = self.drink("   ", base: nil, ingredients: "", in: old)
+            _ = self.menu("", in: old)
+        }
+
+        try importer().runImport()
+
+        XCTAssertEqual(try context.fetch(FetchDescriptor<V1.Cocktail>()).first?.name, "Untitled Cocktail")
+        XCTAssertEqual(try context.fetch(FetchDescriptor<V1.Menu>()).first?.name, "Untitled Menu")
+    }
+
+    // MARK: Seeding record
+
+    func testDeletedClassicsStayDeletedAfterImport() throws {
+        let suite = "LegacyImporterTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        // The old app offered Negroni and Martini; the user then deleted Negroni.
+        defaults.set(["Martini", "Negroni"], forKey: DataController.seededCocktailsKey)
+        try makeLegacyStore(version: "CocktailRecipe 3") { old in
+            _ = self.drink("Martini", base: nil, ingredients: "2½ oz Gin\n½ oz Dry Vermouth", in: old)
+        }
+
+        try importer(defaults: defaults).runImport()
+        try ModelSeeder.seedBuiltIns(context: context, defaults: defaults)
+
+        let names = Set(try context.fetch(FetchDescriptor<V1.Cocktail>()).map(\.name))
+        XCTAssertFalse(names.contains("Negroni"), "Deleted in the old app, so not added back")
+        XCTAssertTrue(names.contains("Gimlet"), "Never offered by the old app, so added")
+        XCTAssertEqual(names.filter { $0 == "Martini" }.count, 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<V1.SpiritStyle>()), SpiritTaxonomy.builtInStyles.count)
+    }
+
+    // MARK: Helpers
+
+    private func importer(defaults: UserDefaults? = nil) -> LegacyImporter {
+        LegacyImporter(context: context, legacyStoreURL: storeURL, defaults: defaults)
+    }
+
+    private func cocktail(_ name: String) throws -> V1.Cocktail {
+        try XCTUnwrap(try context.fetch(FetchDescriptor<V1.Cocktail>()).first { $0.name == name }, "No cocktail named \(name)")
+    }
+
+    /// Every file in the old database's folder, including inside the hidden support folder, by relative path.
+    private func storeFiles() throws -> [String: Data] {
+        var files: [String: Data] = [:]
+        let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey]))
+        for case let url as URL in enumerator {
+            guard try url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else { continue }
+            files[String(url.path.dropFirst(folder.path.count))] = try Data(contentsOf: url)
+        }
+        return files
+    }
+
+    /// Creates an old database file with the given model version and fills it.
+    private func makeLegacyStore(version: String, fill: (NSManagedObjectContext) throws -> Void) throws {
+        let url = try XCTUnwrap(Bundle(for: DataController.self).url(forResource: version, withExtension: "mom", subdirectory: "CocktailRecipe.momd"))
+        let model = try XCTUnwrap(NSManagedObjectModel(contentsOf: url))
+        model.entities.forEach { $0.managedObjectClassName = NSStringFromClass(NSManagedObject.self) }
+        let old = NSPersistentContainer(name: "CocktailRecipe", managedObjectModel: model)
+        old.persistentStoreDescriptions = [NSPersistentStoreDescription(url: storeURL)]
+        var loadError: Error?
+        old.loadPersistentStores { _, error in loadError = error }
+        if let loadError { throw loadError }
+        try fill(old.viewContext)
+        try old.viewContext.save()
+        for store in old.persistentStoreCoordinator.persistentStores {
+            try old.persistentStoreCoordinator.remove(store)
+        }
+    }
+
+    private func insert(_ entity: String, in context: NSManagedObjectContext) -> NSManagedObject {
+        let object = NSEntityDescription.insertNewObject(forEntityName: entity, into: context)
+        object.setValue(UUID(), forKey: "id")
+        return object
+    }
+
+    private func spirit(_ name: String, type: SpiritType = .liquor, in context: NSManagedObjectContext) -> NSManagedObject {
+        let spirit = insert("Spirit", in: context)
+        spirit.setValue(name, forKey: "spiritName")
+        spirit.setValue(type.rawValue, forKey: "type")
+        return spirit
+    }
+
+    private func drink(_ name: String, base: NSManagedObject?, ingredients: String, in context: NSManagedObjectContext) -> NSManagedObject {
+        let drink = insert("Drink", in: context)
+        drink.setValue(name, forKey: "drinkName")
+        drink.setValue(ingredients, forKey: "ingredients")
+        drink.setValue("Shake or stir.", forKey: "method")
+        drink.setValue(Int16(SourceType.original.rawValue), forKey: "source")
+        drink.setValue(base?.value(forKey: "id"), forKey: "baseSpirit")
+        return drink
+    }
+
+    private func bottle(_ brand: String, spirit: NSManagedObject?, in context: NSManagedObjectContext) -> NSManagedObject {
+        let bottle = insert("Bottle", in: context)
+        bottle.setValue(brand, forKey: "brand")
+        bottle.setValue(spirit, forKey: "spirit")
+        return bottle
+    }
+
+    private func menu(_ name: String, in context: NSManagedObjectContext) -> NSManagedObject {
+        let menu = insert("Menu", in: context)
+        menu.setValue(name, forKey: "menuName")
+        menu.setValue(Date(), forKey: "dateCreated")
+        return menu
+    }
+
+    private func menuItem(menu: NSManagedObject?, drink: NSManagedObject?, in context: NSManagedObjectContext) {
+        let item = insert("MenuItem", in: context)
+        item.setValue(menu, forKey: "menu")
+        item.setValue(drink, forKey: "drink")
     }
 }
 

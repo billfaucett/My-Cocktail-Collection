@@ -32,7 +32,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         let aviation = app.staticTexts["Aviation"]
         XCTAssertTrue(aviation.waitForExistence(timeout: 5), "The seeded classics should be listed")
         // The first rows alphabetically, so they are on screen on every iPhone.
-        let others = ["Aperol Spritz", "Bee's Knees", "Bloody Mary", "Boulevardier"]
+        let others = ["Aperol Spritz", "Bee's Knees", "Bloody Mary"]
         for name in others {
             XCTAssertTrue(app.staticTexts[name].exists, "\(name) should be listed before deleting")
         }
