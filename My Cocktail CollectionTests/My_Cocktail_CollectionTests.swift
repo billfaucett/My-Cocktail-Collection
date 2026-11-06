@@ -953,3 +953,230 @@ final class SpiritTaxonomyTests: XCTestCase {
     }
 }
 
+// MARK: - Ingredient parser (data model refactor, step 2)
+
+final class IngredientParserTests: XCTestCase {
+
+    private func line(_ text: String) -> ParsedIngredient {
+        IngredientParser.parseLine(text)
+    }
+
+    // MARK: Lines from the plan
+
+    func testPartsLine() {
+        let gin = line("2 parts Gin")
+        XCTAssertEqual(gin.amount, 2)
+        XCTAssertEqual(gin.unit, .part)
+        XCTAssertEqual(gin.name, "Gin")
+        XCTAssertEqual(gin.styleName, "London Dry")
+        XCTAssertFalse(gin.needsReview)
+        XCTAssertEqual(gin.original, "2 parts Gin")
+    }
+
+    func testOlderPtLine() {
+        let tequila = line("2pt Tequila")
+        XCTAssertEqual(tequila.amount, 2)
+        XCTAssertEqual(tequila.unit, .part)
+        XCTAssertEqual(tequila.name, "Tequila")
+        XCTAssertEqual(tequila.styleName, "Tequila Blanco")
+    }
+
+    func testOuncesBecomePartsOneToOne() {
+        let gin = line("2½ oz Gin")
+        XCTAssertEqual(gin.amount, 2.5)
+        XCTAssertEqual(gin.unit, .part)
+        XCTAssertFalse(gin.needsReview)
+    }
+
+    func testDashRange() {
+        let bitters = line("2–3 dashes Angostura Bitters")
+        XCTAssertEqual(bitters.amount, 2)
+        XCTAssertEqual(bitters.amountMax, 3)
+        XCTAssertEqual(bitters.unit, .dash)
+        XCTAssertEqual(bitters.name, "Angostura Bitters")
+        XCTAssertEqual(bitters.styleName, "Aromatic Bitters")
+    }
+
+    func testTeaspoonBecomesBarspoon() {
+        let benedictine = line("1 tsp Bénédictine")
+        XCTAssertEqual(benedictine.amount, 1)
+        XCTAssertEqual(benedictine.unit, .barspoon)
+        XCTAssertEqual(benedictine.styleName, "Herbal Liqueur")
+    }
+
+    func testTopUp() {
+        let soda = line("Club soda, to top")
+        XCTAssertNil(soda.amount)
+        XCTAssertEqual(soda.unit, .topUp)
+        XCTAssertEqual(soda.name, "Club soda")
+        XCTAssertNil(soda.note)
+        XCTAssertEqual(soda.styleName, "Tonic & Soda")
+    }
+
+    func testGarnish() {
+        let peel = line("Orange peel, to garnish")
+        XCTAssertTrue(peel.isGarnish)
+        XCTAssertEqual(peel.unit, .piece)
+        XCTAssertEqual(peel.name, "Orange peel")
+        XCTAssertNil(peel.styleName)
+    }
+
+    func testOptionalCount() {
+        let egg = line("1 Egg White (optional)")
+        XCTAssertEqual(egg.amount, 1)
+        XCTAssertEqual(egg.unit, .piece)
+        XCTAssertEqual(egg.name, "Egg White")
+        XCTAssertTrue(egg.isOptional)
+    }
+
+    // MARK: Amounts
+
+    func testFractions() {
+        XCTAssertEqual(line("¾ oz Lime Juice").amount, 0.75)
+        XCTAssertEqual(line("1/2 oz Lime Juice").amount, 0.5)
+        XCTAssertEqual(line("1 1/2 oz Gin").amount, 1.5)
+        XCTAssertEqual(line("1 ½ oz Gin").amount, 1.5)
+        XCTAssertEqual(line(".5pt Simple Syrup").amount, 0.5)
+        XCTAssertEqual(line("1¼ oz Bourbon").amount, 1.25)
+    }
+
+    func testRangeOfParts() {
+        let syrup = line(".5-1 part Simple Syrup")
+        XCTAssertEqual(syrup.amount, 0.5)
+        XCTAssertEqual(syrup.amountMax, 1)
+        XCTAssertEqual(syrup.unit, .part)
+        XCTAssertEqual(syrup.styleName, "Syrup")
+    }
+
+    func testTablespoonIsHalfAPart() {
+        XCTAssertEqual(line("1 tbsp Honey Syrup").amount, 0.5)
+        XCTAssertEqual(line("1 tbsp Honey Syrup").unit, .part)
+    }
+
+    func testMetricIsConvertedAndFlagged() {
+        let gin = line("45 ml Gin")
+        XCTAssertEqual(gin.amount ?? 0, 1.5, accuracy: 0.001)
+        XCTAssertEqual(gin.unit, .part)
+        XCTAssertTrue(gin.needsReview, "Converted from ml, so worth a look")
+        XCTAssertEqual(line("4.5 cl Gin").amount ?? 0, 1.5, accuracy: 0.001)
+    }
+
+    // MARK: Notes and flags
+
+    func testNotesAreKept() {
+        XCTAssertEqual(line("¼ oz Islay Scotch, to float").note, "to float")
+        XCTAssertEqual(line("¼ oz Islay Scotch, to float").styleName, "Scotch")
+        let honey = line("¾ oz Honey Syrup (equal parts honey and warm water)")
+        XCTAssertEqual(honey.name, "Honey Syrup")
+        XCTAssertEqual(honey.note, "equal parts honey and warm water")
+        let salt = line("Salt, for the rim (optional)")
+        XCTAssertEqual(salt.name, "Salt")
+        XCTAssertEqual(salt.note, "for the rim")
+        XCTAssertTrue(salt.isOptional)
+    }
+
+    func testOptionalWordings() {
+        XCTAssertTrue(line("Optional .5 parts Agave Nectar").isOptional)
+        XCTAssertEqual(line("Optional .5 parts Agave Nectar").amount, 0.5)
+        XCTAssertTrue(line(".5 parts simple syrup (if desired)").isOptional)
+    }
+
+    func testOlderRecipesListGarnishesWithoutSayingSo() {
+        XCTAssertTrue(line("Orange Peel").isGarnish)
+        XCTAssertTrue(line("Olive").isGarnish)
+        XCTAssertTrue(line("Orange Twist").isGarnish)
+        XCTAssertFalse(line("Egg White").isGarnish)
+        XCTAssertFalse(line("Topo Chico").isGarnish)
+    }
+
+    // MARK: Styles
+
+    func testGingerIsNotGin() {
+        XCTAssertEqual(line("4 oz Ginger Beer").styleName, "Ginger Beer & Ale")
+        XCTAssertEqual(line("¾ oz Honey-Ginger Syrup").styleName, "Syrup")
+    }
+
+    func testCountedItemsAreNotLinkedToAStyle() {
+        let cherries = line("3-4 Luxardo or bourbon soaked cherries")
+        XCTAssertEqual(cherries.amount, 3)
+        XCTAssertEqual(cherries.amountMax, 4)
+        XCTAssertEqual(cherries.unit, .piece)
+        XCTAssertNil(cherries.styleName, "Cherries aren't bourbon")
+    }
+
+    func testFreshIngredientsHaveNoStyle() {
+        XCTAssertNil(line("1 oz Fresh Lime Juice").styleName)
+        XCTAssertNil(line("1 oz Heavy Cream").styleName)
+        XCTAssertNil(line(".5 parts Peanut butter Whiskey").styleName)
+    }
+
+    func testEveryAliasPointsToARealStyle() {
+        for alias in IngredientParser.styleAliases {
+            XCTAssertNotNil(SpiritTaxonomy.builtInStyle(named: alias.style), "\(alias.alias) → \(alias.style) is not a built-in style")
+        }
+    }
+
+    // MARK: Things to flag
+
+    func testUnclearLinesAreFlagged() {
+        XCTAssertTrue(line("Bourbon 2 oz").needsReview, "Amount after the name")
+        XCTAssertTrue(line("2/0 oz Gin").needsReview, "Unreadable amount")
+        XCTAssertTrue(line(String(repeating: "Shake with ice ", count: 8)).needsReview, "A sentence, not an ingredient")
+    }
+
+    // MARK: Whole recipes
+
+    func testAllBuiltInClassicsParseWithoutReview() {
+        for cocktail in SeedData.classics {
+            let recipe = IngredientParser.parse(cocktail.ingredientsText)
+            XCTAssertEqual(recipe.ingredients.count, cocktail.ingredients.count, cocktail.name)
+            XCTAssertFalse(recipe.needsReview, "\(cocktail.name): \(recipe.ingredients.filter(\.needsReview).map(\.original))")
+            for ingredient in recipe.ingredients where ingredient.original.first?.isNumber == true {
+                XCTAssertNotNil(ingredient.amount, "\(cocktail.name): \(ingredient.original)")
+            }
+        }
+    }
+
+    func testEveryClassicsBaseSpiritAppearsInItsIngredients() {
+        // Each classic's base spirit should be recognised among its ingredients (same family at least).
+        for cocktail in SeedData.classics {
+            let recipe = IngredientParser.parse(cocktail.ingredientsText)
+            let families = Set(recipe.ingredients.compactMap { $0.styleName.flatMap(SpiritTaxonomy.builtInStyle(named:))?.family })
+            let baseFamily = SpiritTaxonomy.placement(forLegacySpirit: cocktail.spirit, type: .liquor).family
+            XCTAssertTrue(families.contains(baseFamily), "\(cocktail.name): no \(baseFamily.displayName) ingredient found")
+        }
+    }
+
+    func testHouseFavoritesParseWithoutReview() {
+        for cocktail in SeedData.favorites {
+            let recipe = IngredientParser.parse(cocktail.ingredientsText)
+            XCTAssertFalse(recipe.ingredients.isEmpty, cocktail.name)
+            XCTAssertFalse(recipe.needsReview, "\(cocktail.name): \(recipe.ingredients.filter(\.needsReview).map(\.original))")
+        }
+    }
+
+    func testOriginalFiveClassicsParseWithoutReview() {
+        for (name, recipe) in SeedData.originalClassicRecipes {
+            XCTAssertFalse(IngredientParser.parse(recipe.ingredients).needsReview, name)
+        }
+    }
+
+    func testCommaSeparatedRecipe() {
+        let recipe = IngredientParser.parse("2pt Light Rum, 1pt Lime Juice, .5pt Simple Syrup")
+        XCTAssertEqual(recipe.ingredients.map(\.name), ["Light Rum", "Lime Juice", "Simple Syrup"])
+        XCTAssertEqual(recipe.ingredients.map(\.amount), [2, 1, 0.5])
+        XCTAssertEqual(recipe.ingredients.map(\.styleName), ["White Rum", nil, "Syrup"])
+    }
+
+    func testCommaSeparatedRecipeKeepsNotesWithTheirLine() {
+        let recipe = IngredientParser.parse("2 oz Gin, 1 oz Lemon Juice, Lemon twist, to garnish")
+        XCTAssertEqual(recipe.ingredients.count, 3)
+        XCTAssertTrue(recipe.ingredients[2].isGarnish)
+    }
+
+    func testEmptyTextHasNoIngredients() {
+        XCTAssertTrue(IngredientParser.parse("").ingredients.isEmpty)
+        XCTAssertFalse(IngredientParser.parse("  \n ").needsReview)
+    }
+}
+
