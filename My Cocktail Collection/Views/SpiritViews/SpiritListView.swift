@@ -9,68 +9,80 @@ import SwiftUI
 import CoreData
 
 struct SpiritListView: View {
-    @Environment(\.managedObjectContext) var context
-    @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
-    @State private var showAddNewSpirit = false
-    
+    @Environment(\.managedObjectContext) private var context
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(key: "spiritName", ascending: true, selector: #selector(NSString.localizedCaseInsensitiveCompare(_:)))],
+        animation: .default
+    )
+    private var spirits: FetchedResults<Spirit>
+
+    @State private var showAddSpirit = false
+    @State private var spiritToEdit: Spirit?
+    @State private var spiritToDelete: Spirit?
+
     var body: some View {
-        NavigationView{
-            VStack {
-                HStack {
-                    Button("Close") {
-                        dismiss()
+        NavigationStack {
+            ListScreen(
+                "Spirits",
+                isEmpty: spirits.isEmpty,
+                emptyState: EmptyState(
+                    title: "No Spirits Yet",
+                    systemImage: "drop",
+                    message: "Spirits are the categories for your cocktails and inventory, like Bourbon or Gin.",
+                    actionTitle: "Add a Spirit"
+                ),
+                addLabel: "Add Spirit",
+                onAdd: { showAddSpirit = true }
+            ) {
+                ForEach(spirits) { spirit in
+                    Button {
+                        spiritToEdit = spirit
+                    } label: {
+                        SpiritRow(spirit: spirit)
                     }
-                    Spacer()
-                    Button("Add New Spirit") {
-                        showAddNewSpirit = true
-                    }
-                }
-                .padding()
-                Divider()
-                
-                VStack {
-                    Text("Base Spirits")
-                        .font(.title)
-                    Divider()
-                }
-                
-                List(spirits) { spirit in
-                    HStack {
-                        NavigationLink(destination: AddEditSpirit(spirit: spirit)) {
-                            Text(spirit.spiritName ?? "")
-                                .bold()
-                            Spacer()
-                            if let type = SpiritType(rawValue: spirit.type) {
-                                Text(type.description)
-                            }
-                        }
-                    }
+                    .foregroundStyle(.primary)
+                    .deleteSwipeAction { spiritToDelete = spirit }
                 }
             }
-        }
-        .sheet(isPresented: $showAddNewSpirit) {
-            AddEditSpirit()
+            .sheet(isPresented: $showAddSpirit) {
+                AddEditSpirit()
+            }
+            .sheet(item: $spiritToEdit) { spirit in
+                AddEditSpirit(spirit: spirit)
+            }
+            .confirmDelete($spiritToDelete, title: "Delete Spirit?") { spirit in
+                "\(spirit.spiritName ?? "This spirit") will be removed. Cocktails that use it will no longer show a base spirit, and its bottles will stay in your inventory without a category."
+            } onDelete: { spirit in
+                context.delete(spirit)
+                context.saveOrRollback()
+            }
         }
     }
 }
 
-struct SpiritListView_Previews: PreviewProvider {
-    static var previews: some View {
-        let context = DataController.init().container.viewContext
+/// One spirit in the list: name, how many bottles you have, and its type.
+struct SpiritRow: View {
+    @ObservedObject var spirit: Spirit
 
-        let spirit1 = Spirit(context: context)
-        spirit1.spiritName = "Whiskey"
-        spirit1.type = SpiritType.liquor.rawValue
-        
-        let spirit2 = Spirit(context: context)
-        spirit2.spiritName = "Vodka"
-        spirit2.type = SpiritType.liquor.rawValue
-        
-        try? context.save()
-        
-        return SpiritListView()
-            .environment(\.managedObjectContext, context)
+    private var bottleSummary: String {
+        switch spirit.bottles?.count ?? 0 {
+        case 0: return "No bottles in inventory"
+        case 1: return "1 bottle in inventory"
+        case let count: return "\(count) bottles in inventory"
+        }
+    }
+
+    var body: some View {
+        let type = SpiritType(rawValue: spirit.type) ?? .liquor
+        ItemRow(spirit.spiritName ?? "Unnamed Spirit", subtitle: bottleSummary) {
+            Badge(type.description, color: type.color)
+        }
     }
 }
 
+#Preview {
+    let context = DataController(inMemory: true).container.viewContext
+    DataController.seedSpirits(context: context)
+    return SpiritListView()
+        .environment(\.managedObjectContext, context)
+}

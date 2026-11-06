@@ -37,6 +37,22 @@ class DataController: ObservableObject {
         }
     }
     
+    /// The house favorites added by "Add Our Favorite Cocktails".
+    static let favoriteCocktailNames: Set<String> = [
+        "Cherry Bourbon Sour", "Blood Orange Margarita", "Irish Whiskey Sour",
+        "Ranch Water", "Chocolate Peanutbutter Sundae", "Bourbon Renewal"
+    ]
+    
+    /// Deletes a cocktail and removes it from any menus, so no empty menu entries are left behind.
+    static func delete(_ drink: Drink, context: NSManagedObjectContext) {
+        let request = NSFetchRequest<MenuItem>(entityName: "MenuItem")
+        request.predicate = NSPredicate(format: "drink == %@", drink)
+        let items = (try? context.fetch(request)) ?? []
+        items.forEach { context.delete($0) }
+        context.delete(drink)
+        context.saveOrRollback()
+    }
+    
     /// Seeds spirits and classic cocktails on first launch, then repairs any seeded drinks missing a base spirit.
     static func seedIfNeeded(context: NSManagedObjectContext) {
         let spiritCount = (try? context.count(for: NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? 0
@@ -191,6 +207,22 @@ class DataController: ObservableObject {
             try context.save()
         } catch {
             print("error saving classics: \(error)")
+        }
+    }
+}
+
+extension NSManagedObjectContext {
+    /// Saves any changes. If saving fails, the changes are undone and the error is logged.
+    @discardableResult
+    func saveOrRollback() -> Bool {
+        guard hasChanges else { return true }
+        do {
+            try save()
+            return true
+        } catch {
+            rollback()
+            print("Failed to save changes: \(error)")
+            return false
         }
     }
 }

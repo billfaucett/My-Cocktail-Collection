@@ -9,47 +9,36 @@ import SwiftUI
 import CoreData
 
 struct InventoryListView: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext) private var context
     @FetchRequest(sortDescriptors: Inventory.sortByBrand, animation: .default)
     private var bottles: FetchedResults<Bottle>
 
     @State private var showAddBottle = false
     @State private var bottleToEdit: Bottle?
+    @State private var bottleToDelete: Bottle?
 
     var body: some View {
         NavigationStack {
-            Group {
-                if bottles.isEmpty {
-                    ContentUnavailableView {
-                        Label("No Bottles Yet", systemImage: "wineglass")
-                    } description: {
-                        Text("Add the spirits you have on hand to keep track of what's in stock.")
-                    } actions: {
-                        Button("Add a Bottle") { showAddBottle = true }
-                            .buttonStyle(.borderedProminent)
-                    }
-                } else {
-                    List(bottles) { bottle in
-                        Button {
-                            bottleToEdit = bottle
-                        } label: {
-                            BottleRow(bottle: bottle)
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                }
-            }
-            .navigationTitle("Spirit Inventory")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-                ToolbarItem(placement: .primaryAction) {
+            ListScreen(
+                "Spirit Inventory",
+                isEmpty: bottles.isEmpty,
+                emptyState: EmptyState(
+                    title: "No Bottles Yet",
+                    systemImage: "wineglass",
+                    message: "Add the spirits you have on hand to keep track of what's in stock.",
+                    actionTitle: "Add a Bottle"
+                ),
+                addLabel: "Add Bottle",
+                onAdd: { showAddBottle = true }
+            ) {
+                ForEach(bottles) { bottle in
                     Button {
-                        showAddBottle = true
+                        bottleToEdit = bottle
                     } label: {
-                        Label("Add Bottle", systemImage: "plus")
+                        BottleRow(bottle: bottle)
                     }
+                    .foregroundStyle(.primary)
+                    .deleteSwipeAction { bottleToDelete = bottle }
                 }
             }
             .sheet(isPresented: $showAddBottle) {
@@ -57,6 +46,15 @@ struct InventoryListView: View {
             }
             .sheet(item: $bottleToEdit) { bottle in
                 AddEditBottleView(bottle: bottle)
+            }
+            .confirmDelete($bottleToDelete, title: "Delete Bottle?") { bottle in
+                "\(bottle.brand ?? "This bottle") will be removed from your inventory."
+            } onDelete: { bottle in
+                do {
+                    try Inventory(context: context).delete(bottle)
+                } catch {
+                    print("Failed to delete bottle: \(error)")
+                }
             }
         }
     }
@@ -67,74 +65,20 @@ struct BottleRow: View {
     @ObservedObject var bottle: Bottle
 
     var body: some View {
-        HStack(spacing: 12) {
-            Group {
-                if let data = bottle.image, let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Image(systemName: "wineglass")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(.secondarySystemBackground))
-                }
-            }
-            .frame(width: 48, height: 48)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(bottle.brand ?? "Unnamed Bottle")
-                        .font(.headline)
-                    if bottle.isFavorite {
-                        Image(systemName: "heart.fill")
-                            .font(.caption)
-                            .foregroundStyle(.pink)
-                            .accessibilityLabel("Favorite")
-                    }
-                }
-                Text(bottle.spirit?.spiritName ?? "No Category")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
+        ItemRow(
+            bottle.brand ?? "Unnamed Bottle",
+            subtitle: bottle.spirit?.spiritName ?? "No Category",
+            thumbnail: Thumbnail(data: bottle.image, placeholder: .bottle),
+            isFavorite: bottle.isFavorite
+        ) {
             VStack(alignment: .trailing, spacing: 4) {
-                StockBadge(level: bottle.stock)
+                Badge(bottle.stock.description, color: bottle.stock.color)
                 if bottle.bottleCount > 1 {
                     Text("\(bottle.bottleCount) bottles")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-/// A small coloured label for a stock level.
-struct StockBadge: View {
-    let level: StockLevel
-
-    var body: some View {
-        Text(level.description)
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .foregroundStyle(level.color)
-            .background(level.color.opacity(0.15), in: Capsule())
-    }
-}
-
-extension StockLevel {
-    var color: Color {
-        switch self {
-        case .full: return .green
-        case .half: return .teal
-        case .low: return .orange
-        case .out: return .red
         }
     }
 }

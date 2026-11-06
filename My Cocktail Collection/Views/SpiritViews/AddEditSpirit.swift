@@ -9,101 +9,84 @@ import SwiftUI
 import CoreData
 
 struct AddEditSpirit: View {
-    @Environment(\.managedObjectContext) var context
-    @Environment(\.dismiss) private var dismiss
-    @State var spiritName: String = ""
-    @State var spiritType: SpiritType?
-    @State private var showingAlert = false
-    
-    var spirit: Spirit?
-    
+    @Environment(\.managedObjectContext) private var context
+    @FetchRequest(sortDescriptors: []) private var allSpirits: FetchedResults<Spirit>
+
+    /// The spirit being edited, or nil when adding a new one.
+    private let spirit: Spirit?
+
+    @State private var spiritName = ""
+    @State private var spiritType: SpiritType = .liquor
+    @State private var hasLoaded = false
+
+    /// - Parameter spirit: The spirit to edit. Leave out to add a new spirit.
+    init(spirit: Spirit? = nil) {
+        self.spirit = spirit
+    }
+
+    private var trimmedName: String { spiritName.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     var body: some View {
-        NavigationView {
-            VStack{
-                HStack {
-                    Button("Close") {
-                        dismiss()
-                    }
-                    .padding()
-                    
-                    Spacer()
-                    Button("Save") {
-                        saveSpirit()
-                    }
-                    .padding()
-                }
-                HStack{
-                    TextField("Spirit Name", text: $spiritName)
-                        .padding()
-                        .onAppear {
-                            if let spirit = spirit {
-                                spiritName = spirit.spiritName ?? ""
-                            }
-                        }
-                    Picker("Spirit Type", selection: $spiritType) {
-                        ForEach(SpiritType.allCases, id: \.self) { spiritType in
-                            Text(spiritType.description)
-                                .tag(spiritType as SpiritType?)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                    .padding()
-                    .onAppear {
-                        if let spirit = spirit {
-                            spiritType = SpiritType(rawValue: spirit.type)
-                        }
+        FormScreen(spirit == nil ? "Add Spirit" : "Edit Spirit", canSave: !trimmedName.isEmpty, onSave: save) {
+            Section {
+                TextField("Name (e.g. Bourbon, Amaro, Dry Vermouth)", text: $spiritName)
+                    .textInputAutocapitalization(.words)
+                Picker("Type", selection: $spiritType) {
+                    ForEach(SpiritType.allCases, id: \.self) { type in
+                        Text(type.description).tag(type)
                     }
                 }
-                Spacer()
+            } footer: {
+                Text("Spirits are the categories used for your cocktails' base spirit and your inventory.")
             }
-            .navigationTitle(spirit == nil ? "Add New Spirit" : "Edit Spirit")
         }
+        .onAppear(perform: loadSpirit)
     }
-    
-    func saveSpirit() {
-        guard let spirit = spirit else {
-            let spirit = Spirit(context: context)
-            spirit.id = UUID()
-            spirit.spiritName = spiritName
-            spirit.type = spiritType?.rawValue ?? 0
-            try? context.save()
-            dismiss()
-            return
+
+    private func loadSpirit() {
+        guard !hasLoaded else { return }
+        hasLoaded = true
+        guard let spirit else { return }
+        spiritName = spirit.spiritName ?? ""
+        spiritType = SpiritType(rawValue: spirit.type) ?? .liquor
+    }
+
+    private func save() throws {
+        let name = trimmedName
+        let isDuplicate = allSpirits.contains {
+            $0 != spirit && ($0.spiritName ?? "").caseInsensitiveCompare(name) == .orderedSame
         }
-        
-        spirit.spiritName = spiritName
-        spirit.type = spiritType?.rawValue ?? 0
-        try? context.save()
-        dismiss()
-        return
-    }
-}
+        if isDuplicate {
+            throw FormError("You already have a spirit named \(name).")
+        }
 
-struct AddEditSpirit_Previews: PreviewProvider {
-    static var previews: some View {
-        let context = DataController.init().container.viewContext
-        let newSpirit = Spirit(context: context)
-        newSpirit.spiritName = "Whiskey"
-        newSpirit.type = SpiritType.liquor.rawValue
-        return AddEditSpirit(spirit: newSpirit)
-            .environment(\.managedObjectContext, context)
-    }
-}
+        let target = spirit ?? Spirit(context: context)
+        if spirit == nil {
+            target.id = UUID()
+        }
+        target.spiritName = name
+        target.type = spiritType.rawValue
 
-
-/*Button("Delete") {
-    showingAlert = true
-}
-.padding()
-.foregroundColor(.red)
-.alert(isPresented: $showingAlert) {
-    Alert(title: Text("Confirm Deletion"), message: Text("Are you sure you want to delete this drink?"), primaryButton: .destructive(Text("Delete")) {
-        context.delete(spirit!)
         do {
             try context.save()
-            dismiss()
         } catch {
-            print("Error deleting drink: \(error)")
+            context.rollback()
+            throw error
         }
-    }, secondaryButton: .cancel())
-}*/
+    }
+}
+
+#Preview("Add") {
+    AddEditSpirit()
+        .environment(\.managedObjectContext, DataController(inMemory: true).container.viewContext)
+}
+
+#Preview("Edit") {
+    let context = DataController(inMemory: true).container.viewContext
+    let spirit = Spirit(context: context)
+    spirit.id = UUID()
+    spirit.spiritName = "Amaro"
+    spirit.type = SpiritType.liqueur.rawValue
+    return AddEditSpirit(spirit: spirit)
+        .environment(\.managedObjectContext, context)
+}

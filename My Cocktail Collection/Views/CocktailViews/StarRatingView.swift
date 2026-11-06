@@ -16,19 +16,19 @@ struct StarRatingView: View {
                 if Double(index) < rating {
                     if rating - Double(index) == 0.5 {
                         Image(systemName: "star.leadinghalf.fill")
-                            .foregroundColor(.yellow)
+                            .foregroundStyle(.yellow)
                             .overlay(
                                 Image(systemName: "star.trailinghalf.fill")
-                                    .foregroundColor(.yellow)
+                                    .foregroundStyle(.yellow)
                                     .offset(x: -2)
                             )
                     } else {
                         Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
+                            .foregroundStyle(.yellow)
                     }
                 } else {
                     Image(systemName: "star")
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(.yellow)
                 }
             }
         }

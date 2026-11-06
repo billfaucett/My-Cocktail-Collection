@@ -10,266 +10,128 @@ import CoreData
 import UIKit
 
 struct AddEditCocktailRecipeView: View {
-    @Environment(\.managedObjectContext) var context
-    @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)]) var spirits: FetchedResults<Spirit>
-    @State private var selectedSource: Int = 0
-    @State private var selectedBaseSpirit: Spirit?
-    @State private var selectedBaseSpiritId: UUID?
-    @State private var drinkName: String = ""
-    @State private var ingredients: String = ""
-    @State private var method: String = ""
-    @State private var isSaved = false
-    @State private var selectedImage: UIImage?
-    @State private var displayImage: UIImage?
-    @State private var showImagePicker = false
-    @State private var addSpirit = false
-    @State var ratingValue: Int16 = 0
-    
-    var drink: Drink?
-    
+    @Environment(\.managedObjectContext) private var context
+    @FetchRequest(sortDescriptors: []) private var spirits: FetchedResults<Spirit>
+
+    /// The cocktail being edited, or nil when adding a new one.
+    private let drink: Drink?
+
+    @State private var drinkName = ""
+    @State private var source: SourceType = .classic
+    @State private var baseSpirit: Spirit?
+    @State private var rating = 0
+    @State private var ingredients = ""
+    @State private var method = ""
+    @State private var photo: UIImage?
+    @State private var photoChanged = false
+    @State private var hasLoaded = false
+
+    /// - Parameter drink: The cocktail to edit. Leave out to add a new cocktail.
+    init(drink: Drink? = nil) {
+        self.drink = drink
+    }
+
+    private var canSave: Bool { !drinkName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack {
-                    HStack {
-                        Button("Dismiss") {
-                            dismiss()
-                        }
-                        .padding()
-                        Spacer()
-                        LinearGradient(gradient: Gradient(colors: [Color.white, Color.mint]), startPoint: /*@START_MENU_TOKEN@*/.leading/*@END_MENU_TOKEN@*/, endPoint: /*@START_MENU_TOKEN@*/.trailing/*@END_MENU_TOKEN@*/)
-                            .frame(height: 20)
-                        Button("Save") {
-                            saveRecipe()
-                        }
-                        .padding()
-                        .disabled(isSaved)
-                    }
-                    Section {
-                        VStack {
-                            HStack{
-                                Text("Source")
-                                    .font(.caption)
-                                Spacer()
-                            } .padding(.horizontal)
-                            
-                            Picker(selection: $selectedSource, label: Text("Source")) {
-                                Text("Classic").tag(0)
-                                Text("Website").tag(1)
-                                Text("Menu").tag(2)
-                                Text("Original").tag(3)
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .onAppear {
-                                if let drink = drink {
-                                    selectedSource = Int(drink.source)
-                                }
-                                if let spritId = drink?.baseSpirit {
-                                    selectedBaseSpirit = spirits.first(where: { $0.id == spritId })
-                                }
-                            }
-                        }
-                        .padding()
-                    }
-                    Spacer()
-                    Section {
-                        VStack{
-                            HStack{
-                                Text("Drink Name")
-                                    .font(.caption)
-                                Spacer()
-                            } .padding(.horizontal)
-                            HStack {
-                                TextField("Drink Name", text: $drinkName)
-                                    .padding(.horizontal)
-                                    .onTapGesture {
-                                        hideKeyboard()
-                                    }
-                                    .onAppear {
-                                        if let drink = drink {
-                                            drinkName = drink.drinkName ?? ""
-                                        }
-                                    }
-                                VStack {
-                                    var img = setDisplayImage()
-                                    Button(action: {
-                                        showImagePicker.toggle()
-                                        img = selectedImage ?? UIImage()
-                                    }){
-                                        if let image = selectedImage {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 50, height: 50)
-                                                .padding(.horizontal)
-                                        } else {
-                                            Image(uiImage: img)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fit)
-                                                .scaledToFit()
-                                                .frame(width: 50, height: 50)
-                                                .padding(.horizontal)
-                                        }
-                                    }
-                                    Text("Touch to Change")
-                                    .font(.caption2)
-                                    .padding(.horizontal)
-                                }
-                            }
-                            Spacer()
-                        }
-                        HStack {
-                            Text("Base Spirit")
-                                .font(.caption)
-                            Spacer()
-                            Picker(selection: $selectedBaseSpirit, label: Text("Base Spirit")) {
-                                Text("Select a Base Spirit")
-                                    .tag(nil as Spirit?)
-                                ForEach(spirits) { spirit in
-                                    Text(spirit.spiritName ?? "")
-                                        .tag(spirit as Spirit?)
-                                }
-                            }
-                            Button("Add Spirit") {
-                                addSpirit = true
-                            }
-                            .sheet(isPresented: $addSpirit, onDismiss: refreshSpirits) {
-                                AddEditSpirit()
-                            }
-                        }.padding()
-                        HStack {
-                            Text("Cocktail Rating")
-                                .font(.caption)
-                                .padding(.horizontal)
-                            Spacer()
-                            let ratingOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-                            Picker(selection: $ratingValue, label: Text("Add Rating")) {
-                                Text("Add Rating")
-                                    .tag(nil as Int16?)
-                                ForEach(ratingOptions.indices, id: \.self) { index in
-                                    Text(String(ratingOptions[index])) .tag(Int16(ratingOptions[index]) as Int16)
-                                }
-                            }
-                            .padding(.horizontal)
-                            .onAppear {
-                                if let drink = drink {
-                                    ratingValue = drink.rating
-                                }
-                            }
-                        }
-                    }
-                    Spacer()
-                    Section {
-                        VStack{
-                            HStack{
-                                Text("Ingredients")
-                                    .font(.caption)
-                                Spacer()
-                            } .padding(.horizontal)
-                            TextEditor(text: $ingredients)
-                                .border(Color.gray, width: 1)
-                                .frame(height: 200)
-                                .padding(.horizontal)
-                                .onTapGesture {
-                                    hideKeyboard()
-                                }
-                                .onAppear {
-                                    if let drink = drink {
-                                        ingredients = drink.ingredients ?? ""
-                                    }
-                                }
-                        }
-                    }
-                    Spacer()
-                    Section {
-                        VStack{
-                            HStack{
-                                Text("How to Make")
-                                    .font(.caption)
-                                Spacer()
-                            } .padding(.horizontal)
-                            TextEditor(text: $method)
-                                .border(Color.gray, width: 1)
-                                .frame(height: 200)
-                                .padding(.horizontal)
-                                .onTapGesture {
-                                    hideKeyboard()
-                                }
-                                .onAppear {
-                                    if let drink = drink {
-                                        method = drink.method ?? ""
-                                    }
-                                }
-                        }
-                    }
-                    .sheet(isPresented: $showImagePicker) {
-                        ImagePicker(selectedImage: $selectedImage)
+        FormScreen(drink == nil ? "Add Cocktail" : "Edit Cocktail", canSave: canSave, onSave: save) {
+            PhotoSection(photo: $photo, photoChanged: $photoChanged, placeholder: .cocktail)
+
+            Section("Cocktail") {
+                TextField("Name (e.g. Old Fashioned)", text: $drinkName)
+                    .textInputAutocapitalization(.words)
+                SpiritPicker(selection: $baseSpirit)
+            }
+
+            Section("Source") {
+                Picker("Source", selection: $source) {
+                    ForEach(SourceType.allCases, id: \.self) { source in
+                        Text(source.description).tag(source)
                     }
                 }
-                .onTapGesture {
-                    hideKeyboard()
-                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
-            .navigationTitle(drink == nil ? "Add a New Cocktail" : "Edit Cocktail")
-        }
-    }
-    
-    func setDisplayImage() -> UIImage {
-        if let drink = drink, let uiImage = UIImage(data: drink.image ?? Data()) {
-            return uiImage
-        } else {
-            let image = UIImage(imageLiteralResourceName: "martini")
-            return image
-        }
-    }
-    
-    func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-    
-    func refreshSpirits() {
-        context.refreshAllObjects()
-    }
-    
-    func saveRecipe() {
-        guard let drink = drink else {
-            let drink = Drink(context: context)
-            drink.id = UUID()
-            drink.baseSpirit = selectedBaseSpirit?.id
-            drink.drinkName = drinkName
-            drink.source = Int16(selectedSource)
-            drink.ingredients = ingredients
-            drink.method = method
-            drink.rating = ratingValue
-            if let image = selectedImage {
-                drink.setPhoto(image)
+
+            Section("Rating") {
+                RatingPicker(rating: $rating)
             }
-            try? context.save()
-            dismiss()
-            isSaved = true
-            return
+
+            Section {
+                TextField("e.g. 2 oz Bourbon", text: $ingredients, axis: .vertical)
+                    .lineLimit(4...12)
+            } header: {
+                Text("Ingredients")
+            } footer: {
+                Text("One ingredient per line works best.")
+            }
+
+            Section("How to Make") {
+                TextField("e.g. Stir with ice and strain over a large cube", text: $method, axis: .vertical)
+                    .lineLimit(4...12)
+            }
         }
-        
-        drink.drinkName = drinkName
-        drink.source = Int16(selectedSource)
-        drink.baseSpirit = selectedBaseSpirit?.id
-        drink.ingredients = ingredients
-        drink.method = method
-        drink.rating = ratingValue
-        if let image = selectedImage {
-            drink.setPhoto(image)
+        .onAppear(perform: loadDrink)
+    }
+
+    private func loadDrink() {
+        guard !hasLoaded else { return }
+        hasLoaded = true
+        guard let drink else { return }
+        drinkName = drink.drinkName ?? ""
+        source = SourceType(rawValue: drink.source) ?? .classic
+        if let spiritID = drink.baseSpirit {
+            baseSpirit = spirits.first { $0.id == spiritID }
         }
-        try? context.save()
-        dismiss()
-        isSaved = true
+        rating = Int(drink.rating)
+        ingredients = drink.ingredients ?? ""
+        method = drink.method ?? ""
+        photo = drink.image.flatMap(UIImage.init(data:))
+    }
+
+    private func save() throws {
+        let target = drink ?? Drink(context: context)
+        if drink == nil {
+            target.id = UUID()
+        }
+        target.drinkName = drinkName.trimmingCharacters(in: .whitespacesAndNewlines)
+        target.source = source.rawValue
+        target.baseSpirit = baseSpirit?.id
+        target.rating = Int16(rating)
+        target.ingredients = ingredients
+        target.method = method
+        if photoChanged {
+            if let photo {
+                target.setPhoto(photo)
+            } else {
+                target.image = nil
+            }
+        }
+
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
     }
 }
 
-struct AddCocktailRecipeView_Previews: PreviewProvider {
-    static var previews: some View {
-        AddEditCocktailRecipeView()
-    }
+#Preview("Add") {
+    let context = DataController(inMemory: true).container.viewContext
+    DataController.seedSpirits(context: context)
+    return AddEditCocktailRecipeView()
+        .environment(\.managedObjectContext, context)
+}
+
+#Preview("Edit") {
+    let context = DataController(inMemory: true).container.viewContext
+    DataController.seedSpirits(context: context)
+    DataController.seedCocktails(context: context)
+    let drink = try? context.fetch(NSFetchRequest<Drink>(entityName: "Drink")).first { $0.drinkName == "Old Fashioned" }
+    drink?.rating = 9
+    return AddEditCocktailRecipeView(drink: drink)
+        .environment(\.managedObjectContext, context)
 }
 
 extension UIImage {

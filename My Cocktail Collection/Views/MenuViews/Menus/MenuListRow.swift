@@ -8,51 +8,30 @@
 import SwiftUI
 import CoreData
 
+/// One menu in the list: name, date created and number of cocktails.
 struct MenuListRow: View {
-    @Environment(\.managedObjectContext) var context
-    @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
-    @State var deleteMenu = false
-    var menu: Menu?
-    
-    var body: some View {
-        VStack {
-            HStack {
-                Image(systemName: "menucard")
-                    .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
-                    .padding()
-                Text(menu?.menuName ?? "this is a menu name")
-                    .padding()
-                    .font(.headline)
-                    .swipeActions {
-                        Button(action: {
-                            deleteMenu.toggle()
-                            context.delete(menu!)
-                            try? context.save()
-                        }) {
-                            Text("Delete")
-                            Image(systemName: "trash")
-                        }
-                        .tint(.red)
-                    }
-                    .contextMenu {
-                        Button(action: {
-                            deleteMenu.toggle()
-                            context.delete(menu!)
-                            try? context.save()
-                        }) {
-                            Text("Delete")
-                            Image(systemName: "trash")
-                        }
-                    }
-                Spacer()
-            }
-        }
-    }
-}
+    @ObservedObject var menu: Menu
+    let cocktailCount: Int
 
-struct MenuListRow_Preview: PreviewProvider {
-    static var previews: some View {
-        MenuListRow()
+    init(menu: Menu, cocktailCount: Int) {
+        _menu = ObservedObject(wrappedValue: menu)
+        self.cocktailCount = cocktailCount
+    }
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if let date = menu.dateCreated {
+            parts.append(date.formatted(date: .abbreviated, time: .omitted))
+        }
+        parts.append(cocktailCount == 1 ? "1 cocktail" : "\(cocktailCount) cocktails")
+        return parts.joined(separator: " · ")
+    }
+
+    var body: some View {
+        ItemRow(
+            menu.menuName ?? "Untitled Menu",
+            subtitle: subtitle,
+            thumbnail: Thumbnail(image: nil, placeholder: .menu)
+        )
     }
 }

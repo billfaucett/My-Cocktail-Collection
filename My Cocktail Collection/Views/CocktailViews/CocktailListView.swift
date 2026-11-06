@@ -7,183 +7,156 @@
 
 import SwiftUI
 import CoreData
-import UIKit
 
 struct CocktailListView: View {
-    @Environment(\.managedObjectContext) var context
-    @FetchRequest(sortDescriptors: []) var drinks: FetchedResults<Drink>
-    @FetchRequest(sortDescriptors: []) var spirits: FetchedResults<Spirit>
-    @State private var selectedBaseSpirit: Spirit?
+    @Environment(\.managedObjectContext) private var context
+    @FetchRequest(sortDescriptors: [], animation: .default)
+    private var drinks: FetchedResults<Drink>
+    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)])
+    private var spirits: FetchedResults<Spirit>
+
     @State private var searchText = ""
-    @State private var isSearching = false
-    @State var addDrink = false
-    @State var sendMessage = false
+    @State private var spiritFilter: Spirit?
+    @State private var sortOption = SortingOption.name
+    @State private var showAddDrink = false
     @State private var drinkToDelete: Drink?
-    @State private var selectedSortOption = SortingOption.name
-    var isPreview = false
-    
+
     var body: some View {
-        NavigationView{
-            VStack {
-                VStack {
-                    HStack {
-                        HStack{
-                            Text("Filter by Base Spirit")
-                                .font(.caption)
-                            Picker ("Selected Base Spirit", selection: $selectedBaseSpirit) {
-                                Text("Show All").tag(nil as Spirit?)
-                                ForEach(spirits) { spirit in
-                                    Text(spirit.spiritName ?? "")
-                                        .tag(spirit as Spirit?)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        .frame(height: 25)
+        let spiritNames = spiritNamesByID
+        let visible = visibleDrinks
+
+        NavigationStack {
+            ListScreen(
+                "My Cocktails",
+                isEmpty: visible.isEmpty,
+                emptyState: emptyState,
+                addLabel: "Add Cocktail",
+                onAdd: { showAddDrink = true }
+            ) {
+                ForEach(visible) { drink in
+                    NavigationLink(value: drink) {
+                        CocktailRow(drink: drink, spiritName: drink.baseSpirit.flatMap { spiritNames[$0] })
                     }
+                    .deleteSwipeAction { drinkToDelete = drink }
                 }
-                
-            Divider()
-                VStack {
-                    HStack {
-                        VStack {
-                            TextField("Search Cocktails", text: $searchText)
-                                .padding(.horizontal)
-                        }
-                        .onTapGesture {
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        }
-                        Spacer()
-                        HStack {
-                            Button ("Search") {
-                                selectedBaseSpirit = nil
-                                isSearching = true
-                            }
-                            if isSearching && !searchText.isEmpty {
-                                Button ("Clear") {
-                                    searchText = ""
-                                    isSearching = false
-                                }
-                            }
-                        }
+            } moreMenu: {
+                Picker(selection: $sortOption) {
+                    ForEach(SortingOption.allCases, id: \.self) { option in
+                        Text(option.rawValue).tag(option)
                     }
+                } label: {
+                    Label("Sort By", systemImage: "arrow.up.arrow.down")
                 }
-                .padding(.horizontal)
-                Divider()
-                
-                HStack {
-                    Spacer()
-                    Text("Sort By")
-                        .font(.caption)
-                        .padding(.horizontal)
-                    Picker("Sort Cocktails", selection: $selectedSortOption) {
-                        ForEach(SortingOption.allCases, id: \.self) { option in
-                            Text(option.rawValue)
-                        }
+                .pickerStyle(.menu)
+
+                Picker(selection: $spiritFilter) {
+                    Text("All Spirits").tag(nil as Spirit?)
+                    ForEach(spirits) { spirit in
+                        Text(spirit.spiritName ?? "").tag(spirit as Spirit?)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
+                } label: {
+                    Label("Base Spirit", systemImage: "line.3.horizontal.decrease.circle")
                 }
-                .frame(height: 25)
-                Divider()
-                
-                HStack{
-                    Text("Add new cocktail")
-                        .padding()
-                        .font(.subheadline)
-                    Spacer()
-                    Image(systemName: "plus")
-                        .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
-                        .padding()
-                        .onTapGesture {
-                            addDrink = true
-                        }
-                        .sheet(isPresented: $addDrink) {
-                            AddEditCocktailRecipeView()
-                        }
-                }
-                .frame(height: 25)
-                Divider()
-                
-                List(filteredDrinks().sorted(by: sortingComparator)) { drink in
-                    NavigationLink(destination: CocktailDetailView(drinkID: drink.objectID)) {
-                        HStack {
-                            if let image = drink.image, let uiImage = UIImage(data: image) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 50, height: 50)
-                            } else {
-                                Image("martini", bundle: Bundle.main)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 50, height: 50)
-                            }
-                            Text(drink.drinkName ?? "Unknown")
-                                .font(.headline)
-                                .swipeActions {
-                                    Button("Delete") {
-                                        drinkToDelete = drink
-                                    }
-                                    .tint(.red)
-                                }
-                            if drink.rating > 0 {
-                                StarRatingView(rating: getRatingStars(rating: drink.rating))
-                                    .font(.caption)
-                            }
-                            Spacer()
-                        }
+                .pickerStyle(.menu)
+
+                if !favoritesAdded {
+                    Divider()
+                    Button {
+                        DataController.addBillsFaves(context: context)
+                    } label: {
+                        Label("Add Our Favorite Cocktails", systemImage: "heart")
                     }
                 }
             }
-            .alert("Confirm Delete", isPresented: Binding(
-                get: { drinkToDelete != nil },
-                set: { if !$0 { drinkToDelete = nil } }
-            ), presenting: drinkToDelete) { drink in
-                Button("Delete", role: .destructive) {
-                    context.delete(drink)
-                    try? context.save()
-                    drinkToDelete = nil
-                }
-                Button("Cancel", role: .cancel) {
-                    drinkToDelete = nil
-                }
-            } message: { drink in
-                Text("Are you sure you want to delete \(drink.drinkName ?? "this cocktail")?")
+            .searchable(text: $searchText, prompt: "Search names and ingredients")
+            .navigationDestination(for: Drink.self) { drink in
+                CocktailDetailView(drink: drink)
             }
-            .navigationTitle("My Cocktail Collection")
+            .sheet(isPresented: $showAddDrink) {
+                AddEditCocktailRecipeView()
+            }
+            .confirmDelete($drinkToDelete) { drink in
+                "Are you sure you want to delete \(drink.drinkName ?? "this cocktail")?"
+            } onDelete: { drink in
+                DataController.delete(drink, context: context)
+            }
         }
     }
-        
-    private func filteredDrinks() -> [Drink] {
-        if let baseSpirit = selectedBaseSpirit {
-            return drinks.filter { $0.baseSpirit == baseSpirit.id }
+
+    // MARK: Filtering and sorting
+
+    private var visibleDrinks: [Drink] {
+        var result = Array(drinks)
+        if let spiritID = spiritFilter?.id {
+            result = result.filter { $0.baseSpirit == spiritID }
         }
-        
-        if isSearching && !searchText.isEmpty {
-            return drinks.filter { $0.drinkName?.localizedCaseInsensitiveContains(searchText) ?? false }
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        if !query.isEmpty {
+            result = result.filter {
+                ($0.drinkName ?? "").localizedCaseInsensitiveContains(query)
+                    || ($0.ingredients ?? "").localizedCaseInsensitiveContains(query)
+            }
         }
-        
-        else {
-            return Array(drinks)
-        }
+        return result.sorted(by: sortingComparator)
     }
-    
-    private func sortingComparator(_ drink1: Drink, _ drink2: Drink) -> Bool {
-        switch selectedSortOption {
+
+    private func sortingComparator(_ first: Drink, _ second: Drink) -> Bool {
+        let byName = (first.drinkName ?? "").localizedCaseInsensitiveCompare(second.drinkName ?? "") == .orderedAscending
+        switch sortOption {
         case .name:
-            return drink1.drinkName ?? "" < drink2.drinkName ?? ""
+            return byName
         case .rating:
-            return drink1.rating > drink2.rating
+            return first.rating == second.rating ? byName : first.rating > second.rating
         }
     }
-    
-    private func getRatingStars(rating: Int16) -> Double {
-        let ratingToReturn = Double(rating) / 2.0
-        print(String(ratingToReturn))
-        return ratingToReturn
+
+    private var spiritNamesByID: [UUID: String] {
+        var names: [UUID: String] = [:]
+        for spirit in spirits {
+            if let id = spirit.id {
+                names[id] = spirit.spiritName ?? ""
+            }
+        }
+        return names
+    }
+
+    private var favoritesAdded: Bool {
+        drinks.contains { DataController.favoriteCocktailNames.contains($0.drinkName ?? "") }
+    }
+
+    private var emptyState: EmptyState {
+        if drinks.isEmpty {
+            return EmptyState(
+                title: "No Cocktails Yet",
+                systemImage: "wineglass",
+                message: "Add your first recipe to start your collection.",
+                actionTitle: "Add a Cocktail"
+            )
+        }
+        return EmptyState(
+            title: "No Matches",
+            systemImage: "magnifyingglass",
+            message: "No cocktails match your search or base spirit filter."
+        )
+    }
+}
+
+/// One cocktail in the list: photo, name, base spirit and rating.
+struct CocktailRow: View {
+    @ObservedObject var drink: Drink
+    let spiritName: String?
+
+    var body: some View {
+        ItemRow(
+            drink.drinkName ?? "Unnamed Cocktail",
+            subtitle: spiritName,
+            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail)
+        ) {
+            if drink.rating > 0 {
+                StarRatingView(rating: Double(drink.rating) / 2.0)
+                    .font(.caption2)
+            }
+        }
     }
 }
 
@@ -192,29 +165,10 @@ enum SortingOption: String, CaseIterable {
     case rating = "Rating"
 }
 
-struct CocktailListView_Previews: PreviewProvider {
-    static var previews: some View {
-        let context = DataController.init().container.viewContext
-        
-        let spirit1 = Spirit(context: context)
-        spirit1.id = UUID()
-        spirit1.spiritName = "Rum"
-        let spirit2 = Spirit(context: context)
-        spirit2.id = UUID()
-        spirit2.spiritName = "Vodka"
-        
-        let drink1 = Drink(context: context)
-        drink1.drinkName = "Mojito"
-        drink1.baseSpirit = spirit1.id
-        drink1.rating = 10
-        let drink2 = Drink(context: context)
-        drink2.drinkName = "Cosmopolitan"
-        drink2.baseSpirit = spirit2.id
-        drink2.rating = 5
-        
-        try? context.save()
-        
-        return CocktailListView(isPreview: true)
-            .environment(\.managedObjectContext, context)
-    }
+#Preview {
+    let context = DataController(inMemory: true).container.viewContext
+    DataController.seedSpirits(context: context)
+    DataController.seedCocktails(context: context)
+    return CocktailListView()
+        .environment(\.managedObjectContext, context)
 }

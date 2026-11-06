@@ -23,6 +23,10 @@
 		8AC142C62B8A6ACF002807F5 /* My_Cocktail_CollectionUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142C52B8A6ACF002807F5 /* My_Cocktail_CollectionUITestsLaunchTests.swift */; };
 		8AC142D42B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D22B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld */; };
 		8AC142D62B8A6C83002807F5 /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D52B8A6C83002807F5 /* DataController.swift */; };
+		D351C0DE0000000000000006 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D351C0DE0000000000000002 /* Theme.swift */; };
+		D351C0DE0000000000000007 /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D351C0DE0000000000000003 /* Screens.swift */; };
+		D351C0DE0000000000000008 /* Rows.swift in Sources */ = {isa = PBXBuildFile; fileRef = D351C0DE0000000000000004 /* Rows.swift */; };
+		D351C0DE0000000000000009 /* FormFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = D351C0DE0000000000000005 /* FormFields.swift */; };
 		8AC142D82B8A759B002807F5 /* AddEditCocktailRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */; };
 		8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D92B8A79FE002807F5 /* CocktailListView.swift */; };
 		8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E02B8B9E54002807F5 /* MessageComposer.swift */; };
@@ -73,6 +77,10 @@
 		8AC142C52B8A6ACF002807F5 /* My_Cocktail_CollectionUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = My_Cocktail_CollectionUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		8AC142D32B8A6C01002807F5 /* CocktailRecipe.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CocktailRecipe.xcdatamodel; sourceTree = "<group>"; };
 		8AC142D52B8A6C83002807F5 /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
+		D351C0DE0000000000000002 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		D351C0DE0000000000000003 /* Screens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screens.swift; sourceTree = "<group>"; };
+		D351C0DE0000000000000004 /* Rows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rows.swift; sourceTree = "<group>"; };
+		D351C0DE0000000000000005 /* FormFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormFields.swift; sourceTree = "<group>"; };
 		8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditCocktailRecipeView.swift; sourceTree = "<group>"; };
 		8AC142D92B8A79FE002807F5 /* CocktailListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailListView.swift; sourceTree = "<group>"; };
 		8AC142E02B8B9E54002807F5 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
@@ -178,6 +186,7 @@
 				8AFAEA9E2B912D750000A087 /* ViewUtilities */,
 				8AC142DC2B8A7BB9002807F5 /* Views */,
 				8AC142DD2B8A7BDB002807F5 /* Data */,
+				D351C0DE0000000000000001 /* DesignKit */,
 				8AC142AC2B8A6ACF002807F5 /* Assets.xcassets */,
 				8A0139A52B97D31A0079F240 /* martini-310425_1280.png */,
 				8AFAEA992B90E2F40000A087 /* IMG_6665.heic */,
@@ -233,6 +242,17 @@
 				A7C0FFEE0000000000000002 /* Inventory.swift */,
 			);
 			path = Data;
+			sourceTree = "<group>";
+		};
+		D351C0DE0000000000000001 /* DesignKit */ = {
+			isa = PBXGroup;
+			children = (
+				D351C0DE0000000000000002 /* Theme.swift */,
+				D351C0DE0000000000000003 /* Screens.swift */,
+				D351C0DE0000000000000004 /* Rows.swift */,
+				D351C0DE0000000000000005 /* FormFields.swift */,
+			);
+			path = DesignKit;
 			sourceTree = "<group>";
 		};
 		8AFAEA9C2B912D1F0000A087 /* CocktailViews */ = {
@@ -429,6 +449,10 @@
 				8AC369E12BA380E900516C03 /* PicPicker.swift in Sources */,
 				8A82CF802B9672B90049096A /* MenuListRow.swift in Sources */,
 				8AC142D62B8A6C83002807F5 /* DataController.swift in Sources */,
+				D351C0DE0000000000000006 /* Theme.swift in Sources */,
+				D351C0DE0000000000000007 /* Screens.swift in Sources */,
+				D351C0DE0000000000000008 /* Rows.swift in Sources */,
+				D351C0DE0000000000000009 /* FormFields.swift in Sources */,
 				A7C0FFEE0000000000000003 /* Inventory.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,

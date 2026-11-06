@@ -7,109 +7,43 @@
 
 import SwiftUI
 import CoreData
-import UIKit
 
-struct MenuItemListView: View {
-    @Environment(\.managedObjectContext) var context
-    @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
-    @State private var isSaved = false
-    @State private var dismissView = false
-    @State private var filePath = "Files/Cocktail Collection/Menus"
-    
-    var menu: Menu?
-    
+/// One cocktail on a menu: photo, name and ingredients.
+struct MenuItemRow: View {
+    @ObservedObject var item: MenuItem
+
     var body: some View {
-        VStack {
-            let menuName = menu?.menuName ?? "None"
-            let myMenuItems = menuItems.filter({ $0.menu == menu })
-            Text("Menu: \(menuName)")
-            Text("Number of Cocktails: \(String(myMenuItems.count))")
-                .font(.caption2)
-            
-            if !myMenuItems.isEmpty {
-                HStack{
-                    Spacer()
-                    Button ("Save To Files") {
-                        exportNotes(items: myMenuItems, menuName: menuName)
-                    }
-                    .padding(.horizontal)
-                    .alert(isPresented: $isSaved) {
-                        Alert(title: Text("Menu Saved"),
-                        message: Text("Your Menu was saved to \(filePath)."),
-                        dismissButton: .default(Text("OK")))
-                    }
-                }
-            }
-        
-            List(myMenuItems) { item in
-                VStack{
-                    HStack {
-                        Text(item.drink?.drinkName ?? "Where is my Drink Name?" )
-                            .padding()
-                    }
-                    Text(item.drink?.ingredients ?? "")
-                        .padding()
-                        .lineLimit(nil)
-                        .swipeActions {
-                            Button("Delete") {
-                                context.delete(item)
-                                try? context.save()
-                            }
-                            .tint(.red)
-                        }
-                }
-            }
-        }
-    }
-    
-    func exportNotes(items: [MenuItem], menuName: String) {
-        var notes =  ""
-        print(menuName)
-        if #available(iOS 16.0, *) {
-            print("Doc Dir: \(URL.documentsDirectory.absoluteString)")
-        }
-        
-        for item in items {
-            let name = item.drink?.drinkName
-            let ingredientList = item.drink?.ingredients
-            
-            let output = ("\(name ?? "cocktail") - \(ingredientList ?? "")")
-            notes.append(output)
-            notes.append("\n\n")
-        }
-        
-        let note_path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Menus", isDirectory: true)
-        
-        if !FileManager.default.fileExists(atPath: note_path.path) {
-            do {
-                try FileManager.default.createDirectory(at: note_path, withIntermediateDirectories: true, attributes: nil)
-                print("Directory created successfully")
-            } catch {
-                print("Error creating Directory: \(error)")
-            }
-        }
-        
-        let escapedMenuName = menuName.replacingOccurrences(of: "/", with: "")
-        let note_directory = note_path.appendingPathComponent(escapedMenuName + ".txt")
-        
-        print(note_directory.absoluteString)
-        
-        do {
-            try notes.write(to: note_directory, atomically: true, encoding: .utf8)
-            print("menu saved")
-            let input = try String(contentsOf: note_directory)
-            print(input)
-            isSaved = true
-        } catch {
-            print("Error saving file \(error)")
-        }
+        ItemRow(
+            item.drink?.drinkName ?? "Deleted Cocktail",
+            subtitle: item.drink?.ingredients,
+            thumbnail: Thumbnail(data: item.drink?.image, placeholder: .cocktail)
+        )
     }
 }
 
-struct MenuItemListView_Previews: PreviewProvider {
-    static var previews: some View {
-        MenuItemListView()
+/// Turns a menu into text for sharing or saving to the Files app.
+enum MenuExporter {
+    /// The menu as plain text: each cocktail's name and ingredients.
+    static func text(for items: [MenuItem], menuName: String) -> String {
+        let cocktails = items.map { item in
+            "\(item.drink?.drinkName ?? "Cocktail") - \(item.drink?.ingredients ?? "")"
+        }
+        return ([menuName] + cocktails).joined(separator: "\n\n") + "\n"
+    }
+
+    /// Saves the menu as a text file in the app's Documents/Menus folder, which appears in the Files app.
+    /// - Returns: Where the file was saved.
+    @discardableResult
+    static func saveToFiles(items: [MenuItem], menuName: String) throws -> URL {
+        let folder = URL.documentsDirectory.appendingPathComponent("Menus", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        let safeName = menuName
+            .replacingOccurrences(of: "/", with: "")
+            .replacingOccurrences(of: ":", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let file = folder.appendingPathComponent((safeName.isEmpty ? "Menu" : safeName) + ".txt")
+        try text(for: items, menuName: menuName).write(to: file, atomically: true, encoding: .utf8)
+        return file
     }
 }

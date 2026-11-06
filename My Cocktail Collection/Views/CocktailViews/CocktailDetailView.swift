@@ -7,146 +7,121 @@
 
 import SwiftUI
 import CoreData
-import MessageUI
 
+/// A cocktail's recipe. Shown pushed from the cocktail list.
 struct CocktailDetailView: View {
-    @Environment(\.managedObjectContext) var context
+    @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: []) var spirits: FetchedResults<Spirit>
-    let drinkID: NSManagedObjectID
-    @State private var showingAlert = false
+    @FetchRequest(sortDescriptors: []) private var spirits: FetchedResults<Spirit>
+    @ObservedObject private var drink: Drink
+
     @State private var showEdit = false
-    @State private var refreshId = UUID()
-    
+    @State private var confirmDelete = false
+
+    init(drink: Drink) {
+        _drink = ObservedObject(wrappedValue: drink)
+    }
+
+    private var name: String { drink.drinkName ?? "Cocktail" }
+
+    private var spiritName: String? {
+        guard let id = drink.baseSpirit else { return nil }
+        return spirits.first { $0.id == id }?.spiritName
+    }
+
+    private var shareText: String {
+        "Check out this cocktail recipe: \nCocktail Name: \(drink.drinkName ?? "")\nIngredients: \(drink.ingredients ?? "")\nMethod: \(drink.method ?? "")"
+    }
+
     var body: some View {
-        let drink = context.object(with: drinkID) as! Drink
-        
-        NavigationView {
-            ScrollView {
-                VStack {
-                    HStack {
-                        Button("Delete") {
-                            showingAlert = true
-                        }
-                        .foregroundColor(.red)
-                        .alert(isPresented: $showingAlert) {
-                            Alert(title: Text("Confirm Deletion"), message: Text("Are you sure you want to delete this drink?"), primaryButton: .destructive(Text("Delete")) {
-                                context.delete(drink)
-                                do {
-                                    try context.save()
-                                    dismiss()
-                                } catch {
-                                    print("Error deleteing drink: \(error)")
-                                }
-                            }, secondaryButton: .cancel())
-                        }
-                        .padding()
-                        Spacer()
-                        Button ("Edit") {
-                            showEdit = true
-                        }
-                        .padding()
-                    }
-                }
-                VStack {
-                    Text(drink.drinkName ?? "")
-                        .font(.title)
-                        .padding()
+        // After a delete the object is gone; show nothing while the screen closes.
+        if drink.managedObjectContext == nil || drink.isDeleted {
+            Color.clear
+        } else {
+            recipe
+        }
+    }
+
+    private var recipe: some View {
+        List {
+            Section {
+                VStack(spacing: 12) {
+                    Thumbnail(data: drink.image, placeholder: .cocktail, size: Theme.ImageSize.detail, cornerRadius: Theme.Radius.detail)
                     if drink.rating > 0 {
-                        HStack {
-                            Text("Drink Rating:")
-                            StarRatingView(rating: getRatingStars(rating: drink.rating))
-                                .padding(.horizontal)
-                        }
-                    }
-                    if let image = drink.image, let uiImage = UIImage(data: image) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .scaledToFit()
-                            .frame(width: 200, height: 200)
-                    } else {
-                        Image("martini")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .scaledToFit()
-                            .frame(width: 200, height: 200)
-                    }
-                    if let base = drink.baseSpirit {
-                        if let spirit = spirits.first(where: { $0.id == base }) {
-                            Text("Base Spirit:")
-                                .font(.caption)
-                            Text(spirit.spiritName ?? "")
-                                .padding(.bottom)
-                        } else {
-                            Text("No clue why this is not working")
-                        }
-                    }
-                    if let sourceType = SourceType(rawValue: drink.source) {
-                        Text("Source:")
-                            .font(.caption)
-                        Text(sourceType.description)
-                            .padding(.bottom)
-                    }
-                    Text("Ingredient List:")
-                        .font(.caption)
-                        .bold()
-                        .padding(.horizontal)
-                    Text(drink.ingredients ?? "")
-                        .padding()
-                    Text("Directions:")
-                        .font(.caption)
-                        .bold()
-                        .padding(.horizontal)
-                    Text(drink.method ?? "")
-                        .padding()
-                }
-                .padding()
-                Section {
-                    VStack {
-                        HStack {
-                            ShareLink(item: shareText(for: drink)) {
-                                Label("Share Recipe", systemImage: "square.and.arrow.up")
-                            }
-                        }
+                        StarRatingView(rating: Double(drink.rating) / 2.0)
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
             }
-            .sheet(isPresented: $showEdit) {
-                AddEditCocktailRecipeView(drink: drink)
+
+            Section("Details") {
+                LabeledContent("Base Spirit", value: spiritName ?? "None")
+                LabeledContent("Source", value: SourceType(rawValue: drink.source)?.description ?? "Unknown")
+            }
+
+            Section("Ingredients") {
+                textOrPlaceholder(drink.ingredients, placeholder: "No ingredients added yet.")
+            }
+
+            Section("How to Make") {
+                textOrPlaceholder(drink.method, placeholder: "No directions added yet.")
             }
         }
-        .id(refreshId)
+        .navigationTitle(name)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                // "SwiftUI." is needed because the app's Core Data entity is also named Menu.
+                SwiftUI.Menu {
+                    ShareLink(item: shareText) {
+                        Label("Share Recipe", systemImage: "square.and.arrow.up")
+                    }
+                    Button(role: .destructive) {
+                        confirmDelete = true
+                    } label: {
+                        Label("Delete Cocktail", systemImage: "trash")
+                    }
+                } label: {
+                    Label("More", systemImage: "ellipsis.circle")
+                }
+                Button("Edit") {
+                    showEdit = true
+                }
+            }
+        }
+        .sheet(isPresented: $showEdit) {
+            AddEditCocktailRecipeView(drink: drink)
+        }
+        .alert("Delete \(name)?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) {
+                DataController.delete(drink, context: context)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("It will be removed from your collection and from any menus.")
+        }
     }
-    
-    private func getRatingStars(rating: Int16) -> Double {
-        return Double(rating) / 2.0
-    }
-    
-    private func shareText(for drink: Drink) -> String {
-        "Check out this cocktail recipe: \nCocktail Name: \(drink.drinkName ?? "")\nIngredients: \(drink.ingredients ?? "")\nMethod: \(drink.method ?? "")"
+
+    @ViewBuilder
+    private func textOrPlaceholder(_ text: String?, placeholder: String) -> some View {
+        if let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Text(text)
+        } else {
+            Text(placeholder)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
-struct CocktailDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        let context = DataController.init().container.viewContext
-        let drink = Drink(context: context)
-        let id = UUID()
-        drink.source = 1
-        drink.baseSpirit = id
-        drink.drinkName = "Mocktail"
-        drink.ingredients = "Ingredient 1, Ingredient 2"
-        drink.method = "Mix ingredients and serve chilled."
-        drink.rating = 9
-        
-        // Add mock data for spirits
-        let spirit = Spirit(context: context)
-        spirit.id = id
-        spirit.spiritName = "Whiskey"
-        spirit.type = 0
-        
-        return CocktailDetailView(drinkID: drink.objectID)
-            .environment(\.managedObjectContext, context)
+#Preview {
+    let context = DataController(inMemory: true).container.viewContext
+    DataController.seedSpirits(context: context)
+    DataController.seedCocktails(context: context)
+    let drink = try! context.fetch(NSFetchRequest<Drink>(entityName: "Drink")).first { $0.drinkName == "Old Fashioned" }!
+    drink.rating = 9
+    return NavigationStack {
+        CocktailDetailView(drink: drink)
     }
+    .environment(\.managedObjectContext, context)
 }

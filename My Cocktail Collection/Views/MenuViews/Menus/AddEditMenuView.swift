@@ -9,78 +9,70 @@ import SwiftUI
 import CoreData
 
 struct AddEditMenuView: View {
-    @Environment(\.managedObjectContext) var context
-    @FetchRequest(sortDescriptors: []) var menuItems: FetchedResults<MenuItem>
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.presentationMode) var presentationMode
-    
-    @State private var menuIsSaved = false
-    @State private var menuTitle: String = ""
-    @State private var showAlert = false
-    @State private var alertMessage = ""
-    
-    @State var menu: Menu?
-    
+    @Environment(\.managedObjectContext) private var context
+
+    /// The menu being renamed, or nil when creating a new one.
+    private let menu: Menu?
+    /// Called with the menu after it's saved, e.g. to open a newly created menu.
+    private let onSave: ((Menu) -> Void)?
+
+    @State private var name = ""
+    @State private var hasLoaded = false
+
+    /// - Parameters:
+    ///   - menu: The menu to rename. Leave out to create a new menu.
+    ///   - onSave: Called with the saved menu.
+    init(menu: Menu? = nil, onSave: ((Menu) -> Void)? = nil) {
+        self.menu = menu
+        self.onSave = onSave
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     var body: some View {
-        ScrollView {
-            VStack {
-                Text("Create a Cocktail Menu")
-                    .font(.title)
-                    .padding()
-                Divider()
-                TextField("Menu Title", text: $menuTitle)
-                    .padding()
-                Button("Save Menu") {
-                    saveMenu()
+        FormScreen(
+            menu == nil ? "New Menu" : "Rename Menu",
+            saveTitle: menu == nil ? "Create" : "Save",
+            canSave: !trimmedName.isEmpty,
+            onSave: save
+        ) {
+            Section {
+                TextField("Menu name (e.g. Friday Night)", text: $name)
+                    .textInputAutocapitalization(.words)
+            } footer: {
+                if menu == nil {
+                    Text("You can add cocktails after creating the menu.")
                 }
-                .padding()
-                .alert(isPresented: $showAlert){
-                    Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
-                }
-                .sheet(item: $menu) { savedMenu in
-                    MenuDetailView(menu: savedMenu)
-                        .onDisappear {
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                }
-                Divider()
             }
         }
+        .onAppear(perform: loadMenu)
     }
-    
-    private func saveMenu() {
-        guard !menuTitle.isEmpty else {
-            showAlert = true
-            alertMessage = "Menu title cannot be empty."
-            return
+
+    private func loadMenu() {
+        guard !hasLoaded else { return }
+        hasLoaded = true
+        name = menu?.menuName ?? ""
+    }
+
+    private func save() throws {
+        let target = menu ?? Menu(context: context)
+        if menu == nil {
+            target.id = UUID()
+            target.dateCreated = Date()
         }
-        
-        guard menu == nil else {
-            showAlert = true
-            alertMessage = "Cannot save existing menu."
-            return
-        }
-        
-        let newMenu = Menu(context: context)
-        newMenu.id = UUID()
-        newMenu.menuName = menuTitle
-        newMenu.dateCreated = Date()
-        
+        target.menuName = trimmedName
+
         do {
             try context.save()
-            menu = newMenu
-            menuIsSaved = true
         } catch {
-            showAlert = true
-            alertMessage = "Failed to save menu: \(error.localizedDescription)"
+            context.rollback()
+            throw error
         }
+        onSave?(target)
     }
 }
 
-
-
-struct AddEditMenuView_Previews: PreviewProvider {
-    static var previews: some View {
-        AddEditMenuView()
-    }
+#Preview {
+    AddEditMenuView()
+        .environment(\.managedObjectContext, DataController(inMemory: true).container.viewContext)
 }

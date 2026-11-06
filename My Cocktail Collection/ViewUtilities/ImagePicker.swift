@@ -10,7 +10,7 @@ import SwiftUI
 import CoreData
 
 struct ImagePicker: UIViewControllerRepresentable {
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) var dismiss
     @Binding var selectedImage: UIImage?
 
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
@@ -24,7 +24,7 @@ struct ImagePicker: UIViewControllerRepresentable {
             if let image = info[.originalImage] as? UIImage {
                 parent.selectedImage = image
             }
-            parent.presentationMode.wrappedValue.dismiss()
+            parent.dismiss()
         }
     }
 

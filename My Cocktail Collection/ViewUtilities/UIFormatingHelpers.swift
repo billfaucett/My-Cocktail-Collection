@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum SourceType: Int16, CustomStringConvertible {
+enum SourceType: Int16, CustomStringConvertible, CaseIterable {
     case classic = 0
     case website = 1
     case menu = 2
