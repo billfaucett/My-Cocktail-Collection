@@ -46,6 +46,7 @@
 		5EEDDA7A0000000000000002 /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EEDDA7A0000000000000001 /* SeedData.swift */; };
 		7A70E0E70000000000000002 /* SpiritTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A70E0E70000000000000001 /* SpiritTaxonomy.swift */; };
 		1A9D1E470000000000000002 /* IngredientParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9D1E470000000000000001 /* IngredientParser.swift */; };
+		5C4E3A010000000000000002 /* CocktailSchemaV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000001 /* CocktailSchemaV1.swift */; };
 		B0771E000000000000000003 /* InventoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000002 /* InventoryListView.swift */; };
 		B0771E000000000000000005 /* AddEditBottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000004 /* AddEditBottleView.swift */; };
 /* End PBXBuildFile section */
@@ -106,6 +107,7 @@
 		5EEDDA7A0000000000000001 /* SeedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedData.swift; sourceTree = "<group>"; };
 		7A70E0E70000000000000001 /* SpiritTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpiritTaxonomy.swift; sourceTree = "<group>"; };
 		1A9D1E470000000000000001 /* IngredientParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientParser.swift; sourceTree = "<group>"; };
+		5C4E3A010000000000000001 /* CocktailSchemaV1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailSchemaV1.swift; sourceTree = "<group>"; };
 		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
 		B0771E000000000000000004 /* AddEditBottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditBottleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -250,6 +252,7 @@
 				5EEDDA7A0000000000000001 /* SeedData.swift */,
 				7A70E0E70000000000000001 /* SpiritTaxonomy.swift */,
 				1A9D1E470000000000000001 /* IngredientParser.swift */,
+				5C4E3A010000000000000001 /* CocktailSchemaV1.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -467,6 +470,7 @@
 				5EEDDA7A0000000000000002 /* SeedData.swift in Sources */,
 				7A70E0E70000000000000002 /* SpiritTaxonomy.swift in Sources */,
 				1A9D1E470000000000000002 /* IngredientParser.swift in Sources */,
+				5C4E3A010000000000000002 /* CocktailSchemaV1.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,

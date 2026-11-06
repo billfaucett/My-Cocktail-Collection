@@ -7,6 +7,7 @@
 
 import XCTest
 import CoreData
+import SwiftData
 import UIKit
 @testable import My_Cocktail_Collection
 
@@ -1177,6 +1178,227 @@ final class IngredientParserTests: XCTestCase {
     func testEmptyTextHasNoIngredients() {
         XCTAssertTrue(IngredientParser.parse("").ingredients.isEmpty)
         XCTAssertFalse(IngredientParser.parse("  \n ").needsReview)
+    }
+}
+
+// MARK: - SwiftData models (data model refactor, phase 3)
+
+final class SwiftDataModelTests: XCTestCase {
+    private typealias V1 = CocktailSchemaV1
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    override func setUpWithError() throws {
+        container = try CocktailModelContainer.make(inMemory: true)
+        context = ModelContext(container)
+    }
+
+    override func tearDownWithError() throws {
+        context = nil
+        container = nil
+    }
+
+    // MARK: Schema
+
+    func testSchemaHasSixModelsAtVersionOne() {
+        XCTAssertEqual(V1.models.count, 6)
+        XCTAssertEqual(V1.versionIdentifier, Schema.Version(1, 0, 0))
+        XCTAssertEqual(CocktailMigrationPlan.schemas.count, 1)
+    }
+
+    // MARK: Defaults and enums
+
+    func testDefaultsAndEnumsRoundTrip() throws {
+        let style = V1.SpiritStyle(name: "Bourbon", family: .whiskey, isBuiltIn: true)
+        let bottle = V1.Bottle(brand: "Buffalo Trace")
+        let cocktail = V1.Cocktail(name: "Old Fashioned", source: .classic)
+        let ingredient = V1.RecipeIngredient(position: 0, name: "Bourbon", amount: 2, unit: .part)
+        context.insert(style)
+        context.insert(bottle)
+        context.insert(cocktail)
+        context.insert(ingredient)
+        try context.save()
+
+        XCTAssertEqual(style.family, .whiskey)
+        XCTAssertEqual(bottle.stock, .full)
+        XCTAssertEqual(bottle.bottleCount, 1)
+        XCTAssertFalse(bottle.isFavorite)
+        XCTAssertEqual(cocktail.source, .classic)
+        XCTAssertFalse(cocktail.needsIngredientReview)
+        XCTAssertEqual(ingredient.unit, .part)
+
+        bottle.stock = .low
+        style.family = .liqueursAndAmari
+        cocktail.source = .website
+        ingredient.unit = .dash
+        XCTAssertEqual(bottle.stockLevelRaw, Int(StockLevel.low.rawValue))
+        XCTAssertEqual(style.familyRaw, "liqueursAndAmari")
+        XCTAssertEqual(cocktail.sourceRaw, "website")
+        XCTAssertEqual(ingredient.unitRaw, "dash")
+    }
+
+    func testUnknownStoredValuesFallBackSafely() {
+        let style = V1.SpiritStyle(name: "Mystery", family: .other)
+        style.familyRaw = "notAFamily"
+        XCTAssertEqual(style.family, .other)
+        let cocktail = V1.Cocktail(name: "Mystery")
+        cocktail.sourceRaw = "unknown"
+        XCTAssertEqual(cocktail.source, .original)
+    }
+
+    func testLegacySourceMapping() {
+        XCTAssertEqual(CocktailSource(legacy: .classic), .classic)
+        XCTAssertEqual(CocktailSource(legacy: .website), .website)
+        XCTAssertEqual(CocktailSource(legacy: .menu), .menu)
+        XCTAssertEqual(CocktailSource(legacy: .original), .original)
+    }
+
+    // MARK: Relationships
+
+    func testLinksWorkBothWays() throws {
+        let bourbon = insertStyle("Bourbon", .whiskey)
+        let bottle = V1.Bottle(brand: "Buffalo Trace")
+        context.insert(bottle)
+        bottle.style = bourbon
+        let cocktail = V1.Cocktail(name: "Old Fashioned")
+        context.insert(cocktail)
+        cocktail.baseStyle = bourbon
+        try context.save()
+
+        XCTAssertEqual(bourbon.bottles?.map(\.brand), ["Buffalo Trace"])
+        XCTAssertEqual(bourbon.cocktails?.map(\.name), ["Old Fashioned"])
+        XCTAssertEqual(bottle.style?.family, .whiskey)
+    }
+
+    func testIngredientsKeepRecipeOrder() throws {
+        let cocktail = insertCocktail("Negroni", ingredients: ["Gin", "Campari", "Sweet Vermouth"])
+        try context.save()
+        XCTAssertEqual(cocktail.orderedIngredients.map(\.name), ["Gin", "Campari", "Sweet Vermouth"])
+    }
+
+    func testIngredientFromParsedLine() {
+        let parsed = IngredientParser.parseLine("2–3 dashes Angostura Bitters")
+        let ingredient = V1.RecipeIngredient(parsed: parsed, position: 4)
+        XCTAssertEqual(ingredient.position, 4)
+        XCTAssertEqual(ingredient.name, "Angostura Bitters")
+        XCTAssertEqual(ingredient.amount, 2)
+        XCTAssertEqual(ingredient.amountMax, 3)
+        XCTAssertEqual(ingredient.unit, .dash)
+    }
+
+    // MARK: Delete rules
+
+    func testDeletingACocktailRemovesItsIngredientsAndMenuEntries() throws {
+        let cocktail = insertCocktail("Negroni", ingredients: ["Gin", "Campari", "Sweet Vermouth"])
+        let menu = insertMenu("Friday Night", cocktails: [cocktail])
+        try context.save()
+        XCTAssertEqual(try count(V1.RecipeIngredient.self), 3)
+        XCTAssertEqual(try count(V1.MenuEntry.self), 1)
+
+        context.delete(cocktail)
+        try context.save()
+
+        XCTAssertEqual(try count(V1.RecipeIngredient.self), 0)
+        XCTAssertEqual(try count(V1.MenuEntry.self), 0, "No orphaned menu entries")
+        XCTAssertEqual(try count(V1.Menu.self), 1, "The menu itself stays")
+        XCTAssertEqual(menu.entries?.count ?? 0, 0)
+    }
+
+    func testDeletingAMenuRemovesItsEntriesButKeepsCocktails() throws {
+        let negroni = insertCocktail("Negroni", ingredients: ["Gin"])
+        let martini = insertCocktail("Martini", ingredients: ["Gin"])
+        let menu = insertMenu("Friday Night", cocktails: [negroni, martini])
+        try context.save()
+
+        context.delete(menu)
+        try context.save()
+
+        XCTAssertEqual(try count(V1.MenuEntry.self), 0)
+        XCTAssertEqual(try count(V1.Cocktail.self), 2)
+        XCTAssertEqual(negroni.menuEntries?.count ?? 0, 0)
+    }
+
+    func testDeletingAStyleKeepsWhatUsedIt() throws {
+        let gin = insertStyle("London Dry", .gin)
+        let bottle = V1.Bottle(brand: "Tanqueray")
+        context.insert(bottle)
+        bottle.style = gin
+        let cocktail = insertCocktail("Martini", ingredients: ["Gin"])
+        cocktail.baseStyle = gin
+        cocktail.orderedIngredients.first?.style = gin
+        try context.save()
+
+        context.delete(gin)
+        try context.save()
+
+        XCTAssertEqual(try count(V1.Bottle.self), 1)
+        XCTAssertNil(bottle.style)
+        XCTAssertEqual(try count(V1.Cocktail.self), 1)
+        XCTAssertNil(cocktail.baseStyle)
+        XCTAssertEqual(try count(V1.RecipeIngredient.self), 1)
+        XCTAssertNil(cocktail.orderedIngredients.first?.style)
+    }
+
+    func testDeletingABottleChangesNothingElse() throws {
+        let gin = insertStyle("London Dry", .gin)
+        let bottle = V1.Bottle(brand: "Tanqueray")
+        context.insert(bottle)
+        bottle.style = gin
+        try context.save()
+
+        context.delete(bottle)
+        try context.save()
+
+        XCTAssertEqual(try count(V1.SpiritStyle.self), 1)
+        XCTAssertEqual(gin.bottles?.count ?? 0, 0)
+    }
+
+    // MARK: Fetching
+
+    func testFetchFavorites() throws {
+        let negroni = insertCocktail("Negroni", ingredients: [])
+        _ = insertCocktail("Martini", ingredients: [])
+        negroni.isFavorite = true
+        try context.save()
+
+        let favorites = try context.fetch(FetchDescriptor<V1.Cocktail>(predicate: #Predicate { $0.isFavorite }))
+        XCTAssertEqual(favorites.map(\.name), ["Negroni"])
+    }
+
+    // MARK: Helpers
+
+    private func insertStyle(_ name: String, _ family: SpiritFamily) -> V1.SpiritStyle {
+        let style = V1.SpiritStyle(name: name, family: family)
+        context.insert(style)
+        return style
+    }
+
+    private func insertCocktail(_ name: String, ingredients names: [String]) -> V1.Cocktail {
+        let cocktail = V1.Cocktail(name: name)
+        context.insert(cocktail)
+        for (position, ingredientName) in names.enumerated() {
+            let ingredient = V1.RecipeIngredient(position: position, name: ingredientName, amount: 1, unit: .part)
+            context.insert(ingredient)
+            ingredient.cocktail = cocktail
+        }
+        return cocktail
+    }
+
+    @discardableResult
+    private func insertMenu(_ name: String, cocktails: [V1.Cocktail]) -> V1.Menu {
+        let menu = V1.Menu(name: name)
+        context.insert(menu)
+        for (position, cocktail) in cocktails.enumerated() {
+            let entry = V1.MenuEntry(position: position)
+            context.insert(entry)
+            entry.menu = menu
+            entry.cocktail = cocktail
+        }
+        return menu
+    }
+
+    private func count<T: PersistentModel>(_ type: T.Type) throws -> Int {
+        try context.fetchCount(FetchDescriptor<T>())
     }
 }
 
