@@ -43,6 +43,7 @@
 		8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA42B913F100000A087 /* MenuItemListView.swift */; };
 		8AFAEAA72B91442C0000A087 /* MenusListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFAEAA62B91442C0000A087 /* MenusListView.swift */; };
 		A7C0FFEE0000000000000003 /* Inventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C0FFEE0000000000000002 /* Inventory.swift */; };
+		5EEDDA7A0000000000000002 /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EEDDA7A0000000000000001 /* SeedData.swift */; };
 		B0771E000000000000000003 /* InventoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000002 /* InventoryListView.swift */; };
 		B0771E000000000000000005 /* AddEditBottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000004 /* AddEditBottleView.swift */; };
 /* End PBXBuildFile section */
@@ -99,6 +100,7 @@
 		8AFAEAA62B91442C0000A087 /* MenusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenusListView.swift; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2.xcdatamodel"; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000002 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
+		5EEDDA7A0000000000000001 /* SeedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedData.swift; sourceTree = "<group>"; };
 		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
 		B0771E000000000000000004 /* AddEditBottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditBottleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -240,6 +242,7 @@
 				8AC142D22B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld */,
 				8AC142D52B8A6C83002807F5 /* DataController.swift */,
 				A7C0FFEE0000000000000002 /* Inventory.swift */,
+				5EEDDA7A0000000000000001 /* SeedData.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -454,6 +457,7 @@
 				D351C0DE0000000000000008 /* Rows.swift in Sources */,
 				D351C0DE0000000000000009 /* FormFields.swift in Sources */,
 				A7C0FFEE0000000000000003 /* Inventory.swift in Sources */,
+				5EEDDA7A0000000000000002 /* SeedData.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,

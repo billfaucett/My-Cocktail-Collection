@@ -494,3 +494,228 @@ final class ModelUpgradeTests: XCTestCase {
         if let loadError { throw loadError }
     }
 }
+
+// MARK: - Built-in spirits and cocktails
+
+final class SeedDataTests: XCTestCase {
+    private var dataController: DataController!
+    private var context: NSManagedObjectContext!
+    private var defaults: UserDefaults!
+    private var defaultsSuite: String!
+
+    override func setUpWithError() throws {
+        dataController = DataController(inMemory: true)
+        context = dataController.container.viewContext
+        defaultsSuite = "SeedDataTests-\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: defaultsSuite)
+    }
+
+    override func tearDownWithError() throws {
+        defaults.removePersistentDomain(forName: defaultsSuite)
+        defaults = nil
+        context = nil
+        dataController = nil
+    }
+
+    // MARK: Seed data itself
+
+    func testBuiltInNamesAreUniqueAndSpiritsExist() {
+        let names = (SeedData.classics + SeedData.favorites).map { $0.name.lowercased() }
+        XCTAssertEqual(names.count, Set(names).count, "Every built-in cocktail needs a unique name")
+
+        let spiritNames = Set(SeedData.spirits.map(\.name))
+        for cocktail in SeedData.classics + SeedData.favorites {
+            XCTAssertTrue(spiritNames.contains(cocktail.spirit), "\(cocktail.name) uses unknown spirit \(cocktail.spirit)")
+            XCTAssertFalse(cocktail.ingredients.isEmpty, "\(cocktail.name) has no ingredients")
+            XCTAssertFalse(cocktail.method.isEmpty, "\(cocktail.name) has no method")
+        }
+    }
+
+    func testSeedDataHasNoKnownTypos() {
+        let allText = (SeedData.classics + SeedData.favorites)
+            .flatMap { [$0.name, $0.ingredientsText, $0.methodText] }
+            .joined(separator: "\n")
+        for fix in SeedData.typoFixes {
+            XCTAssertFalse(allText.contains(fix.typo), "Seed data still contains \"\(fix.typo)\"")
+        }
+        XCTAssertFalse(allText.contains("Daquiri"))
+    }
+
+    // MARK: Fresh install
+
+    func testFreshInstallAddsEverythingWithBaseSpirits() throws {
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        XCTAssertEqual(try spirits().count, SeedData.spirits.count)
+        let drinks = try self.drinks()
+        XCTAssertEqual(drinks.count, SeedData.classics.count)
+
+        let spiritNamesByID = Dictionary(uniqueKeysWithValues: try spirits().map { ($0.id!, $0.spiritName!) })
+        for seed in SeedData.classics {
+            let drink = try XCTUnwrap(drinks.first { $0.drinkName == seed.name }, "\(seed.name) missing")
+            XCTAssertEqual(drink.baseSpirit.flatMap { spiritNamesByID[$0] }, seed.spirit, "\(seed.name) has the wrong base spirit")
+            XCTAssertEqual(drink.ingredients, seed.ingredientsText)
+            XCTAssertEqual(drink.source, SourceType.classic.rawValue)
+        }
+    }
+
+    func testRunningAgainAddsNothing() throws {
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        XCTAssertEqual(try spirits().count, SeedData.spirits.count)
+        XCTAssertEqual(try drinks().count, SeedData.classics.count)
+    }
+
+    // MARK: Existing install (the database on your phone)
+
+    func testExistingInstallGetsNewSpiritsAndClassics() throws {
+        makeOriginalInstall()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        let spiritNames = Set(try spirits().compactMap(\.spiritName))
+        for name in ["Rye", "Mezcal", "Pisco", "Aperol"] {
+            XCTAssertTrue(spiritNames.contains(name), "\(name) should be added")
+        }
+        XCTAssertEqual(try spirits().count, SeedData.spirits.count)
+
+        let drinkNames = try drinks().compactMap(\.drinkName)
+        XCTAssertEqual(drinkNames.count, SeedData.classics.count, "Every classic exactly once")
+        XCTAssertTrue(drinkNames.contains("Negroni"))
+        XCTAssertTrue(drinkNames.contains("Daiquiri"))
+        XCTAssertFalse(drinkNames.contains("Daquiri"), "Daquiri should be renamed, not duplicated")
+    }
+
+    func testUneditedOriginalClassicsGetTheUpdatedRecipe() throws {
+        makeOriginalInstall()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        for name in ["Margarita", "Old Fashioned", "Martini", "Daiquiri", "Cosmopolitan"] {
+            let drink = try XCTUnwrap(try drinks().first { $0.drinkName == name })
+            let seed = try XCTUnwrap(SeedData.classics.first { $0.name == name })
+            XCTAssertEqual(drink.ingredients, seed.ingredientsText, "\(name) ingredients should be updated")
+            XCTAssertEqual(drink.method, seed.methodText, "\(name) method should be updated")
+        }
+    }
+
+    func testEditedClassicKeepsYourEditsButGetsTypoFixed() throws {
+        let original = try XCTUnwrap(SeedData.originalClassicRecipes["Margarita"])
+        let margarita = makeDrink("Margarita", ingredients: original.ingredients + ", Splash of orange juice", method: original.method)
+        try context.save()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        let ingredients = try XCTUnwrap(margarita.ingredients)
+        XCTAssertTrue(ingredients.contains("Splash of orange juice"), "Your edit should be kept")
+        XCTAssertTrue(ingredients.contains("Triple Sec"))
+        XCTAssertFalse(ingredients.contains("Tripe Sec"))
+    }
+
+    func testFavoritesTyposAreFixed() throws {
+        let renewal = makeDrink("Bourbon Renewal", ingredients: "2 parts Bourbon", method: "Add igredients to a cocktail shaker")
+        let cherry = makeDrink("Cherry Bourbon Sour", ingredients: "2 parts bourbon",
+                               method: "To and old fashioned glass add the cherries and simple syrup, mull the cherries to a pulp, add a cube of lce")
+        try context.save()
+
+        DataController.applySeedCorrections(context: context)
+
+        XCTAssertEqual(renewal.method, "Add ingredients to a cocktail shaker")
+        XCTAssertEqual(cherry.method, "To an old fashioned glass add the cherries and simple syrup, muddle the cherries to a pulp, add a cube of ice")
+    }
+
+    func testYourOwnDrinksAreNotChanged() throws {
+        let mine = makeDrink("Tripe Sec Surprise", ingredients: "1pt Tripe Sec", method: "Shake untile chilled")
+        try context.save()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        XCTAssertEqual(mine.drinkName, "Tripe Sec Surprise")
+        XCTAssertEqual(mine.ingredients, "1pt Tripe Sec", "Only built-in recipes are corrected")
+        XCTAssertNil(mine.baseSpirit)
+    }
+
+    // MARK: Deleting built-ins
+
+    func testDeletedClassicIsNotAddedBack() throws {
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+        let negroni = try XCTUnwrap(try drinks().first { $0.drinkName == "Negroni" })
+        context.delete(negroni)
+        try context.save()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        XCTAssertFalse(try drinks().contains { $0.drinkName == "Negroni" })
+    }
+
+    func testDeletedSpiritIsNotAddedBack() throws {
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+        let aquavit = try XCTUnwrap(try spirits().first { $0.spiritName == "Aquavit" })
+        context.delete(aquavit)
+        try context.save()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        XCTAssertFalse(try spirits().contains { $0.spiritName == "Aquavit" })
+    }
+
+    func testEmptyCollectionIsFilledAgain() throws {
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+        try drinks().forEach { context.delete($0) }
+        try context.save()
+
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        XCTAssertEqual(try drinks().count, SeedData.classics.count)
+    }
+
+    // MARK: Favorites
+
+    func testAddFavoritesAddsEachOnceWithBaseSpirit() throws {
+        DataController.seedIfNeeded(context: context, defaults: defaults)
+
+        DataController.addBillsFaves(context: context)
+        DataController.addBillsFaves(context: context)
+
+        let favorites = try drinks().filter { DataController.favoriteCocktailNames.contains($0.drinkName ?? "") }
+        XCTAssertEqual(favorites.count, SeedData.favorites.count)
+        XCTAssertTrue(favorites.allSatisfy { $0.source == SourceType.original.rawValue })
+        let whiskey = try XCTUnwrap(try spirits().first { $0.spiritName == "Whiskey" })
+        XCTAssertEqual(favorites.first { $0.drinkName == "Irish Whiskey Sour" }?.baseSpirit, whiskey.id)
+    }
+
+    // MARK: Helpers
+
+    /// A database as earlier versions created it: the original nine spirits and five classics, with old text.
+    private func makeOriginalInstall() {
+        for name in ["Vodka", "Bourbon", "Scotch", "Whiskey", "Rum", "Brandy", "Gin", "Tequila", "Aquavit"] {
+            let spirit = Spirit(context: context)
+            spirit.id = UUID()
+            spirit.spiritName = name
+            spirit.type = SpiritType.liquor.rawValue
+        }
+        for (name, recipe) in SeedData.originalClassicRecipes {
+            makeDrink(name == "Daiquiri" ? "Daquiri" : name, ingredients: recipe.ingredients, method: recipe.method)
+        }
+        try? context.save()
+    }
+
+    @discardableResult
+    private func makeDrink(_ name: String, ingredients: String, method: String) -> Drink {
+        let drink = Drink(context: context)
+        drink.id = UUID()
+        drink.drinkName = name
+        drink.ingredients = ingredients
+        drink.method = method
+        return drink
+    }
+
+    private func drinks() throws -> [Drink] {
+        try context.fetch(NSFetchRequest<Drink>(entityName: "Drink"))
+    }
+
+    private func spirits() throws -> [Spirit] {
+        try context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))
+    }
+}

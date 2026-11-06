@@ -37,12 +37,8 @@ class DataController: ObservableObject {
         }
     }
     
-    /// The house favorites added by "Add Our Favorite Cocktails".
-    static let favoriteCocktailNames: Set<String> = [
-        "Cherry Bourbon Sour", "Blood Orange Margarita", "Irish Whiskey Sour",
-        "Ranch Water", "Chocolate Peanutbutter Sundae", "Bourbon Renewal"
-    ]
-    
+    // MARK: - Deleting
+
     /// Deletes a cocktail and removes it from any menus, so no empty menu entries are left behind.
     static func delete(_ drink: Drink, context: NSManagedObjectContext) {
         let request = NSFetchRequest<MenuItem>(entityName: "MenuItem")
@@ -53,161 +49,164 @@ class DataController: ObservableObject {
         context.saveOrRollback()
     }
     
-    /// Seeds spirits and classic cocktails on first launch, then repairs any seeded drinks missing a base spirit.
-    static func seedIfNeeded(context: NSManagedObjectContext) {
-        let spiritCount = (try? context.count(for: NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? 0
-        if spiritCount == 0 {
-            seedSpirits(context: context)
-        }
-        let drinkCount = (try? context.count(for: NSFetchRequest<Drink>(entityName: "Drink"))) ?? 0
-        if drinkCount == 0 {
-            seedCocktails(context: context)
-        }
-        linkMissingBaseSpirits(context: context)
-    }
-    
-    /// Earlier versions could save the built-in cocktails before the spirit list was ready,
-    /// leaving them without a base spirit. This links them up. Drinks you created are not touched.
-    static func linkMissingBaseSpirits(context: NSManagedObjectContext) {
-        let seededSpirits = [
-            "Margarita": "Tequila", "Old Fashioned": "Bourbon", "Martini": "Gin",
-            "Daquiri": "Rum", "Cosmopolitan": "Vodka",
-            "Blood Orange Margarita": "Tequila", "Irish Whiskey Sour": "Whiskey",
-            "Ranch Water": "Tequila", "Bourbon Renewal": "Bourbon",
-            "Chocolate Peanutbutter Sundae": "Vodka", "Cherry Bourbon Sour": "Bourbon"
-        ]
-        let request = NSFetchRequest<Drink>(entityName: "Drink")
-        request.predicate = NSPredicate(format: "baseSpirit == nil")
-        guard let drinks = try? context.fetch(request), !drinks.isEmpty else { return }
-        let spirits = (try? context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? []
-        
-        var changed = false
-        for drink in drinks {
-            guard let liquor = seededSpirits[drink.drinkName ?? ""],
-                  let spirit = spirits.first(where: { $0.spiritName == liquor }) else { continue }
-            drink.baseSpirit = spirit.id
-            changed = true
-        }
-        if changed {
-            do {
-                try context.save()
-            } catch {
-                print("error linking base spirits: \(error)")
-            }
-        }
-    }
-    
     static func deleteStuff(context: NSManagedObjectContext) {
         DeleteHelper().deleteAllRowsFromEntity(entity: MenuItem.self, context: context)
         DeleteHelper().deleteAllRowsFromEntity(entity: Menu.self, context: context)
     }
     
+    // MARK: - Built-in spirits and cocktails
+    
+    /// The house favorites added by "Add Our Favorite Cocktails".
+    static let favoriteCocktailNames: Set<String> = Set(SeedData.favorites.map(\.name))
+    
+    /// Remembers which built-in spirits and cocktails have been added, so ones you delete stay deleted.
+    static let seededSpiritsKey = "SeededSpiritNames"
+    static let seededCocktailsKey = "SeededClassicCocktailNames"
+    
+    /// Runs at every launch:
+    /// 1. Adds any built-in spirits and classic cocktails that are missing (see `SeedData`).
+    /// 2. Fixes typos and outdated text from earlier versions of the built-in recipes.
+    /// 3. Links built-in cocktails to their base spirit.
+    ///
+    /// Each built-in spirit and cocktail is added once. If you delete one later it stays deleted,
+    /// unless that list is completely empty, in which case everything is added again.
+    /// - Parameter defaults: Where the record of what's been added is kept. Tests pass their own.
+    static func seedIfNeeded(context: NSManagedObjectContext, defaults: UserDefaults = .standard) {
+        addMissingSpirits(context: context, defaults: defaults)
+        applySeedCorrections(context: context)
+        addMissingClassics(context: context, defaults: defaults)
+        linkMissingBaseSpirits(context: context)
+    }
+    
+    /// Adds every built-in spirit that isn't already in the list. Used by previews; the app uses `seedIfNeeded`.
+    static func seedSpirits(context: NSManagedObjectContext) {
+        addMissingSpirits(context: context, defaults: nil)
+    }
+    
+    /// Adds every classic cocktail that isn't already in the collection. Used by previews; the app uses `seedIfNeeded`.
     static func seedCocktails(context: NSManagedObjectContext) {
-        let spirits = (try? context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? []
-        struct ClassicCocktail {
-            var name: String
-            var ingredients: String
-            var method: String
-            var liquor: String
+        addMissingClassics(context: context, defaults: nil)
+        linkMissingBaseSpirits(context: context)
+    }
+    
+    /// Adds the house favorites that aren't already in the collection.
+    static func addBillsFaves(context: NSManagedObjectContext) {
+        let existing = Set(fetchAll(Drink.self, context: context).compactMap { $0.drinkName?.lowercased() })
+        let spirits = fetchAll(Spirit.self, context: context)
+        for cocktail in SeedData.favorites where !existing.contains(cocktail.name.lowercased()) {
+            insert(cocktail, source: .original, spirits: spirits, context: context)
         }
-        
-        let classicCocktails = [
-            ClassicCocktail(name: "Margarita", ingredients: "2pt Tequila, 1pt Tripe Sec, 1pt Lime Juice", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled glass or over ice", liquor: "Tequila"),
-            ClassicCocktail(name: "Old Fashioned", ingredients: "2pt Bourbon, 1pt Simple Syrup, 2-4 dashes Angostura Bitters, Orange Peel", method: "Combine ingredients in a mixing glass, Add Ice and stir until chilled, Strain into a chilled glass or over ice, Express oil from orange peel over drink and use peel to garnish", liquor: "Bourbon"),
-            ClassicCocktail(name: "Martini", ingredients: "1pt Gin, 1pt Dry Vermouth, Olive", method: "Combine ingredients in a mixing glass, Add Ice and stir until chilled, Strain into a chilled martini glass, Garnish with olive", liquor: "Gin"),
-            ClassicCocktail(name: "Daquiri", ingredients: "2pt Light Rum, 1pt Lime Juice, .5pt Simple Syrup", method: "Combine ingredients in a shaker, Add Ice and shake until chilled, Strain into a chilled coupe glass", liquor: "Rum"),
-            ClassicCocktail(name: "Cosmopolitan", ingredients: "2pt Vodka, 1pt Triple Sec, 1pt Cranberry Juice, .5pt Lime Juice, Orange Twist", method: "Combine ingredients in a shaker and top with ice, Shake for 10-15 seconds untile chilled, Strain into a chilled martini glass, garnisg with orange twist", liquor: "Vodka")
-        ]
-        
-        for cocktail in classicCocktails {
-            let drink = Drink(context: context)
-            drink.id = UUID()
-            drink.source = 0
-            drink.drinkName = cocktail.name
-            drink.ingredients = cocktail.ingredients
-            drink.method = cocktail.method
-            if let spirit = spirits.first(where: { $0.spiritName == cocktail.liquor }) {
-                drink.baseSpirit = spirit.id
+        context.saveOrRollback()
+    }
+    
+    /// Fixes earlier versions of the built-in recipes:
+    /// - renames cocktails listed in `SeedData.renamedCocktails` (e.g. "Daquiri")
+    /// - replaces the original five classics with the updated recipes, if they were never edited
+    /// - corrects known typos in built-in recipes, even edited ones
+    static func applySeedCorrections(context: NSManagedObjectContext) {
+        let drinks = fetchAll(Drink.self, context: context)
+        let existingNames = Set(drinks.compactMap(\.drinkName))
+        for drink in drinks {
+            if let oldName = drink.drinkName, let newName = SeedData.renamedCocktails[oldName], !existingNames.contains(newName) {
+                drink.drinkName = newName
             }
         }
         
-        do {
-            try context.save()
-        } catch {
-            print("error saving classics: \(error)")
-        }
-    }
-    
-    static func seedSpirits(context: NSManagedObjectContext) {
-        struct Liquor {
-            var name: String
-        }
-        
-        let liquors = [
-            Liquor(name: "Vodka"),
-            Liquor(name: "Bourbon"),
-            Liquor(name: "Scotch"),
-            Liquor(name: "Whiskey"),
-            Liquor(name: "Rum"),
-            Liquor(name: "Brandy"),
-            Liquor(name: "Gin"),
-            Liquor(name: "Tequila"),
-            Liquor(name: "Aquavit")
-        ]
-        
-        for liquor in liquors {
-            let spirit = Spirit(context: context)
-            spirit.id = UUID()
-            spirit.spiritName = liquor.name
-            spirit.type = 0
-        }
-        do {
-            try context.save()
-        } catch {
-            print("error saving spirits: \(error)")
-        }
-    }
-    
-    static func addBillsFaves(context: NSManagedObjectContext) {
-        let spirits = (try? context.fetch(NSFetchRequest<Spirit>(entityName: "Spirit"))) ?? []
-        let loadedDrinks = (try? context.fetch(NSFetchRequest<Drink>(entityName: "Drink"))) ?? []
-        struct ClassicCocktail {
-            var name: String
-            var ingredients: String
-            var method: String
-            var liquor: String
-        }
-        
-        let billsFaves = [
-            ClassicCocktail(name: "Blood Orange Margarita", ingredients: "3 parts Tequila, 2 parts Blood Orange Juice, 1 part Triple Sec, .5 parts Lime Juice, Optional .5 parts Agave Nectar", method: "Use a lime wedge to lightly salt the rim of a chilled glass, Mix ingredients into a cocktail shker filled with ice, Shake until chilled, Strain into your glass over ice, garnish with a slice of blood orange", liquor: "Tequila"),
-            ClassicCocktail(name: "Irish Whiskey Sour", ingredients: "2 parts Irish Whiskey, 1 part Lemon Juice, .5-1 part Simple Syrup, Egg White", method: "Add all ingredients to a shaker without ice, Dry Shake 10-15 seconds to Froth the egg white, Add ice and shake again until chilled, Strain into a chilled low ball glass, Garnish with a twist of lemon and a Luxardo Cherry", liquor: "Whiskey"),
-            ClassicCocktail(name: "Ranch Water", ingredients: "2 parts Tequila, 1 part Lime Juice, Topo Chico", method: "Add Tequila and Lime Juice to a shaker, Fill with ice and shake until chilled, strain into a chilled glass or over ice, Fill the rest of the glass with Topo Chico, Garnish with a wedge of lime", liquor: "Tequila"),
-            ClassicCocktail(name: "Bourbon Renewal", ingredients: "2 parts Bourbon, 1 part Lemon Juice, .5 parts Creme de Cassis, .5 parts Simple Syrup", method: "Add igredients to a cocktail shaker, fill with ice and shake until chilled, strain into a low ball glass over a large ice cube, garnish with a slice of lemon", liquor: "Bourbon"),
-            ClassicCocktail(name: "Chocolate Peanutbutter Sundae", ingredients: "2 parts Vodka, 1 part Creme de Cacao, .5 parts Peanut butter Whiskey, .5 parts Heavy Cream", method: "Add ingredients to a shaker, cover with ice and shake until chilled, strain ingredients into a chilled martini glass lined with a swirl of chocolate sauce, garnish with a luxardo cherry, and for an extra flourish float a touch of Luxardo Liqueur or Kirschwasser on top", liquor: "Vodka"),
-            ClassicCocktail(name: "Cherry Bourbon Sour", ingredients: "2 parts bourbon, 1 part lemon juice, 3-4 Luxardo or bourbon soaked cherries, .5 parts simple syrup (if desired)", method: "To and old fashioned glass add the cherries and simple syrup, mull the cherries to a pulp, add a cube of lce to the glass and pour in the bourbon and lemon juice, stir with a bar spoon until combined and chilled, garnish with a cherry and lemon twist", liquor: "Bourbon")
-        ]
-        
-        for cocktail in billsFaves {
-            let isloaded = loadedDrinks.contains { $0.drinkName == cocktail.name }
-            
-            if !isloaded {
-                let drink = Drink(context: context)
-                drink.id = UUID()
-                drink.source = 3
-                drink.drinkName = cocktail.name
-                drink.ingredients = cocktail.ingredients
-                drink.method = cocktail.method
-                if let spirit = spirits.first(where: { $0.spiritName == cocktail.liquor }) {
-                    drink.baseSpirit = spirit.id
+        let builtIn = Dictionary((SeedData.classics + SeedData.favorites).map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
+        for drink in drinks {
+            guard let name = drink.drinkName, let seed = builtIn[name] else { continue }
+            if let original = SeedData.originalClassicRecipes[name],
+               drink.ingredients == original.ingredients,
+               drink.method == original.method {
+                drink.ingredients = seed.ingredientsText
+                drink.method = seed.methodText
+                continue
+            }
+            for fix in SeedData.typoFixes {
+                if let text = drink.ingredients, text.contains(fix.typo) {
+                    drink.ingredients = text.replacingOccurrences(of: fix.typo, with: fix.correction)
+                }
+                if let text = drink.method, text.contains(fix.typo) {
+                    drink.method = text.replacingOccurrences(of: fix.typo, with: fix.correction)
                 }
             }
         }
+        context.saveOrRollback()
+    }
+    
+    /// Links built-in cocktails that have no base spirit to the right one. Drinks you created are not touched.
+    static func linkMissingBaseSpirits(context: NSManagedObjectContext) {
+        let request = NSFetchRequest<Drink>(entityName: "Drink")
+        request.predicate = NSPredicate(format: "baseSpirit == nil")
+        guard let drinks = try? context.fetch(request), !drinks.isEmpty else { return }
+        let spirits = fetchAll(Spirit.self, context: context)
+        let spiritForCocktail = Dictionary(
+            (SeedData.classics + SeedData.favorites).map { ($0.name.lowercased(), $0.spirit) },
+            uniquingKeysWith: { first, _ in first }
+        )
         
-        do {
-            try context.save()
-        } catch {
-            print("error saving classics: \(error)")
+        for drink in drinks {
+            guard let spiritName = spiritForCocktail[(drink.drinkName ?? "").lowercased()],
+                  let spirit = findSpirit(named: spiritName, in: spirits) else { continue }
+            drink.baseSpirit = spirit.id
         }
+        context.saveOrRollback()
+    }
+    
+    // MARK: Seeding helpers
+    
+    /// Adds missing built-in spirits. With `defaults`, each one is only ever added once.
+    private static func addMissingSpirits(context: NSManagedObjectContext, defaults: UserDefaults?) {
+        let spirits = fetchAll(Spirit.self, context: context)
+        let existing = Set(spirits.compactMap { $0.spiritName?.lowercased() })
+        let alreadyAdded = Set(defaults?.stringArray(forKey: seededSpiritsKey) ?? [])
+        let listIsEmpty = spirits.isEmpty
+        
+        for seed in SeedData.spirits where !existing.contains(seed.name.lowercased()) {
+            guard defaults == nil || listIsEmpty || !alreadyAdded.contains(seed.name) else { continue }
+            let spirit = Spirit(context: context)
+            spirit.id = UUID()
+            spirit.spiritName = seed.name
+            spirit.type = seed.type.rawValue
+        }
+        if context.saveOrRollback() {
+            defaults?.set(alreadyAdded.union(SeedData.spirits.map(\.name)).sorted(), forKey: seededSpiritsKey)
+        }
+    }
+    
+    /// Adds missing classic cocktails. With `defaults`, each one is only ever added once.
+    private static func addMissingClassics(context: NSManagedObjectContext, defaults: UserDefaults?) {
+        let drinks = fetchAll(Drink.self, context: context)
+        let existing = Set(drinks.compactMap { $0.drinkName?.lowercased() })
+        let alreadyAdded = Set(defaults?.stringArray(forKey: seededCocktailsKey) ?? [])
+        let collectionIsEmpty = drinks.isEmpty
+        let spirits = fetchAll(Spirit.self, context: context)
+        
+        for cocktail in SeedData.classics where !existing.contains(cocktail.name.lowercased()) {
+            guard defaults == nil || collectionIsEmpty || !alreadyAdded.contains(cocktail.name) else { continue }
+            insert(cocktail, source: .classic, spirits: spirits, context: context)
+        }
+        if context.saveOrRollback() {
+            defaults?.set(alreadyAdded.union(SeedData.classics.map(\.name)).sorted(), forKey: seededCocktailsKey)
+        }
+    }
+    
+    private static func insert(_ cocktail: SeedCocktail, source: SourceType, spirits: [Spirit], context: NSManagedObjectContext) {
+        let drink = Drink(context: context)
+        drink.id = UUID()
+        drink.source = source.rawValue
+        drink.drinkName = cocktail.name
+        drink.ingredients = cocktail.ingredientsText
+        drink.method = cocktail.methodText
+        drink.baseSpirit = findSpirit(named: cocktail.spirit, in: spirits)?.id
+    }
+    
+    private static func findSpirit(named name: String, in spirits: [Spirit]) -> Spirit? {
+        spirits.first { ($0.spiritName ?? "").caseInsensitiveCompare(name) == .orderedSame }
+    }
+    
+    private static func fetchAll<T: NSManagedObject>(_ type: T.Type, context: NSManagedObjectContext) -> [T] {
+        (try? context.fetch(NSFetchRequest<T>(entityName: String(describing: type)))) ?? []
     }
 }
 

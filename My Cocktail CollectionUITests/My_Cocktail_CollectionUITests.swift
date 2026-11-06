@@ -26,26 +26,27 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
     /// Before the fix, every row shared one alert flag, so the wrong drink could be deleted.
     func testSwipeToDeleteRemovesTheSwipedCocktail() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uiTesting"] // fresh in-memory database seeded with the 5 classics
+        app.launchArguments = ["-uiTesting"] // fresh in-memory database seeded with the classic cocktails
         app.launch()
 
-        let martini = app.staticTexts["Martini"]
-        XCTAssertTrue(martini.waitForExistence(timeout: 5), "The seeded classics should be listed")
-        let others = ["Margarita", "Old Fashioned", "Daquiri", "Cosmopolitan"]
+        let aviation = app.staticTexts["Aviation"]
+        XCTAssertTrue(aviation.waitForExistence(timeout: 5), "The seeded classics should be listed")
+        // The first rows alphabetically, so they are on screen on every iPhone.
+        let others = ["Aperol Spritz", "Bee's Knees", "Bloody Mary", "Boulevardier"]
         for name in others {
             XCTAssertTrue(app.staticTexts[name].exists, "\(name) should be listed before deleting")
         }
 
-        martini.swipeLeft()
+        aviation.swipeLeft()
         app.buttons["Delete"].firstMatch.tap()
 
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
-        XCTAssertTrue(alert.staticTexts["Are you sure you want to delete Martini?"].exists,
+        XCTAssertTrue(alert.staticTexts["Are you sure you want to delete Aviation?"].exists,
                       "The alert should name the drink that was swiped")
         alert.buttons["Delete"].tap()
 
-        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: martini)
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: aviation)
         wait(for: [gone], timeout: 3)
         for name in others {
             XCTAssertTrue(app.staticTexts[name].exists, "\(name) should not have been deleted")
@@ -58,16 +59,16 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         app.launchArguments = ["-uiTesting"]
         app.launch()
 
-        let martini = app.staticTexts["Martini"]
-        XCTAssertTrue(martini.waitForExistence(timeout: 5))
+        let aviation = app.staticTexts["Aviation"]
+        XCTAssertTrue(aviation.waitForExistence(timeout: 5))
 
-        martini.swipeLeft()
+        aviation.swipeLeft()
         app.buttons["Delete"].firstMatch.tap()
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
         alert.buttons["Cancel"].tap()
 
-        XCTAssertTrue(martini.waitForExistence(timeout: 2))
+        XCTAssertTrue(aviation.waitForExistence(timeout: 2))
     }
 
     func testLaunchPerformance() throws {
