@@ -841,3 +841,115 @@ final class CocktailFavoriteTests: XCTestCase {
         return drink
     }
 }
+
+// MARK: - Spirit taxonomy (data model refactor, step 1)
+
+final class SpiritTaxonomyTests: XCTestCase {
+
+    // MARK: Families
+
+    func testThirteenFamiliesWithNames() {
+        XCTAssertEqual(SpiritFamily.allCases.count, 13)
+        XCTAssertEqual(Set(SpiritFamily.allCases.map(\.rawValue)).count, 13)
+        for family in SpiritFamily.allCases {
+            XCTAssertFalse(family.displayName.isEmpty)
+            XCTAssertFalse(family.symbolName.isEmpty)
+        }
+        XCTAssertEqual(SpiritFamily.allCases.map(\.sortOrder), Array(0..<13))
+        XCTAssertEqual(SpiritFamily.other.sortOrder, 12, "Other sorts last")
+    }
+
+    func testStoredValuesNeverChange() {
+        // These strings are saved in the database. Changing one would orphan stored styles.
+        XCTAssertEqual(SpiritFamily.liqueursAndAmari.rawValue, "liqueursAndAmari")
+        XCTAssertEqual(SpiritFamily(rawValue: "whiskey"), .whiskey)
+        XCTAssertEqual(SpiritFamily(rawValue: "mixersAndSyrups"), .mixersAndSyrups)
+    }
+
+    // MARK: Built-in styles
+
+    func testBuiltInStyleNamesAreUnique() {
+        let names = SpiritTaxonomy.builtInStyles.map { $0.name.lowercased() }
+        XCTAssertEqual(names.count, Set(names).count)
+    }
+
+    func testEveryFamilyHasAtLeastOneStyle() {
+        for family in SpiritFamily.allCases {
+            XCTAssertFalse(SpiritTaxonomy.builtInStyles(in: family).isEmpty, "\(family.displayName) has no styles")
+        }
+    }
+
+    func testGeneralRumAndBrandyStylesExist() {
+        XCTAssertEqual(SpiritTaxonomy.builtInStyle(named: "Rum")?.family, .rum)
+        XCTAssertEqual(SpiritTaxonomy.builtInStyle(named: "Brandy")?.family, .brandy)
+        XCTAssertEqual(SpiritTaxonomy.builtInStyles(in: .rum).first?.name, "Rum", "The general style is listed first")
+        XCTAssertEqual(SpiritTaxonomy.builtInStyles(in: .brandy).first?.name, "Brandy")
+    }
+
+    func testFindStyleIgnoresCaseAndSpaces() {
+        XCTAssertEqual(SpiritTaxonomy.builtInStyle(named: "  sweet vermouth ")?.name, "Sweet Vermouth")
+        XCTAssertNil(SpiritTaxonomy.builtInStyle(named: "Moonshine"))
+    }
+
+    // MARK: Mapping today's spirits
+
+    func testEveryCurrentBuiltInSpiritMapsAsPlanned() throws {
+        let expected: [String: (SpiritFamily, String)] = [
+            "Bourbon": (.whiskey, "Bourbon"),
+            "Rye": (.whiskey, "Rye"),
+            "Scotch": (.whiskey, "Scotch"),
+            "Whiskey": (.whiskey, "Irish Whiskey"),
+            "Gin": (.gin, "London Dry"),
+            "Rum": (.rum, "Rum"),
+            "Tequila": (.agave, "Tequila Blanco"),
+            "Mezcal": (.agave, "Mezcal"),
+            "Brandy": (.brandy, "Brandy"),
+            "Pisco": (.brandy, "Pisco"),
+            "Vodka": (.vodka, "Vodka"),
+            "Aperol": (.liqueursAndAmari, "Aperitivo"),
+            "Aquavit": (.other, "Aquavit")
+        ]
+        XCTAssertEqual(Set(expected.keys), Set(SeedData.spirits.map(\.name)), "Every current seed spirit is covered")
+
+        for seed in SeedData.spirits {
+            let placement = SpiritTaxonomy.placement(forLegacySpirit: seed.name, type: seed.type)
+            let (family, style) = try XCTUnwrap(expected[seed.name])
+            XCTAssertEqual(placement.family, family, seed.name)
+            XCTAssertEqual(placement.styleName, style, seed.name)
+            XCTAssertTrue(placement.isBuiltIn, seed.name)
+        }
+    }
+
+    func testMappingIgnoresCaseAndSpaces() {
+        let placement = SpiritTaxonomy.placement(forLegacySpirit: "  bourbon ", type: .liquor)
+        XCTAssertEqual(placement, .init(family: .whiskey, styleName: "Bourbon", isBuiltIn: true))
+    }
+
+    func testYourSpiritMatchingABuiltInStyleUsesIt() {
+        let placement = SpiritTaxonomy.placement(forLegacySpirit: "Amaro", type: .liqueur)
+        XCTAssertEqual(placement, .init(family: .liqueursAndAmari, styleName: "Amaro", isBuiltIn: true))
+    }
+
+    func testYourSpiritIsPlacedByTellingWord() {
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Japanese Whiskey Blend", type: .liquor),
+                       .init(family: .whiskey, styleName: "Japanese Whiskey Blend", isBuiltIn: false))
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Lillet Blanc", type: .liquor).family, .vermouthAndFortified)
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Cachaça", type: .liquor).family, .rum)
+    }
+
+    func testGingerIsNotGin() {
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Ginger Liqueur", type: .liquor).family, .liqueursAndAmari)
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Ginger Beer", type: .beer).family, .mixersAndSyrups,
+                       "Ginger beer is a mixer, even if it was saved as Beer")
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Old Tom Gin", type: .liquor).family, .gin)
+    }
+
+    func testOldTypeDecidesWhenTheNameDoesNot() {
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "House Red", type: .wine).family, .wine)
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Something Herbal", type: .liqueur).family, .liqueursAndAmari)
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Junmai", type: .sake).family, .other)
+        XCTAssertEqual(SpiritTaxonomy.placement(forLegacySpirit: "Mystery Spirit", type: .liquor),
+                       .init(family: .other, styleName: "Mystery Spirit", isBuiltIn: false))
+    }
+}
+
