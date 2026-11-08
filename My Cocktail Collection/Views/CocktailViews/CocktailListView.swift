@@ -25,6 +25,7 @@ struct CocktailListView: View {
     @State private var sortOption = SortingOption.name
     @State private var favoritesOnly = false
     @State private var showAddCocktail = false
+    @State private var showSettings = false
     @State private var cocktailToDelete: V1.Cocktail?
     @State private var errorMessage: String?
 
@@ -74,6 +75,13 @@ struct CocktailListView: View {
                 }
                 .pickerStyle(.menu)
 
+                Divider()
+                Button {
+                    showSettings = true
+                } label: {
+                    Label("Part Size…", systemImage: "ruler")
+                }
+
                 if !houseFavoritesAdded {
                     Divider()
                     Button {
@@ -89,6 +97,9 @@ struct CocktailListView: View {
             }
             .sheet(isPresented: $showAddCocktail) {
                 AddEditCocktailRecipeView()
+            }
+            .sheet(isPresented: $showSettings) {
+                PartSizeSettingsView()
             }
             .confirmDelete($cocktailToDelete) { cocktail in
                 "Are you sure you want to delete \(cocktail.name)?"

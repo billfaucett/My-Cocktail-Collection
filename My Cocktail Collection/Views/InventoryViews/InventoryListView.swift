@@ -40,6 +40,8 @@ struct InventoryListView: View {
 
     @State private var searchText = ""
     @State private var stockFilter = StockFilter.all
+    /// Only this family's bottles, or every family when nil.
+    @State private var familyFilter: SpiritFamily?
     @State private var favoritesOnly = false
     @State private var showAddBottle = false
     @State private var bottleToEdit: V1.Bottle?
@@ -51,7 +53,7 @@ struct InventoryListView: View {
 
         NavigationStack {
             ListScreen(
-                stockFilter == .shoppingList ? "Shopping List" : "Spirit Inventory",
+                title,
                 isEmpty: visible.isEmpty,
                 emptyState: emptyState,
                 addLabel: "Add Bottle",
@@ -85,6 +87,16 @@ struct InventoryListView: View {
                     Label("Show", systemImage: "line.3.horizontal.decrease.circle")
                 }
                 .pickerStyle(.inline)
+
+                Picker(selection: $familyFilter) {
+                    Text("All Families").tag(nil as SpiritFamily?)
+                    ForEach(familiesInUse) { family in
+                        Label(family.displayName, systemImage: family.symbolName).tag(family as SpiritFamily?)
+                    }
+                } label: {
+                    Label("Family", systemImage: "square.stack.3d.up")
+                }
+                .pickerStyle(.menu)
             }
             .searchable(text: $searchText, prompt: "Search brands and styles")
             .sheet(isPresented: $showAddBottle) {
@@ -116,6 +128,7 @@ struct InventoryListView: View {
         return bottles
             .filter { bottle in
                 guard stockFilter.includes(bottle.stock) else { return false }
+                if let familyFilter, bottle.style?.family != familyFilter { return false }
                 if favoritesOnly && !bottle.isFavorite { return false }
                 if query.isEmpty { return true }
                 return bottle.brand.localizedCaseInsensitiveContains(query)
@@ -123,6 +136,12 @@ struct InventoryListView: View {
                     || (bottle.style?.family.displayName.localizedCaseInsensitiveContains(query) ?? false)
             }
             .sorted { $0.brand.localizedCaseInsensitiveCompare($1.brand) == .orderedAscending }
+    }
+
+    /// Families with at least one bottle, in display order.
+    private var familiesInUse: [SpiritFamily] {
+        let used = Set(bottles.compactMap { $0.style?.family })
+        return SpiritFamily.allCases.filter { used.contains($0) }
     }
 
     /// Bottles in family order (Whiskey, Gin, Rum…), with bottles that have no style last.
@@ -138,13 +157,21 @@ struct InventoryListView: View {
         return groups
     }
 
+    /// "Spirit Inventory", "Shopping List", or the family when one is picked, e.g. "Whiskey".
+    private var title: String {
+        if let familyFilter {
+            return stockFilter == .shoppingList ? "\(familyFilter.displayName) to Buy" : familyFilter.displayName
+        }
+        return stockFilter == .shoppingList ? "Shopping List" : "Spirit Inventory"
+    }
+
     private var emptyState: EmptyState {
         if bottles.isEmpty {
             return EmptyState(title: "No Bottles Yet", systemImage: "wineglass",
                               message: "Add the spirits you have on hand to keep track of what's in stock.",
                               actionTitle: "Add a Bottle")
         }
-        if stockFilter == .shoppingList && searchText.isEmpty {
+        if stockFilter == .shoppingList && searchText.isEmpty && familyFilter == nil {
             return EmptyState(title: "Nothing to Buy", systemImage: "cart",
                               message: "Bottles marked Low or Out show up here.")
         }

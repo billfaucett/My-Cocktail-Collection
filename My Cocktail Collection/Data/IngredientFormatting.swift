@@ -98,3 +98,78 @@ extension ParsedIngredient {
                                  note: note, isGarnish: isGarnish, isOptional: isOptional)
     }
 }
+
+// MARK: - Part size
+
+/// How big a part is, for showing recipes converted to ounces or millilitres (data model refactor, phase 6).
+/// Recipes are always stored in parts; this only changes what the recipe screen shows beside them.
+enum PartSize: String, CaseIterable, Identifiable {
+    case off
+    case oneOunce = "1oz"
+    case oneAndAHalfOunces = "1.5oz"
+    case twoOunces = "2oz"
+    case twentyFiveMillilitres = "25ml"
+    case thirtyMillilitres = "30ml"
+    case fortyFiveMillilitres = "45ml"
+    case fiftyMillilitres = "50ml"
+
+    /// Where the setting is saved, for `@AppStorage`.
+    static let storageKey = "PartSize"
+
+    var id: Self { self }
+
+    /// Ounces or millilitres in one part, or nil when converting is off.
+    var size: (amount: Double, unit: String)? {
+        switch self {
+        case .off: return nil
+        case .oneOunce: return (1, "oz")
+        case .oneAndAHalfOunces: return (1.5, "oz")
+        case .twoOunces: return (2, "oz")
+        case .twentyFiveMillilitres: return (25, "ml")
+        case .thirtyMillilitres: return (30, "ml")
+        case .fortyFiveMillilitres: return (45, "ml")
+        case .fiftyMillilitres: return (50, "ml")
+        }
+    }
+
+    /// "1 part = 1½ oz", or "Parts only" when off.
+    var displayName: String {
+        guard let size else { return "Parts only" }
+        return "1 part = \(Self.format(size.amount, unit: size.unit))"
+    }
+
+    /// An amount in parts, converted: 2 parts at 1½ oz → "3 oz"; a range → "1–1½ oz".
+    /// Nil when converting is off or there's no amount.
+    func converted(amount: Double?, amountMax: Double? = nil) -> String? {
+        guard let size, let amount else { return nil }
+        let low = Self.rounded(amount * size.amount, unit: size.unit)
+        guard let amountMax else { return Self.format(low, unit: size.unit) }
+        let high = Self.rounded(amountMax * size.amount, unit: size.unit)
+        return "\(Self.number(low, unit: size.unit))–\(Self.format(high, unit: size.unit))"
+    }
+
+    /// The converted amount for an ingredient measured in parts. Dashes, garnishes and the like stay as they are.
+    func converted(_ ingredient: V1.RecipeIngredient) -> String? {
+        guard ingredient.unit == .part else { return nil }
+        return converted(amount: ingredient.amount, amountMax: ingredient.amountMax)
+    }
+
+    /// Ounces to the nearest eighth (thirds are kept, so ⅓ part of 1 oz shows as ⅓ oz);
+    /// millilitres to the nearest 5 from 20 ml up, otherwise to the nearest whole.
+    private static func rounded(_ value: Double, unit: String) -> Double {
+        if unit == "ml" {
+            return value >= 20 ? (value / 5).rounded() * 5 : value.rounded()
+        }
+        let thirds = value * 3
+        if abs(thirds - thirds.rounded()) < 0.01 { return thirds.rounded() / 3 }
+        return (value * 8).rounded() / 8
+    }
+
+    private static func number(_ value: Double, unit: String) -> String {
+        unit == "ml" ? String(Int(value.rounded())) : IngredientFormatter.amount(value)
+    }
+
+    private static func format(_ value: Double, unit: String) -> String {
+        "\(number(value, unit: unit)) \(unit)"
+    }
+}

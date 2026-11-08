@@ -14,6 +14,7 @@ struct CocktailDetailView: View {
     @Environment(\.dismiss) private var dismiss
     private let cocktail: V1.Cocktail
 
+    @AppStorage(PartSize.storageKey) private var partSize = PartSize.off
     @State private var showEdit = false
     @State private var confirmDelete = false
     @State private var errorMessage: String?
@@ -24,7 +25,10 @@ struct CocktailDetailView: View {
 
     private var shareText: String {
         var lines = [cocktail.name, ""]
-        lines += cocktail.orderedIngredients.map { "• " + $0.displayText }
+        lines += cocktail.orderedIngredients.map { ingredient in
+            let converted = partSize.converted(ingredient).map { " (\($0))" } ?? ""
+            return "• " + ingredient.displayText + converted
+        }
         if !cocktail.method.isEmpty {
             lines += ["", cocktail.method]
         }
@@ -64,12 +68,30 @@ struct CocktailDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(cocktail.orderedIngredients) { ingredient in
-                        Text(ingredient.displayText)
-                            .foregroundStyle(ingredient.isGarnish ? .secondary : .primary)
+                        ConvertedIngredientRow(text: ingredient.displayText,
+                                               converted: partSize.converted(ingredient),
+                                               isSecondary: ingredient.isGarnish)
                     }
                 }
             } header: {
-                Text("Ingredients")
+                HStack {
+                    Text("Ingredients")
+                    Spacer()
+                    // A quick way to switch the part size without leaving the recipe.
+                    SwiftUI.Menu {
+                        Picker("Part Size", selection: $partSize) {
+                            ForEach(PartSize.allCases) { size in
+                                Text(size.displayName).tag(size)
+                            }
+                        }
+                    } label: {
+                        Label(partSize == .off ? "Parts" : partSize.displayName,
+                              systemImage: "ruler")
+                            .font(.caption)
+                            .textCase(nil)
+                    }
+                    .accessibilityLabel("Part Size")
+                }
             } footer: {
                 if cocktail.needsIngredientReview {
                     Label("Some ingredients couldn't be read clearly. Tap Edit to check them.", systemImage: "exclamationmark.triangle")

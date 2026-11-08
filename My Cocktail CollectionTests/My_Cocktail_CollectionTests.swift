@@ -1611,6 +1611,40 @@ final class CocktailStoreTests: StoreTestCase {
     }
 }
 
+/// Showing parts converted to ounces or millilitres (data model refactor, phase 6).
+final class PartSizeTests: StoreTestCase {
+    func testOffShowsNothing() {
+        XCTAssertNil(PartSize.off.converted(amount: 2))
+        XCTAssertEqual(PartSize.off.displayName, "Parts only")
+    }
+
+    func testOunces() {
+        XCTAssertEqual(PartSize.oneOunce.converted(amount: 2), "2 oz")
+        XCTAssertEqual(PartSize.oneOunce.converted(amount: 0.75), "¾ oz")
+        XCTAssertEqual(PartSize.oneOunce.converted(amount: 1.0 / 3), "⅓ oz", "Thirds are kept")
+        XCTAssertEqual(PartSize.oneAndAHalfOunces.converted(amount: 2), "3 oz")
+        XCTAssertEqual(PartSize.oneAndAHalfOunces.converted(amount: 0.75), "1⅛ oz")
+        XCTAssertEqual(PartSize.oneAndAHalfOunces.displayName, "1 part = 1½ oz")
+        XCTAssertEqual(PartSize.twoOunces.converted(amount: 1, amountMax: 1.5), "2–3 oz")
+    }
+
+    func testMillilitres() {
+        XCTAssertEqual(PartSize.thirtyMillilitres.converted(amount: 2), "60 ml")
+        XCTAssertEqual(PartSize.thirtyMillilitres.converted(amount: 0.75), "25 ml", "22.5 ml rounds to the nearest 5")
+        XCTAssertEqual(PartSize.thirtyMillilitres.converted(amount: 1.0 / 3), "10 ml")
+        XCTAssertEqual(PartSize.twentyFiveMillilitres.converted(amount: 0.5), "13 ml", "Under 20 ml rounds to the nearest whole")
+        XCTAssertEqual(PartSize.fiftyMillilitres.converted(amount: 1, amountMax: 2), "50–100 ml")
+    }
+
+    func testOnlyPartsAreConverted() throws {
+        let cocktail = try CocktailStore(context: context).addCocktail(
+            name: "Old Fashioned",
+            ingredients: IngredientParser.parse("2 oz Bourbon\n2 dashes Angostura Bitters\nOrange peel, to garnish").ingredients
+        )
+        XCTAssertEqual(cocktail.orderedIngredients.map { PartSize.thirtyMillilitres.converted($0) }, ["60 ml", nil, nil])
+    }
+}
+
 /// The Inventory tab's stock filter (data model refactor, phase 5).
 final class StockFilterTests: XCTestCase {
     func testShoppingListShowsLowAndOutOnly() {

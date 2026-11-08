@@ -29,6 +29,7 @@
 		D351C0DE0000000000000009 /* FormFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = D351C0DE0000000000000005 /* FormFields.swift */; };
 		8AC142D82B8A759B002807F5 /* AddEditCocktailRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */; };
 		C0FFEE1A2B3C4D5E6F700102 /* IngredientEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F700101 /* IngredientEditorView.swift */; };
+		C0FFEE1A2B3C4D5E6F700104 /* PartSizeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F700103 /* PartSizeSettingsView.swift */; };
 		8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142D92B8A79FE002807F5 /* CocktailListView.swift */; };
 		8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E02B8B9E54002807F5 /* MessageComposer.swift */; };
 		8AC142E32B8BB399002807F5 /* UIFormatingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */; };
@@ -95,6 +96,7 @@
 		D351C0DE0000000000000005 /* FormFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormFields.swift; sourceTree = "<group>"; };
 		8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditCocktailRecipeView.swift; sourceTree = "<group>"; };
 		C0FFEE1A2B3C4D5E6F700101 /* IngredientEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientEditorView.swift; sourceTree = "<group>"; };
+		C0FFEE1A2B3C4D5E6F700103 /* PartSizeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartSizeSettingsView.swift; sourceTree = "<group>"; };
 		8AC142D92B8A79FE002807F5 /* CocktailListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailListView.swift; sourceTree = "<group>"; };
 		8AC142E02B8B9E54002807F5 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		8AC142E22B8BB399002807F5 /* UIFormatingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIFormatingHelpers.swift; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 			children = (
 				8AC142D72B8A759B002807F5 /* AddEditCocktailRecipeView.swift */,
 				C0FFEE1A2B3C4D5E6F700101 /* IngredientEditorView.swift */,
+				C0FFEE1A2B3C4D5E6F700103 /* PartSizeSettingsView.swift */,
 				8AC142D92B8A79FE002807F5 /* CocktailListView.swift */,
 				8AC142EA2B8F98D9002807F5 /* CocktailDetailView.swift */,
 				8A10F1602BA7661D000E511C /* StarRatingView.swift */,
@@ -493,6 +496,7 @@
 				8AC142E72B8D52CB002807F5 /* AddEditSpirit.swift in Sources */,
 				8AC142D82B8A759B002807F5 /* AddEditCocktailRecipeView.swift in Sources */,
 				C0FFEE1A2B3C4D5E6F700102 /* IngredientEditorView.swift in Sources */,
+				C0FFEE1A2B3C4D5E6F700104 /* PartSizeSettingsView.swift in Sources */,
 				8AC142D42B8A6C01002807F5 /* CocktailRecipe.xcdatamodeld in Sources */,
 				8AFAEAA32B9135590000A087 /* AddMenuItemView.swift in Sources */,
 				8AC142DA2B8A79FE002807F5 /* CocktailListView.swift in Sources */,
