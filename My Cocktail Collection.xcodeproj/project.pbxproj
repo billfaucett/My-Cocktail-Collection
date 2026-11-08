@@ -50,8 +50,11 @@
 		5C4E3A010000000000000004 /* ModelStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000003 /* ModelStores.swift */; };
 		5C4E3A010000000000000006 /* ModelSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000005 /* ModelSeeder.swift */; };
 		5C4E3A010000000000000008 /* LegacyImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000007 /* LegacyImporter.swift */; };
+		5C4E3A01000000000000000A /* AppStartup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000009 /* AppStartup.swift */; };
 		B0771E000000000000000003 /* InventoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000002 /* InventoryListView.swift */; };
 		B0771E000000000000000005 /* AddEditBottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000004 /* AddEditBottleView.swift */; };
+		57E1E5000000000000000002 /* StyleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000001 /* StyleListView.swift */; };
+		57E1E5000000000000000004 /* AddEditStyleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000003 /* AddEditStyleView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,8 +123,11 @@
 		5C4E3A010000000000000003 /* ModelStores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelStores.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000005 /* ModelSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelSeeder.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000007 /* LegacyImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyImporter.swift; sourceTree = "<group>"; };
+		5C4E3A010000000000000009 /* AppStartup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStartup.swift; sourceTree = "<group>"; };
 		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
 		B0771E000000000000000004 /* AddEditBottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditBottleView.swift; sourceTree = "<group>"; };
+		57E1E5000000000000000001 /* StyleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleListView.swift; sourceTree = "<group>"; };
+		57E1E5000000000000000003 /* AddEditStyleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditStyleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -250,6 +256,7 @@
 				8AFAEA9F2B912D8D0000A087 /* MenuViews */,
 				8AFAEA9D2B912D4F0000A087 /* SpiritViews */,
 				B0771E000000000000000001 /* InventoryViews */,
+				57E1E500000000000000000A /* StyleViews */,
 				8A01399E2B97CFBF0079F240 /* Resources */,
 			);
 			path = Views;
@@ -268,6 +275,7 @@
 				5C4E3A010000000000000003 /* ModelStores.swift */,
 				5C4E3A010000000000000005 /* ModelSeeder.swift */,
 				5C4E3A010000000000000007 /* LegacyImporter.swift */,
+				5C4E3A010000000000000009 /* AppStartup.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -330,6 +338,15 @@
 				B0771E000000000000000002 /* InventoryListView.swift */,
 			);
 			path = InventoryViews;
+			sourceTree = "<group>";
+		};
+		57E1E500000000000000000A /* StyleViews */ = {
+			isa = PBXGroup;
+			children = (
+				57E1E5000000000000000001 /* StyleListView.swift */,
+				57E1E5000000000000000003 /* AddEditStyleView.swift */,
+			);
+			path = StyleViews;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -489,6 +506,7 @@
 				5C4E3A010000000000000004 /* ModelStores.swift in Sources */,
 				5C4E3A010000000000000006 /* ModelSeeder.swift in Sources */,
 				5C4E3A010000000000000008 /* LegacyImporter.swift in Sources */,
+				5C4E3A01000000000000000A /* AppStartup.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
@@ -501,6 +519,8 @@
 				8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */,
 				B0771E000000000000000003 /* InventoryListView.swift in Sources */,
 				B0771E000000000000000005 /* AddEditBottleView.swift in Sources */,
+				57E1E5000000000000000002 /* StyleListView.swift in Sources */,
+				57E1E5000000000000000004 /* AddEditStyleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

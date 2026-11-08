@@ -98,6 +98,31 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(aperolSpritz.waitForExistence(timeout: 2), "Show All should bring every cocktail back")
     }
 
+    /// The Styles tab lists built-in styles from the new database, and search narrows them.
+    func testStylesTabListsStyles() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.tabBars.buttons["Styles"].tap()
+        XCTAssertTrue(app.staticTexts["Bourbon"].waitForExistence(timeout: 5), "Whiskey styles come first")
+        XCTAssertTrue(app.staticTexts["Rye"].exists)
+
+        // The Styles search bar is always visible; some iOS versions show it as a Search button first.
+        let search = app.searchFields.firstMatch
+        if !search.waitForExistence(timeout: 2) {
+            let searchButton = app.buttons["Search"].firstMatch
+            if searchButton.exists {
+                searchButton.tap()
+            }
+        }
+        XCTAssertTrue(search.waitForExistence(timeout: 3), "The search field is available")
+        search.tap()
+        search.typeText("Aperitivo")
+        XCTAssertTrue(app.staticTexts["Aperitivo"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Bourbon"].exists, "Search hides other styles")
+    }
+
     func testLaunchPerformance() throws {
         if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
             // This measures how long it takes to launch your application.
