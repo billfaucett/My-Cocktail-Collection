@@ -118,7 +118,15 @@ enum IngredientParser {
         }
         head = head.trimmingCharacters(in: .whitespaces)
 
-        var ingredient = ParsedIngredient(unit: .unspecified, name: head, isOptional: isOptional, original: original)
+        // "Top with ginger beer" or "Top up with soda" is a top-up
+        var isTopUp = false
+        for prefix in ["top up with ", "top with "] where head.lowercased().hasPrefix(prefix) {
+            head = String(head.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+            isTopUp = true
+            break
+        }
+
+        var ingredient = ParsedIngredient(unit: isTopUp ? .topUp : .unspecified, name: head, isOptional: isOptional, original: original)
 
         // Amount, range and unit at the start of the line
         let chars = Array(head)

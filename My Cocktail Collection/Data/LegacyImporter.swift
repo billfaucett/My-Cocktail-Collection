@@ -161,14 +161,23 @@ struct LegacyImporter {
             styleForSpiritObject[spirit.objectID] = style
         }
 
-        // 2. Cocktails, with ingredients read into rows. The original text is kept.
+        // 2. Cocktails, with ingredients read into rows. Older databases never received the built-in
+        //    recipe corrections, so they're applied here. The original ingredient text is kept as it was.
         let classicsByName = Dictionary(SeedData.classics.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+        let drinks = try old.fetch(NSFetchRequest<Drink>(entityName: "Drink"))
+        let takenNames = Set(drinks.map { Self.clean($0.drinkName, fallback: "") })
         var cocktailForDrink: [NSManagedObjectID: V1.Cocktail] = [:]
-        for drink in try old.fetch(NSFetchRequest<Drink>(entityName: "Drink")) {
-            let cocktail = V1.Cocktail(
+        for drink in drinks {
+            let recipe = SeedData.corrected(
                 name: Self.clean(drink.drinkName, fallback: "Untitled Cocktail"),
+                ingredients: drink.ingredients,
+                method: drink.method,
+                takenNames: takenNames
+            )
+            let cocktail = V1.Cocktail(
+                name: recipe.name,
                 source: CocktailSource(legacy: SourceType(rawValue: drink.source) ?? .original),
-                method: drink.method ?? ""
+                method: recipe.method ?? ""
             )
             context.insert(cocktail)
             cocktail.rating = Int(min(max(drink.rating, 0), 10))
@@ -183,7 +192,7 @@ struct LegacyImporter {
                 cocktail.baseStyle = stylesByName[ModelSeeder.baseStyleName(for: seed).lowercased()]
             }
 
-            let parsed = IngredientParser.parse(drink.ingredients ?? "").ingredients
+            let parsed = IngredientParser.parse(recipe.ingredients ?? "").ingredients
             for (position, line) in parsed.enumerated() {
                 let ingredient = V1.RecipeIngredient(parsed: line, position: position)
                 context.insert(ingredient)
@@ -242,9 +251,11 @@ struct LegacyImporter {
         context.insert(V1.ImportRecord(cocktailCount: summary.cocktails, bottleCount: summary.bottles, menuCount: summary.menus))
 
         // Classics already offered by the old app, so ones you deleted there stay deleted.
-        // Older installs without that record count only the classics actually imported.
+        // Older installs have no record: every version seeded the original five classics, so those
+        // count as offered (a missing one was deleted), plus whatever was actually imported.
         let legacyRecord = defaults?.stringArray(forKey: DataController.seededCocktailsKey)
-        let offered = legacyRecord.map { Set($0) } ?? Set(cocktailForDrink.values.map(\.name))
+        let offered = legacyRecord.map { Set($0) }
+            ?? Set(cocktailForDrink.values.map(\.name)).union(SeedData.originalClassicRecipes.keys)
         return (summary, offered)
     }
 

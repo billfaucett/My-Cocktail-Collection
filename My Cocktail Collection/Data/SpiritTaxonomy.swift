@@ -198,8 +198,11 @@ enum SpiritTaxonomy {
     /// Places a spirit from the current database, in this order:
     /// 1. A built-in spirit from earlier versions → its style (`legacySpiritStyles`).
     /// 2. A name that matches a built-in style → that style.
-    /// 3. A name containing a telling word ("Japanese Whisky", "Ginger Liqueur") → that family, as a new style.
-    /// 4. Otherwise its old type (Liqueur, Wine…) picks the family, as a new style; plain Liquor → Other.
+    /// 3. A name that is exactly a known ingredient ("Campari", "Prosecco", "Cointreau") → that ingredient's style.
+    /// 4. An explicit type other than Liquor (Liqueur, Wine, Fortified Wine, Beer, Cider) → that family, as a new
+    ///    style. The type was the user's own choice, so "Sloe Gin" saved as a Liqueur stays a liqueur.
+    /// 5. Otherwise a telling word in the name ("Japanese Whisky", "Ginger Liqueur") → that family, as a new style.
+    /// 6. Otherwise Other, as a new style.
     static func placement(forLegacySpirit name: String, type: SpiritType) -> Placement {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let key = normalized(trimmed)
@@ -210,7 +213,12 @@ enum SpiritTaxonomy {
         if let style = builtInStyle(named: trimmed) {
             return Placement(family: style.family, styleName: style.name, isBuiltIn: true)
         }
-        let matchedFamily = family(forName: key) ?? family(forLegacyType: type)
+        if let alias = IngredientParser.styleAliases.first(where: { normalized($0.alias) == key }),
+           let style = builtInStyle(named: alias.style) {
+            return Placement(family: style.family, styleName: style.name, isBuiltIn: true)
+        }
+        let typeFamily = family(forLegacyType: type)
+        let matchedFamily = typeFamily == .other ? (family(forName: key) ?? .other) : typeFamily
         return Placement(family: matchedFamily, styleName: trimmed, isBuiltIn: false)
     }
 

@@ -106,6 +106,12 @@
 		8AFAEAA62B91442C0000A087 /* MenusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenusListView.swift; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2.xcdatamodel"; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000004 /* CocktailRecipe 3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 3.xcdatamodel"; sourceTree = "<group>"; };
+		B1570A110000000000000001 /* CocktailRecipe 2024-02-24.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2024-02-24.xcdatamodel"; sourceTree = "<group>"; };
+		B1570A110000000000000002 /* CocktailRecipe 2024-02-27.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2024-02-27.xcdatamodel"; sourceTree = "<group>"; };
+		B1570A110000000000000003 /* CocktailRecipe 2024-02-29a.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2024-02-29a.xcdatamodel"; sourceTree = "<group>"; };
+		B1570A110000000000000004 /* CocktailRecipe 2024-02-29b.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2024-02-29b.xcdatamodel"; sourceTree = "<group>"; };
+		B1570A110000000000000005 /* CocktailRecipe 2024-03-01.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2024-03-01.xcdatamodel"; sourceTree = "<group>"; };
+		B1570A110000000000000006 /* CocktailRecipe 2024-03-03.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CocktailRecipe 2024-03-03.xcdatamodel"; sourceTree = "<group>"; };
 		A7C0FFEE0000000000000002 /* Inventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inventory.swift; sourceTree = "<group>"; };
 		5EEDDA7A0000000000000001 /* SeedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedData.swift; sourceTree = "<group>"; };
 		7A70E0E70000000000000001 /* SpiritTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpiritTaxonomy.swift; sourceTree = "<group>"; };
@@ -835,6 +841,12 @@
 				8AC142D32B8A6C01002807F5 /* CocktailRecipe.xcdatamodel */,
 				A7C0FFEE0000000000000001 /* CocktailRecipe 2.xcdatamodel */,
 				A7C0FFEE0000000000000004 /* CocktailRecipe 3.xcdatamodel */,
+				B1570A110000000000000001 /* CocktailRecipe 2024-02-24.xcdatamodel */,
+				B1570A110000000000000002 /* CocktailRecipe 2024-02-27.xcdatamodel */,
+				B1570A110000000000000003 /* CocktailRecipe 2024-02-29a.xcdatamodel */,
+				B1570A110000000000000004 /* CocktailRecipe 2024-02-29b.xcdatamodel */,
+				B1570A110000000000000005 /* CocktailRecipe 2024-03-01.xcdatamodel */,
+				B1570A110000000000000006 /* CocktailRecipe 2024-03-03.xcdatamodel */,
 			);
 			currentVersion = A7C0FFEE0000000000000004 /* CocktailRecipe 3.xcdatamodel */;
 			path = CocktailRecipe.xcdatamodeld;
