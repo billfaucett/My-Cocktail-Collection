@@ -1673,7 +1673,8 @@ final class IngredientRowTests: StoreTestCase {
     func testRowsFromTextAreLinkedAndFlagged() throws {
         let rows = cocktails.rows(fromText: "2 oz Bourbon\n30 ml Sweet Vermouth\n2 dashes Angostura Bitters")
         XCTAssertEqual(rows.map(\.name), ["Bourbon", "Sweet Vermouth", "Angostura Bitters"])
-        XCTAssertTrue(rows[0].style === (try style("Bourbon")))
+        let bourbon = try style("Bourbon")
+        XCTAssertTrue(rows[0].style === bourbon, "Bourbon is linked to the stored Bourbon style")
         XCTAssertEqual(rows.map(\.needsReview), [false, true, false], "Millilitres are converted and marked for checking")
         XCTAssertEqual(rows[1].amount, 1)
     }
