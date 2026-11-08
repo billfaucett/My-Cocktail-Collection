@@ -225,6 +225,66 @@ struct BottleStore {
     }
 }
 
+// MARK: - Ingredient rows
+
+/// One ingredient row being edited, before it's saved. The style is set explicitly,
+/// so a style picked by hand wins over the one the name suggests.
+struct IngredientInput: Identifiable, Equatable {
+    let id = UUID()
+    var amount: Double?
+    var amountMax: Double?
+    var unit: IngredientUnit = .unspecified
+    var name: String = ""
+    var note: String?
+    var isGarnish = false
+    var isOptional = false
+    var style: V1.SpiritStyle?
+    /// True when the parser wasn't sure about this row. Editing it by hand clears this.
+    var needsReview = false
+
+    init(amount: Double? = nil, amountMax: Double? = nil, unit: IngredientUnit = .unspecified, name: String = "",
+         note: String? = nil, isGarnish: Bool = false, isOptional: Bool = false,
+         style: V1.SpiritStyle? = nil, needsReview: Bool = false) {
+        self.amount = amount
+        self.amountMax = amountMax
+        self.unit = unit
+        self.name = name
+        self.note = note
+        self.isGarnish = isGarnish
+        self.isOptional = isOptional
+        self.style = style
+        self.needsReview = needsReview
+    }
+
+    /// A row read from text. Pass the style that matches its style name, if any.
+    init(parsed: ParsedIngredient, style: V1.SpiritStyle?) {
+        self.init(amount: parsed.amount, amountMax: parsed.amountMax, unit: parsed.unit, name: parsed.name,
+                  note: parsed.note, isGarnish: parsed.isGarnish, isOptional: parsed.isOptional,
+                  style: style, needsReview: parsed.needsReview)
+    }
+
+    /// A row copied from a saved ingredient.
+    init(stored: V1.RecipeIngredient, needsReview: Bool = false) {
+        self.init(amount: stored.amount, amountMax: stored.amountMax, unit: stored.unit, name: stored.name,
+                  note: stored.note, isGarnish: stored.isGarnish, isOptional: stored.isOptional,
+                  style: stored.style, needsReview: needsReview)
+    }
+
+    /// This row as it will read in the recipe, e.g. "1½ parts Bourbon".
+    var displayText: String {
+        IngredientFormatter.line(amount: amount, amountMax: amountMax, unit: unit, name: name,
+                                 note: note, isGarnish: isGarnish, isOptional: isOptional)
+    }
+
+    /// Rows are equal when they'd save the same ingredient; the id is ignored.
+    static func == (lhs: IngredientInput, rhs: IngredientInput) -> Bool {
+        lhs.amount == rhs.amount && lhs.amountMax == rhs.amountMax && lhs.unit == rhs.unit
+            && lhs.name == rhs.name && (lhs.note ?? "") == (rhs.note ?? "")
+            && lhs.isGarnish == rhs.isGarnish && lhs.isOptional == rhs.isOptional
+            && lhs.style === rhs.style && lhs.needsReview == rhs.needsReview
+    }
+}
+
 // MARK: - Cocktails
 
 enum CocktailSort {
@@ -241,6 +301,7 @@ struct CocktailStore {
         source: CocktailSource = .original,
         baseStyle: V1.SpiritStyle? = nil,
         ingredients: [ParsedIngredient] = [],
+        rows: [IngredientInput] = [],
         method: String = "",
         rating: Int = 0,
         isFavorite: Bool = false,
@@ -252,18 +313,29 @@ struct CocktailStore {
         cocktail.rating = rating
         cocktail.isFavorite = isFavorite
         cocktail.photo = photo?.cocktailPhotoData()
-        insertIngredients(ingredients, into: cocktail)
+        insertRows(inputs(from: ingredients) + rows, into: cocktail)
         try validateAndSave(cocktail)
         return cocktail
     }
 
     /// Replaces a cocktail's ingredients. Each is linked to its style when one matches.
     func setIngredients(_ ingredients: [ParsedIngredient], for cocktail: V1.Cocktail) throws {
+        try setIngredients(inputs(from: ingredients), for: cocktail)
+    }
+
+    /// Replaces a cocktail's ingredients with edited rows, in order, keeping each row's own style.
+    func setIngredients(_ rows: [IngredientInput], for cocktail: V1.Cocktail) throws {
         for old in cocktail.ingredients ?? [] {
             context.delete(old)
         }
-        insertIngredients(ingredients, into: cocktail)
+        cocktail.ingredients = []
+        insertRows(rows, into: cocktail)
         try validateAndSave(cocktail)
+    }
+
+    /// Reads recipe text into rows, linking each to the stored style its name matches.
+    func rows(fromText text: String) -> [IngredientInput] {
+        inputs(from: IngredientParser.parse(text).ingredients)
     }
 
     /// Replaces a cocktail's ingredients by reading recipe text, one ingredient per line.
@@ -327,16 +399,28 @@ struct CocktailStore {
         return (cocktail.ingredients ?? []).contains { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
-    private func insertIngredients(_ parsed: [ParsedIngredient], into cocktail: V1.Cocktail) {
+    /// Parsed lines as rows, each linked to the stored style named by the parser.
+    private func inputs(from parsed: [ParsedIngredient]) -> [IngredientInput] {
+        guard !parsed.isEmpty else { return [] }
         let styles = (try? context.fetch(FetchDescriptor<V1.SpiritStyle>())) ?? []
         let stylesByName = Dictionary(styles.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
-        for (position, line) in parsed.enumerated() {
-            let ingredient = V1.RecipeIngredient(parsed: line, position: position)
+        return parsed.map { line in
+            IngredientInput(parsed: line, style: line.styleName.flatMap { stylesByName[$0.lowercased()] })
+        }
+    }
+
+    /// Inserts rows in order, each with its own style link.
+    private func insertRows(_ rows: [IngredientInput], into cocktail: V1.Cocktail) {
+        for (position, row) in rows.enumerated() {
+            let ingredient = V1.RecipeIngredient(position: position, name: trimmed(row.name), amount: row.amount,
+                                                 amountMax: row.amountMax, unit: row.unit,
+                                                 note: row.note.map(trimmed).flatMap { $0.isEmpty ? nil : $0 },
+                                                 isGarnish: row.isGarnish, isOptional: row.isOptional)
             context.insert(ingredient)
             ingredient.cocktail = cocktail
-            ingredient.style = line.styleName.flatMap { stylesByName[$0.lowercased()] }
+            ingredient.style = row.style
         }
-        cocktail.needsIngredientReview = parsed.contains(where: \.needsReview)
+        cocktail.needsIngredientReview = rows.contains(where: \.needsReview)
     }
 
     private func validateAndSave(_ cocktail: V1.Cocktail) throws {

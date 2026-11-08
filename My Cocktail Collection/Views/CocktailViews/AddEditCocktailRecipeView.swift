@@ -11,7 +11,8 @@ import SwiftData
 import UIKit
 
 /// Form for adding a cocktail or editing one, on the new database (data model refactor, phase 5).
-/// Ingredients are edited as text, one per line, and read into rows when saved.
+/// Ingredients are a list of rows: tap one to edit it, swipe to delete, Reorder to drag,
+/// or Add from Text to paste a recipe.
 struct AddEditCocktailRecipeView: View {
     @Environment(\.modelContext) private var context
 
@@ -23,8 +24,12 @@ struct AddEditCocktailRecipeView: View {
     @State private var baseStyle: V1.SpiritStyle?
     @State private var rating = 0
     @State private var isFavorite = false
-    @State private var ingredientsText = ""
-    @State private var loadedIngredientsText = ""
+    @State private var rows: [IngredientInput] = []
+    @State private var loadedRows: [IngredientInput] = []
+    @State private var editingRow: IngredientInput?
+    @State private var showAddIngredient = false
+    @State private var showPasteIngredients = false
+    @State private var isReordering = false
     @State private var method = ""
     @State private var photo: UIImage?
     @State private var photoChanged = false
@@ -37,10 +42,7 @@ struct AddEditCocktailRecipeView: View {
 
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
-    /// Lines the parser isn't sure about, so they can be pointed out while editing.
-    private var unclearLines: [String] {
-        IngredientParser.parse(ingredientsText).ingredients.filter(\.needsReview).map(\.original)
-    }
+    private var reviewCount: Int { rows.filter(\.needsReview).count }
 
     var body: some View {
         FormScreen(cocktail == nil ? "Add Cocktail" : "Edit Cocktail", canSave: canSave, onSave: save) {
@@ -68,17 +70,50 @@ struct AddEditCocktailRecipeView: View {
             }
 
             Section {
-                TextField("e.g. 2 parts Bourbon", text: $ingredientsText, axis: .vertical)
-                    .lineLimit(4...14)
+                ForEach(rows) { row in
+                    Button {
+                        editingRow = row
+                    } label: {
+                        IngredientRowLabel(row: row)
+                    }
+                    .tint(.primary)
+                }
+                .onDelete { rows.remove(atOffsets: $0) }
+                .onMove { rows.move(fromOffsets: $0, toOffset: $1) }
+
+                if !isReordering {
+                    Button {
+                        showAddIngredient = true
+                    } label: {
+                        Label("Add Ingredient", systemImage: "plus.circle.fill")
+                    }
+                    Button {
+                        showPasteIngredients = true
+                    } label: {
+                        Label("Add from Text…", systemImage: "text.badge.plus")
+                    }
+                }
             } header: {
-                Text("Ingredients")
+                HStack {
+                    Text("Ingredients")
+                    Spacer()
+                    if rows.count > 1 {
+                        Button(isReordering ? "Done" : "Reorder") {
+                            withAnimation { isReordering.toggle() }
+                        }
+                        .font(.subheadline)
+                        .textCase(nil)
+                    }
+                }
             } footer: {
-                if unclearLines.isEmpty {
-                    Text("One ingredient per line, in parts: \"2 parts Gin\", \"¾ part Lime Juice\", \"2 dashes Bitters\".")
-                } else {
-                    Label("Check: \(unclearLines.joined(separator: "; "))", systemImage: "exclamationmark.triangle")
+                if reviewCount > 0 {
+                    Label("\(reviewCount == 1 ? "1 ingredient needs" : "\(reviewCount) ingredients need") checking. Tap it to fix.",
+                          systemImage: "exclamationmark.triangle")
+                } else if rows.isEmpty {
+                    Text("Add each ingredient in parts. A part is whatever measure you use.")
                 }
             }
+            .environment(\.editMode, .constant(isReordering ? .active : .inactive))
 
             Section("How to Make") {
                 TextField("e.g. Stir with ice and strain over a large cube", text: $method, axis: .vertical)
@@ -86,6 +121,19 @@ struct AddEditCocktailRecipeView: View {
             }
         }
         .onAppear(perform: loadCocktail)
+        .sheet(item: $editingRow) { row in
+            IngredientEditorView(ingredient: row) { edited in
+                if let index = rows.firstIndex(where: { $0.id == row.id }) {
+                    rows[index] = edited
+                }
+            }
+        }
+        .sheet(isPresented: $showAddIngredient) {
+            IngredientEditorView { rows.append($0) }
+        }
+        .sheet(isPresented: $showPasteIngredients) {
+            PasteIngredientsView { rows.append(contentsOf: $0) }
+        }
     }
 
     private func loadCocktail() {
@@ -97,8 +145,12 @@ struct AddEditCocktailRecipeView: View {
         baseStyle = cocktail.baseStyle
         rating = cocktail.rating
         isFavorite = cocktail.isFavorite
-        ingredientsText = IngredientFormatter.text(for: cocktail.orderedIngredients)
-        loadedIngredientsText = ingredientsText
+        rows = cocktail.orderedIngredients.map { ingredient in
+            // Re-read each line to find the ones that still need checking.
+            IngredientInput(stored: ingredient,
+                            needsReview: cocktail.needsIngredientReview && IngredientParser.parseLine(ingredient.displayText).needsReview)
+        }
+        loadedRows = rows
         method = cocktail.method
         photo = cocktail.photo.flatMap(UIImage.init(data:))
     }
@@ -118,16 +170,16 @@ struct AddEditCocktailRecipeView: View {
                     $0.photo = photoData
                 }
             }
-            // Only re-read the ingredients if they were changed, so untouched recipes keep their rows exactly.
-            if ingredientsText != loadedIngredientsText {
-                try store.setIngredients(fromText: ingredientsText, for: cocktail)
+            // Only replace the ingredients if they were changed, so untouched recipes keep their rows exactly.
+            if rows != loadedRows {
+                try store.setIngredients(rows, for: cocktail)
             }
         } else {
             try store.addCocktail(
                 name: name,
                 source: source,
                 baseStyle: baseStyle,
-                ingredients: IngredientParser.parse(ingredientsText).ingredients,
+                rows: rows,
                 method: method,
                 rating: rating,
                 isFavorite: isFavorite,

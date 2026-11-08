@@ -1611,6 +1611,85 @@ final class CocktailStoreTests: StoreTestCase {
     }
 }
 
+/// Ingredient rows as the ingredient editor makes them (data model refactor, phase 6).
+final class IngredientRowTests: StoreTestCase {
+    private var cocktails: CocktailStore { CocktailStore(context: context) }
+
+    func testRowsKeepTheStylePickedByHand() throws {
+        let rows = [
+            IngredientInput(amount: 2, unit: .part, name: "House Rum Blend", style: try style("Rum")),
+            IngredientInput(amount: 1, unit: .part, name: "Campari"),
+        ]
+        let cocktail = try cocktails.addCocktail(name: "Jungle-ish", rows: rows)
+        let saved = cocktail.orderedIngredients
+        XCTAssertEqual(saved.map(\.name), ["House Rum Blend", "Campari"])
+        XCTAssertEqual(saved[0].style?.name, "Rum", "A style picked by hand is kept")
+        XCTAssertNil(saved[1].style, "A row with no style isn't linked from its name behind the user's back")
+    }
+
+    func testRowsFromTextAreLinkedAndFlagged() throws {
+        let rows = cocktails.rows(fromText: "2 oz Bourbon\n30 ml Sweet Vermouth\n2 dashes Angostura Bitters")
+        XCTAssertEqual(rows.map(\.name), ["Bourbon", "Sweet Vermouth", "Angostura Bitters"])
+        XCTAssertTrue(rows[0].style === (try style("Bourbon")))
+        XCTAssertEqual(rows.map(\.needsReview), [false, true, false], "Millilitres are converted and marked for checking")
+        XCTAssertEqual(rows[1].amount, 1)
+    }
+
+    func testSettingRowsReplacesInOrderAndClearsReview() throws {
+        let cocktail = try cocktails.addCocktail(name: "Martini", ingredients: IngredientParser.parse("60 ml Gin\n10 ml Dry Vermouth").ingredients)
+        XCTAssertTrue(cocktail.needsIngredientReview)
+
+        var rows = cocktail.orderedIngredients.map { IngredientInput(stored: $0, needsReview: true) }
+        rows[0].needsReview = false
+        rows[1].needsReview = false
+        rows[1].amount = 0.5
+        rows.append(IngredientInput(name: "Lemon twist", isGarnish: true))
+        rows.swapAt(0, 1)
+        try cocktails.setIngredients(rows, for: cocktail)
+
+        XCTAssertEqual(cocktail.orderedIngredients.map(\.displayText), ["½ part Dry Vermouth", "2 parts Gin", "Lemon twist, to garnish"])
+        XCTAssertEqual(cocktail.orderedIngredients.map(\.position), [0, 1, 2])
+        XCTAssertFalse(cocktail.needsIngredientReview, "Checked rows clear the cocktail's flag")
+        XCTAssertEqual(try count(V1.RecipeIngredient.self), 3, "Old rows are deleted, not left behind")
+    }
+
+    func testRowEqualityIgnoresIdButNotStyle() throws {
+        let first = IngredientInput(amount: 2, unit: .part, name: "Gin", style: try style("London Dry"))
+        var second = IngredientInput(amount: 2, unit: .part, name: "Gin", style: try style("London Dry"))
+        XCTAssertNotEqual(first.id, second.id)
+        XCTAssertEqual(first, second)
+        second.style = try style("Old Tom")
+        XCTAssertNotEqual(first, second)
+        second.style = first.style
+        second.note = ""
+        XCTAssertEqual(first, second, "An empty note is the same as no note")
+    }
+
+    func testStoredRowsRoundTripUnchanged() throws {
+        let cocktail = try cocktails.addCocktail(name: "Bee's Knees", rows: cocktails.rows(fromText: "2 oz Gin\n¾ oz Honey Syrup\n¾ oz Lemon Juice\nLemon peel, to garnish (optional)"))
+        let loaded = cocktail.orderedIngredients.map { IngredientInput(stored: $0) }
+        let reloaded = cocktail.orderedIngredients.map { IngredientInput(stored: $0) }
+        XCTAssertEqual(loaded, reloaded, "Untouched rows compare equal, so the form doesn't rewrite them")
+        XCTAssertEqual(loaded.map(\.displayText), ["2 parts Gin", "¾ part Honey Syrup", "¾ part Lemon Juice", "Lemon peel, to garnish (optional)"])
+        XCTAssertEqual(loaded[0].style?.name, "London Dry")
+    }
+
+    func testRangesAndTopUpRows() throws {
+        let rows = [
+            IngredientInput(amount: 2, amountMax: 3, unit: .dash, name: "Angostura Bitters"),
+            IngredientInput(unit: .topUp, name: "Club Soda"),
+            IngredientInput(amount: 1, unit: .piece, name: "Egg White", isOptional: true),
+        ]
+        XCTAssertEqual(rows.map(\.displayText), ["2–3 dashes Angostura Bitters", "Club Soda, to top", "1 Egg White (optional)"])
+        for row in rows {
+            let reread = IngredientParser.parseLine(row.displayText)
+            XCTAssertEqual(reread.name, row.name)
+            XCTAssertEqual(reread.unit, row.unit)
+            XCTAssertEqual(reread.amountMax, row.amountMax)
+        }
+    }
+}
+
 final class MenuStoreTests: StoreTestCase {
     private var menus: MenuStore { MenuStore(context: context) }
 

@@ -37,7 +37,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
             XCTAssertTrue(app.staticTexts[name].exists, "\(name) should be listed before deleting")
         }
 
-        revealSwipeAction("Delete", on: aviation, in: app) { $0.swipeLeft() }.tap()
+        revealSwipeAction("Delete", on: aviation, in: app).tap()
 
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
@@ -61,7 +61,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         let aviation = app.staticTexts["Aviation"]
         XCTAssertTrue(aviation.waitForExistence(timeout: 5))
 
-        revealSwipeAction("Delete", on: aviation, in: app) { $0.swipeLeft() }.tap()
+        revealSwipeAction("Delete", on: aviation, in: app).tap()
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
         alert.buttons["Cancel"].tap()
@@ -121,14 +121,22 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Bourbon"].exists, "Search hides other styles")
     }
 
-    /// Swipes a row to reveal one of its swipe actions. A swipe in the Simulator occasionally doesn't
-    /// register (for example while the list is still settling), so it tries up to three times.
-    private func revealSwipeAction(_ title: String, on row: XCUIElement, in app: XCUIApplication,
-                                   swipe: (XCUIElement) -> Void) -> XCUIElement {
+    /// Swipes a row left to reveal one of its trailing swipe actions, such as Delete.
+    /// It drags the whole row slowly rather than flicking the label, which the Simulator sometimes
+    /// reads as a scroll while the list is settling after launch. It tries up to three times, and
+    /// never swipes again once the button is showing (a second swipe would close it).
+    private func revealSwipeAction(_ title: String, on row: XCUIElement, in app: XCUIApplication) -> XCUIElement {
         let button = app.buttons[title].firstMatch
+        let cell = app.cells.containing(.staticText, identifier: row.label).firstMatch
+        let target = cell.waitForExistence(timeout: 2) ? cell : row
         for _ in 0..<3 {
-            swipe(row)
-            if button.waitForExistence(timeout: 1.5) {
+            if button.exists { return button }
+            let hittable = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: target)
+            _ = XCTWaiter.wait(for: [hittable], timeout: 2)
+            let start = target.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+            let end = target.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5))
+            start.press(forDuration: 0.1, thenDragTo: end)
+            if button.waitForExistence(timeout: 3) {
                 return button
             }
         }
