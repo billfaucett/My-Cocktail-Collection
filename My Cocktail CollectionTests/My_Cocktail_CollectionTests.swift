@@ -1611,6 +1611,15 @@ final class CocktailStoreTests: StoreTestCase {
     }
 }
 
+/// The Inventory tab's stock filter (data model refactor, phase 5).
+final class StockFilterTests: XCTestCase {
+    func testShoppingListShowsLowAndOutOnly() {
+        XCTAssertEqual(StockLevel.allCases.filter(StockFilter.shoppingList.includes), [.low, .out])
+        XCTAssertEqual(StockLevel.allCases.filter(StockFilter.inStock.includes), [.full, .half, .low])
+        XCTAssertEqual(StockLevel.allCases.filter(StockFilter.all.includes), StockLevel.allCases)
+    }
+}
+
 /// Ingredient rows as the ingredient editor makes them (data model refactor, phase 6).
 final class IngredientRowTests: StoreTestCase {
     private var cocktails: CocktailStore { CocktailStore(context: context) }

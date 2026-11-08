@@ -121,6 +121,32 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Bourbon"].exists, "Search hides other styles")
     }
 
+    /// Adding a bottle on the Inventory tab lists it, and tapping it opens it for editing.
+    func testAddingABottleListsIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.tabBars.buttons["Inventory"].tap()
+        let addButton = app.buttons["Add Bottle"].firstMatch
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
+
+        let brand = app.textFields["Brand or name (e.g. Buffalo Trace)"]
+        XCTAssertTrue(brand.waitForExistence(timeout: 3))
+        brand.tap()
+        brand.typeText("Test Bottle")
+        app.navigationBars["Add Bottle"].buttons["Save"].tap()
+
+        let row = app.staticTexts["Test Bottle"]
+        XCTAssertTrue(row.waitForExistence(timeout: 3), "The new bottle should be listed")
+        XCTAssertTrue(app.staticTexts["No Style"].exists, "A bottle with no style is listed under No Style")
+
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Edit Bottle"].waitForExistence(timeout: 3))
+        app.navigationBars["Edit Bottle"].buttons["Cancel"].tap()
+    }
+
     /// Swipes a row left to reveal one of its trailing swipe actions, such as Delete.
     /// It drags the whole row slowly rather than flicking the label, which the Simulator sometimes
     /// reads as a scroll while the list is settling after launch. It tries up to three times, and
