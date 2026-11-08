@@ -1755,6 +1755,57 @@ final class MenuStoreTests: StoreTestCase {
     }
 }
 
+/// Menus as shared and saved from the Menus tab (data model refactor, phase 5).
+final class MenuExporterTests: StoreTestCase {
+    private func makeMenu() throws -> V1.Menu {
+        let cocktails = CocktailStore(context: context)
+        let negroni = try cocktails.addCocktail(name: "Negroni", ingredients: IngredientParser.parse("1 oz Gin\n1 oz Campari\n1 oz Sweet Vermouth").ingredients)
+        let daiquiri = try cocktails.addCocktail(name: "Daiquiri", ingredients: IngredientParser.parse("2 oz Rum\n¾ oz Lime Juice\n¾ oz Simple Syrup").ingredients)
+        let menus = MenuStore(context: context)
+        let menu = try menus.addMenu(name: "Friday Night")
+        try menus.add([negroni, daiquiri], to: menu)
+        return menu
+    }
+
+    func testTextListsCocktailsInMenuOrderWithIngredientsInParts() throws {
+        let menu = try makeMenu()
+        XCTAssertEqual(MenuExporter.text(for: menu), """
+            Friday Night
+
+            Negroni
+            1 part Gin · 1 part Campari · 1 part Sweet Vermouth
+
+            Daiquiri
+            2 parts Rum · ¾ part Lime Juice · ¾ part Simple Syrup
+
+            """)
+
+        let daiquiri = try XCTUnwrap(menu.orderedEntries.last)
+        try MenuStore(context: context).move(daiquiri, to: 0, in: menu)
+        XCTAssertTrue(MenuExporter.text(for: menu).hasPrefix("Friday Night\n\nDaiquiri"), "The text follows the menu's order")
+    }
+
+    func testSavingWritesATextFile() throws {
+        let menu = try makeMenu()
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file = try MenuExporter.saveToFiles(menu, folder: folder)
+        XCTAssertEqual(file.lastPathComponent, "Friday Night.txt")
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), MenuExporter.text(for: menu))
+        XCTAssertEqual(MenuExporter.fileName(for: " 12/24: Party "), "1224 Party.txt")
+        XCTAssertEqual(MenuExporter.fileName(for: "  "), "Menu.txt")
+    }
+
+    func testDeleteAllMenusKeepsTheCocktails() throws {
+        _ = try makeMenu()
+        _ = try MenuStore(context: context).addMenu(name: "Holiday Party")
+        try MenuStore(context: context).deleteAll()
+        XCTAssertEqual(try count(V1.Menu.self), 0)
+        XCTAssertEqual(try count(V1.MenuEntry.self), 0)
+        XCTAssertEqual(try count(V1.Cocktail.self), 2)
+    }
+}
+
 final class ModelSeederTests: XCTestCase {
     private var container: ModelContainer!
     private var context: ModelContext!

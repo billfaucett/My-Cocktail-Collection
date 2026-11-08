@@ -147,6 +147,34 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         app.navigationBars["Edit Bottle"].buttons["Cancel"].tap()
     }
 
+    /// Creating a menu opens it, and cocktails picked from the collection are added to it.
+    func testCreatingAMenuAndAddingCocktails() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.tabBars.buttons["Menus"].tap()
+        let newMenu = app.buttons["New Menu"].firstMatch
+        XCTAssertTrue(newMenu.waitForExistence(timeout: 5))
+        newMenu.tap()
+
+        let name = app.textFields["Menu name (e.g. Friday Night)"]
+        XCTAssertTrue(name.waitForExistence(timeout: 3))
+        name.tap()
+        name.typeText("Test Night")
+        app.navigationBars["New Menu"].buttons["Create"].tap()
+
+        XCTAssertTrue(app.navigationBars["Test Night"].waitForExistence(timeout: 3), "A new menu opens straight away")
+        app.buttons["Add Cocktails"].firstMatch.tap()
+
+        let aviation = app.buttons.containing(.staticText, identifier: "Aviation").firstMatch
+        XCTAssertTrue(aviation.waitForExistence(timeout: 3))
+        aviation.tap()
+        app.navigationBars["Add Cocktails"].buttons["Add (1)"].tap()
+
+        XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 3), "The picked cocktail is on the menu")
+    }
+
     /// Swipes a row left to reveal one of its trailing swipe actions, such as Delete.
     /// It drags the whole row slowly rather than flicking the label, which the Simulator sometimes
     /// reads as a scroll while the list is settling after launch. It tries up to three times, and

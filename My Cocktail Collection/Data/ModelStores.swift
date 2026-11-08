@@ -506,4 +506,12 @@ struct MenuStore {
         context.delete(menu)
         try context.saveOrUndo()
     }
+
+    /// Deletes every menu and its entries. The cocktails stay in the collection.
+    func deleteAll() throws {
+        for menu in try menus() {
+            context.delete(menu)
+        }
+        try context.saveOrUndo()
+    }
 }

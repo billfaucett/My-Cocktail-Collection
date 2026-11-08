@@ -5,16 +5,17 @@
 //  Created by William Faucett on 2/29/24.
 //
 
+
 import SwiftUI
-import CoreData
+import SwiftData
 
 struct AddEditMenuView: View {
-    @Environment(\.managedObjectContext) private var context
+    @Environment(\.modelContext) private var context
 
     /// The menu being renamed, or nil when creating a new one.
-    private let menu: Menu?
+    private let menu: V1.Menu?
     /// Called with the menu after it's saved, e.g. to open a newly created menu.
-    private let onSave: ((Menu) -> Void)?
+    private let onSave: ((V1.Menu) -> Void)?
 
     @State private var name = ""
     @State private var hasLoaded = false
@@ -22,7 +23,7 @@ struct AddEditMenuView: View {
     /// - Parameters:
     ///   - menu: The menu to rename. Leave out to create a new menu.
     ///   - onSave: Called with the saved menu.
-    init(menu: Menu? = nil, onSave: ((Menu) -> Void)? = nil) {
+    init(menu: V1.Menu? = nil, onSave: ((V1.Menu) -> Void)? = nil) {
         self.menu = menu
         self.onSave = onSave
     }
@@ -51,28 +52,23 @@ struct AddEditMenuView: View {
     private func loadMenu() {
         guard !hasLoaded else { return }
         hasLoaded = true
-        name = menu?.menuName ?? ""
+        name = menu?.name ?? ""
     }
 
     private func save() throws {
-        let target = menu ?? Menu(context: context)
-        if menu == nil {
-            target.id = UUID()
-            target.dateCreated = Date()
+        let store = MenuStore(context: context)
+        let saved: V1.Menu
+        if let menu {
+            try store.rename(menu, to: trimmedName)
+            saved = menu
+        } else {
+            saved = try store.addMenu(name: trimmedName)
         }
-        target.menuName = trimmedName
-
-        do {
-            try context.save()
-        } catch {
-            context.rollback()
-            throw error
-        }
-        onSave?(target)
+        onSave?(saved)
     }
 }
 
 #Preview {
     AddEditMenuView()
-        .environment(\.managedObjectContext, DataController(inMemory: true).container.viewContext)
+        .modelContainer(try! CocktailModelContainer.make(inMemory: true))
 }
