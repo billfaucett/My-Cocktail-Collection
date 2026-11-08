@@ -2385,3 +2385,67 @@ final class RealisticVersion1ImportTests: LegacyStoreTestCase {
     }
 }
 
+// MARK: - Ingredient formatting (data model refactor, phase 5)
+
+final class IngredientFormatterTests: XCTestCase {
+
+    func testAmounts() {
+        XCTAssertEqual(IngredientFormatter.amount(2), "2")
+        XCTAssertEqual(IngredientFormatter.amount(2.5), "2½")
+        XCTAssertEqual(IngredientFormatter.amount(0.75), "¾")
+        XCTAssertEqual(IngredientFormatter.amount(1.25), "1¼")
+        XCTAssertEqual(IngredientFormatter.amount(1.0 / 3), "⅓")
+        XCTAssertEqual(IngredientFormatter.amount(0.125), "⅛")
+        XCTAssertEqual(IngredientFormatter.amount(0.6), "0.6")
+        XCTAssertEqual(IngredientFormatter.amount(1.999), "2")
+    }
+
+    func testLines() {
+        func line(_ text: String) -> String { IngredientParser.parseLine(text).displayText }
+        XCTAssertEqual(line("2 oz Gin"), "2 parts Gin")
+        XCTAssertEqual(line("¾ oz Lime Juice"), "¾ part Lime Juice")
+        XCTAssertEqual(line("1 oz Campari"), "1 part Campari")
+        XCTAssertEqual(line("1½ oz Bourbon"), "1½ parts Bourbon")
+        XCTAssertEqual(line("2–3 dashes Angostura Bitters"), "2–3 dashes Angostura Bitters")
+        XCTAssertEqual(line("1 dash Orange Bitters"), "1 dash Orange Bitters")
+        XCTAssertEqual(line("1 tsp Bénédictine"), "1 barspoon Bénédictine")
+        XCTAssertEqual(line("Club soda, to top"), "Club soda, to top")
+        XCTAssertEqual(line("Orange peel, to garnish"), "Orange peel, to garnish")
+        XCTAssertEqual(line("1 Egg White (optional)"), "1 Egg White (optional)")
+        XCTAssertEqual(line("Salt, for the rim (optional)"), "Salt, for the rim (optional)")
+        XCTAssertEqual(line("¼ oz Islay Scotch, to float"), "¼ part Islay Scotch, to float")
+        XCTAssertEqual(line("Pinch of salt"), "Pinch of salt")
+    }
+
+    /// Text shown in the form must read back to the same rows, or editing would quietly change recipes.
+    func testEveryClassicSurvivesARoundTrip() {
+        for recipe in SeedData.classics + SeedData.favorites {
+            let first = IngredientParser.parse(recipe.ingredientsText).ingredients
+            let text = first.map(\.displayText).joined(separator: "\n")
+            let second = IngredientParser.parse(text).ingredients
+            XCTAssertEqual(first.count, second.count, recipe.name)
+            for (a, b) in zip(first, second) {
+                XCTAssertEqual(a.amount, b.amount, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.amountMax, b.amountMax, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.unit, b.unit, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.name, b.name, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.note, b.note, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.isGarnish, b.isGarnish, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.isOptional, b.isOptional, "\(recipe.name): \(a.original)")
+                XCTAssertEqual(a.styleName, b.styleName, "\(recipe.name): \(a.original)")
+                XCTAssertFalse(b.needsReview, "\(recipe.name): \(b.original)")
+            }
+        }
+    }
+
+    func testStoredIngredientsFormatTheSameWay() throws {
+        let container = try CocktailModelContainer.make(inMemory: true)
+        let context = ModelContext(container)
+        let cocktail = try CocktailStore(context: context).addCocktail(
+            name: "Negroni", ingredients: IngredientParser.parse("1 oz Gin\n1 oz Campari\n1 oz Sweet Vermouth\nOrange peel, to garnish").ingredients
+        )
+        XCTAssertEqual(IngredientFormatter.text(for: cocktail.orderedIngredients),
+                       "1 part Gin\n1 part Campari\n1 part Sweet Vermouth\nOrange peel, to garnish")
+    }
+}
+

@@ -7,47 +7,55 @@
 
 import SwiftUI
 import CoreData
+import SwiftData
 import UIKit
 
+/// Form for adding a cocktail or editing one, on the new database (data model refactor, phase 5).
+/// Ingredients are edited as text, one per line, and read into rows when saved.
 struct AddEditCocktailRecipeView: View {
-    @Environment(\.managedObjectContext) private var context
-    @FetchRequest(sortDescriptors: []) private var spirits: FetchedResults<Spirit>
+    @Environment(\.modelContext) private var context
 
     /// The cocktail being edited, or nil when adding a new one.
-    private let drink: Drink?
+    private let cocktail: V1.Cocktail?
 
-    @State private var drinkName = ""
-    @State private var source: SourceType = .classic
-    @State private var baseSpirit: Spirit?
+    @State private var name = ""
+    @State private var source: CocktailSource = .original
+    @State private var baseStyle: V1.SpiritStyle?
     @State private var rating = 0
     @State private var isFavorite = false
-    @State private var ingredients = ""
+    @State private var ingredientsText = ""
+    @State private var loadedIngredientsText = ""
     @State private var method = ""
     @State private var photo: UIImage?
     @State private var photoChanged = false
     @State private var hasLoaded = false
 
-    /// - Parameter drink: The cocktail to edit. Leave out to add a new cocktail.
-    init(drink: Drink? = nil) {
-        self.drink = drink
+    /// - Parameter cocktail: The cocktail to edit. Leave out to add a new cocktail.
+    init(cocktail: V1.Cocktail? = nil) {
+        self.cocktail = cocktail
     }
 
-    private var canSave: Bool { !drinkName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var canSave: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    /// Lines the parser isn't sure about, so they can be pointed out while editing.
+    private var unclearLines: [String] {
+        IngredientParser.parse(ingredientsText).ingredients.filter(\.needsReview).map(\.original)
+    }
 
     var body: some View {
-        FormScreen(drink == nil ? "Add Cocktail" : "Edit Cocktail", canSave: canSave, onSave: save) {
+        FormScreen(cocktail == nil ? "Add Cocktail" : "Edit Cocktail", canSave: canSave, onSave: save) {
             PhotoSection(photo: $photo, photoChanged: $photoChanged, placeholder: .cocktail)
 
             Section("Cocktail") {
-                TextField("Name (e.g. Old Fashioned)", text: $drinkName)
+                TextField("Name (e.g. Old Fashioned)", text: $name)
                     .textInputAutocapitalization(.words)
-                SpiritPicker(selection: $baseSpirit)
+                StylePicker(selection: $baseStyle)
             }
 
             Section("Source") {
                 Picker("Source", selection: $source) {
-                    ForEach(SourceType.allCases, id: \.self) { source in
-                        Text(source.description).tag(source)
+                    ForEach(CocktailSource.allCases, id: \.self) { source in
+                        Text(source.displayName).tag(source)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -60,12 +68,16 @@ struct AddEditCocktailRecipeView: View {
             }
 
             Section {
-                TextField("e.g. 2 oz Bourbon", text: $ingredients, axis: .vertical)
-                    .lineLimit(4...12)
+                TextField("e.g. 2 parts Bourbon", text: $ingredientsText, axis: .vertical)
+                    .lineLimit(4...14)
             } header: {
                 Text("Ingredients")
             } footer: {
-                Text("One ingredient per line works best.")
+                if unclearLines.isEmpty {
+                    Text("One ingredient per line, in parts: \"2 parts Gin\", \"¾ part Lime Juice\", \"2 dashes Bitters\".")
+                } else {
+                    Label("Check: \(unclearLines.joined(separator: "; "))", systemImage: "exclamationmark.triangle")
+                }
             }
 
             Section("How to Make") {
@@ -73,69 +85,71 @@ struct AddEditCocktailRecipeView: View {
                     .lineLimit(4...12)
             }
         }
-        .onAppear(perform: loadDrink)
+        .onAppear(perform: loadCocktail)
     }
 
-    private func loadDrink() {
+    private func loadCocktail() {
         guard !hasLoaded else { return }
         hasLoaded = true
-        guard let drink else { return }
-        drinkName = drink.drinkName ?? ""
-        source = SourceType(rawValue: drink.source) ?? .classic
-        if let spiritID = drink.baseSpirit {
-            baseSpirit = spirits.first { $0.id == spiritID }
-        }
-        rating = Int(drink.rating)
-        isFavorite = drink.isFavorite
-        ingredients = drink.ingredients ?? ""
-        method = drink.method ?? ""
-        photo = drink.image.flatMap(UIImage.init(data:))
+        guard let cocktail else { return }
+        name = cocktail.name
+        source = cocktail.source
+        baseStyle = cocktail.baseStyle
+        rating = cocktail.rating
+        isFavorite = cocktail.isFavorite
+        ingredientsText = IngredientFormatter.text(for: cocktail.orderedIngredients)
+        loadedIngredientsText = ingredientsText
+        method = cocktail.method
+        photo = cocktail.photo.flatMap(UIImage.init(data:))
     }
 
     private func save() throws {
-        let target = drink ?? Drink(context: context)
-        if drink == nil {
-            target.id = UUID()
-        }
-        target.drinkName = drinkName.trimmingCharacters(in: .whitespacesAndNewlines)
-        target.source = source.rawValue
-        target.baseSpirit = baseSpirit?.id
-        target.rating = Int16(rating)
-        target.isFavorite = isFavorite
-        target.ingredients = ingredients
-        target.method = method
-        if photoChanged {
-            if let photo {
-                target.setPhoto(photo)
-            } else {
-                target.image = nil
+        let store = CocktailStore(context: context)
+        let photoData = photo?.cocktailPhotoData()
+        if let cocktail {
+            try store.update(cocktail) {
+                $0.name = name
+                $0.source = source
+                $0.baseStyle = baseStyle
+                $0.rating = rating
+                $0.isFavorite = isFavorite
+                $0.method = method
+                if photoChanged {
+                    $0.photo = photoData
+                }
             }
-        }
-
-        do {
-            try context.save()
-        } catch {
-            context.rollback()
-            throw error
+            // Only re-read the ingredients if they were changed, so untouched recipes keep their rows exactly.
+            if ingredientsText != loadedIngredientsText {
+                try store.setIngredients(fromText: ingredientsText, for: cocktail)
+            }
+        } else {
+            try store.addCocktail(
+                name: name,
+                source: source,
+                baseStyle: baseStyle,
+                ingredients: IngredientParser.parse(ingredientsText).ingredients,
+                method: method,
+                rating: rating,
+                isFavorite: isFavorite,
+                photo: photo
+            )
         }
     }
 }
 
 #Preview("Add") {
-    let context = DataController(inMemory: true).container.viewContext
-    DataController.seedSpirits(context: context)
+    let container = try! CocktailModelContainer.make(inMemory: true)
+    try? ModelSeeder.addMissingStyles(context: container.mainContext, defaults: nil)
     return AddEditCocktailRecipeView()
-        .environment(\.managedObjectContext, context)
+        .modelContainer(container)
 }
 
 #Preview("Edit") {
-    let context = DataController(inMemory: true).container.viewContext
-    DataController.seedSpirits(context: context)
-    DataController.seedCocktails(context: context)
-    let drink = try? context.fetch(NSFetchRequest<Drink>(entityName: "Drink")).first { $0.drinkName == "Old Fashioned" }
-    drink?.rating = 9
-    return AddEditCocktailRecipeView(drink: drink)
-        .environment(\.managedObjectContext, context)
+    let container = try! CocktailModelContainer.make(inMemory: true)
+    try? ModelSeeder.seedBuiltIns(context: container.mainContext, defaults: nil)
+    let oldFashioned = try! container.mainContext.fetch(FetchDescriptor<V1.Cocktail>()).first { $0.name == "Old Fashioned" }!
+    return AddEditCocktailRecipeView(cocktail: oldFashioned)
+        .modelContainer(container)
 }
 
 extension UIImage {

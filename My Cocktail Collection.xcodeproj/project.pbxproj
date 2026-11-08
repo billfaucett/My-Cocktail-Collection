@@ -51,6 +51,7 @@
 		5C4E3A010000000000000006 /* ModelSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000005 /* ModelSeeder.swift */; };
 		5C4E3A010000000000000008 /* LegacyImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000007 /* LegacyImporter.swift */; };
 		5C4E3A01000000000000000A /* AppStartup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000009 /* AppStartup.swift */; };
+		5C4E3A01000000000000000C /* IngredientFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A01000000000000000B /* IngredientFormatting.swift */; };
 		B0771E000000000000000003 /* InventoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000002 /* InventoryListView.swift */; };
 		B0771E000000000000000005 /* AddEditBottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000004 /* AddEditBottleView.swift */; };
 		57E1E5000000000000000002 /* StyleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000001 /* StyleListView.swift */; };
@@ -124,6 +125,7 @@
 		5C4E3A010000000000000005 /* ModelSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelSeeder.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000007 /* LegacyImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyImporter.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000009 /* AppStartup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStartup.swift; sourceTree = "<group>"; };
+		5C4E3A01000000000000000B /* IngredientFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientFormatting.swift; sourceTree = "<group>"; };
 		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
 		B0771E000000000000000004 /* AddEditBottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditBottleView.swift; sourceTree = "<group>"; };
 		57E1E5000000000000000001 /* StyleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleListView.swift; sourceTree = "<group>"; };
@@ -276,6 +278,7 @@
 				5C4E3A010000000000000005 /* ModelSeeder.swift */,
 				5C4E3A010000000000000007 /* LegacyImporter.swift */,
 				5C4E3A010000000000000009 /* AppStartup.swift */,
+				5C4E3A01000000000000000B /* IngredientFormatting.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -507,6 +510,7 @@
 				5C4E3A010000000000000006 /* ModelSeeder.swift in Sources */,
 				5C4E3A010000000000000008 /* LegacyImporter.swift in Sources */,
 				5C4E3A01000000000000000A /* AppStartup.swift in Sources */,
+				5C4E3A01000000000000000C /* IngredientFormatting.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,

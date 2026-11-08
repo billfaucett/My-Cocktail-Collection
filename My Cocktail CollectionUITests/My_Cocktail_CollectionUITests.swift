@@ -37,8 +37,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
             XCTAssertTrue(app.staticTexts[name].exists, "\(name) should be listed before deleting")
         }
 
-        aviation.swipeLeft()
-        app.buttons["Delete"].firstMatch.tap()
+        revealSwipeAction("Delete", on: aviation, in: app) { $0.swipeLeft() }.tap()
 
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
@@ -62,8 +61,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         let aviation = app.staticTexts["Aviation"]
         XCTAssertTrue(aviation.waitForExistence(timeout: 5))
 
-        aviation.swipeLeft()
-        app.buttons["Delete"].firstMatch.tap()
+        revealSwipeAction("Delete", on: aviation, in: app) { $0.swipeLeft() }.tap()
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
         alert.buttons["Cancel"].tap()
@@ -121,6 +119,21 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         search.typeText("Aperitivo")
         XCTAssertTrue(app.staticTexts["Aperitivo"].waitForExistence(timeout: 2))
         XCTAssertFalse(app.staticTexts["Bourbon"].exists, "Search hides other styles")
+    }
+
+    /// Swipes a row to reveal one of its swipe actions. A swipe in the Simulator occasionally doesn't
+    /// register (for example while the list is still settling), so it tries up to three times.
+    private func revealSwipeAction(_ title: String, on row: XCUIElement, in app: XCUIApplication,
+                                   swipe: (XCUIElement) -> Void) -> XCUIElement {
+        let button = app.buttons[title].firstMatch
+        for _ in 0..<3 {
+            swipe(row)
+            if button.waitForExistence(timeout: 1.5) {
+                return button
+            }
+        }
+        XCTFail("Swiping didn't reveal \(title)")
+        return button
     }
 
     func testLaunchPerformance() throws {
