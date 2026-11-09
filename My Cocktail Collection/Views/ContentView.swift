@@ -20,11 +20,11 @@ struct ContentView: View {
             CocktailListView()
                 .tabItem { Label("Cocktails", systemImage: "wineglass") }
             InventoryListView()
-                .tabItem { Label("Inventory", systemImage: "archivebox") }
+                .tabItem { Label("My Bar", systemImage: "cabinet") }
             MenusListView()
                 .tabItem { Label("Menus", systemImage: "menucard") }
             StyleListView()
-                .tabItem { Label("Styles", systemImage: "square.stack.3d.up") }
+                .tabItem { Label("Spirits", systemImage: "square.stack.3d.up") }
         }
         .onAppear {
             if !isPreview {

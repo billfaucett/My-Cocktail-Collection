@@ -36,14 +36,14 @@ struct StyleListView: View {
 
         NavigationStack {
             ListScreen(
-                "Styles",
+                "Spirits",
                 isEmpty: visible.isEmpty,
                 emptyState: styles.isEmpty
-                    ? EmptyState(title: "No Styles Yet", systemImage: "square.stack.3d.up",
-                                 message: "Styles group your bottles and set each cocktail's base spirit.", actionTitle: "Add a Style")
+                    ? EmptyState(title: "No Spirit Types Yet", systemImage: "square.stack.3d.up",
+                                 message: "Types group the bottles in My Bar and set each cocktail's base spirit.", actionTitle: "Add a Type")
                     : EmptyState(title: "No Matches", systemImage: "magnifyingglass",
-                                 message: "No styles or families match your search."),
-                addLabel: "Add Style",
+                                 message: "No types or families match your search."),
+                addLabel: "Add Type",
                 onAdd: { showAddStyle = true }
             ) {
                 ForEach(SpiritFamily.allCases) { family in
@@ -73,15 +73,15 @@ struct StyleListView: View {
                 }
                 #endif
             }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search styles and families")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search types and families")
             .sheet(isPresented: $showAddStyle) {
                 AddEditStyleView()
             }
             .sheet(item: $styleToEdit) { style in
                 AddEditStyleView(style: style)
             }
-            .confirmDelete($styleToDelete, title: "Delete Style?") { style in
-                "\(style.name) will be removed. Bottles and cocktails that use it keep everything else and just lose this style."
+            .confirmDelete($styleToDelete, title: "Delete Type?") { style in
+                "\(style.name) will be removed. Bottles and cocktails that use it keep everything else and just lose this type."
             } onDelete: { style in
                 do {
                     try StyleStore(context: context).delete(style)

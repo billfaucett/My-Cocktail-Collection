@@ -96,13 +96,13 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(aperolSpritz.waitForExistence(timeout: 2), "Show All should bring every cocktail back")
     }
 
-    /// The Styles tab lists built-in styles from the new database, and search narrows them.
+    /// The Spirits tab lists built-in spirit types from the new database, and search narrows them.
     func testStylesTabListsStyles() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting"]
         app.launch()
 
-        app.tabBars.buttons["Styles"].tap()
+        app.tabBars.buttons["Spirits"].tap()
         XCTAssertTrue(app.staticTexts["Bourbon"].waitForExistence(timeout: 5), "Whiskey styles come first")
         XCTAssertTrue(app.staticTexts["Rye"].exists)
 
@@ -121,13 +121,13 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Bourbon"].exists, "Search hides other styles")
     }
 
-    /// Adding a bottle on the Inventory tab lists it, and tapping it opens it for editing.
+    /// Adding a bottle on the My Bar tab lists it, and tapping it opens it for editing.
     func testAddingABottleListsIt() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting"]
         app.launch()
 
-        app.tabBars.buttons["Inventory"].tap()
+        app.tabBars.buttons["My Bar"].tap()
         let addButton = app.buttons["Add Bottle"].firstMatch
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
         addButton.tap()
@@ -140,7 +140,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
 
         let row = app.staticTexts["Test Bottle"]
         XCTAssertTrue(row.waitForExistence(timeout: 3), "The new bottle should be listed")
-        XCTAssertTrue(app.staticTexts["No Style"].exists, "A bottle with no style is listed under No Style")
+        XCTAssertTrue(app.staticTexts["No Type"].exists, "A bottle with no type is listed under No Type")
 
         row.tap()
         XCTAssertTrue(app.navigationBars["Edit Bottle"].waitForExistence(timeout: 3))

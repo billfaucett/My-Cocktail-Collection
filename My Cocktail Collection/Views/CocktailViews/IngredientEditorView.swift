@@ -239,11 +239,11 @@ struct IngredientEditorView: View {
                         style = newStyle
                         styleChosenByHand = true
                     }
-                ), title: "Style")
+                ), title: "Type")
             } header: {
                 Text("Ingredient")
             } footer: {
-                Text("The style links this ingredient to your bottles. It's filled in from the name unless you pick one.")
+                Text("The type links this ingredient to the bottles in My Bar. It's filled in from the name unless you pick one.")
             }
 
             Section("Details") {

@@ -33,7 +33,7 @@ enum StockFilter: String, CaseIterable, Identifiable {
     }
 }
 
-/// The Inventory tab. Reads the new SwiftData database (data model refactor, phase 5).
+/// The My Bar tab (the bottles you have). Reads the new SwiftData database (data model refactor, phase 5).
 struct InventoryListView: View {
     @Environment(\.modelContext) private var context
     @Query(animation: .default) private var bottles: [V1.Bottle]
@@ -98,7 +98,7 @@ struct InventoryListView: View {
                 }
                 .pickerStyle(.menu)
             }
-            .searchable(text: $searchText, prompt: "Search brands and styles")
+            .searchable(text: $searchText, prompt: "Search brands and types")
             .sheet(isPresented: $showAddBottle) {
                 AddEditBottleView()
             }
@@ -106,7 +106,7 @@ struct InventoryListView: View {
                 AddEditBottleView(bottle: bottle)
             }
             .confirmDelete($bottleToDelete, title: "Delete Bottle?") { bottle in
-                "\(bottle.brand) will be removed from your inventory."
+                "\(bottle.brand) will be removed from My Bar."
             } onDelete: { bottle in
                 run { try BottleStore(context: context).delete(bottle) }
             }
@@ -152,17 +152,17 @@ struct InventoryListView: View {
         }
         let noStyle = bottles.filter { $0.style == nil }
         if !noStyle.isEmpty {
-            groups.append(BottleGroup(title: "No Style", systemImage: "questionmark.circle", bottles: noStyle))
+            groups.append(BottleGroup(title: "No Type", systemImage: "questionmark.circle", bottles: noStyle))
         }
         return groups
     }
 
-    /// "Spirit Inventory", "Shopping List", or the family when one is picked, e.g. "Whiskey".
+    /// "My Bar", "Shopping List", or the family when one is picked, e.g. "Whiskey".
     private var title: String {
         if let familyFilter {
             return stockFilter == .shoppingList ? "\(familyFilter.displayName) to Buy" : familyFilter.displayName
         }
-        return stockFilter == .shoppingList ? "Shopping List" : "Spirit Inventory"
+        return stockFilter == .shoppingList ? "Shopping List" : "My Bar"
     }
 
     private var emptyState: EmptyState {
@@ -202,7 +202,7 @@ struct BottleRow: View {
     var body: some View {
         ItemRow(
             bottle.brand,
-            subtitle: bottle.style?.name ?? "No Style",
+            subtitle: bottle.style?.name ?? "No Type",
             thumbnail: Thumbnail(data: bottle.photo, placeholder: .bottle),
             isFavorite: bottle.isFavorite
         ) {

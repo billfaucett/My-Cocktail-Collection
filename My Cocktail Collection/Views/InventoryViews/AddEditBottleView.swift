@@ -42,14 +42,14 @@ struct AddEditBottleView: View {
             Section {
                 TextField("Brand or name (e.g. Buffalo Trace)", text: $brand)
                     .textInputAutocapitalization(.words)
-                StylePicker(selection: $style, title: "Style")
+                StylePicker(selection: $style, title: "Type")
             } header: {
                 Text("Bottle")
             } footer: {
                 if let style {
                     Text("Listed under \(style.family.displayName).")
                 } else {
-                    Text("The style (Bourbon, London Dry, Aperitivo…) groups your bottles and links them to recipes.")
+                    Text("The type (Bourbon, London Dry, Aperitivo…) groups your bottles and links them to recipes.")
                 }
             }
 

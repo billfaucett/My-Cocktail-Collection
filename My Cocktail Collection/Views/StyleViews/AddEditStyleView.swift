@@ -29,7 +29,7 @@ struct AddEditStyleView: View {
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        FormScreen(style == nil ? "Add Style" : "Edit Style", canSave: !trimmedName.isEmpty, onSave: save) {
+        FormScreen(style == nil ? "Add Spirit Type" : "Edit Spirit Type", canSave: !trimmedName.isEmpty, onSave: save) {
             Section {
                 TextField("Name (e.g. Bourbon, Amaro, Overproof Rum)", text: $name)
                     .textInputAutocapitalization(.words)
@@ -39,7 +39,7 @@ struct AddEditStyleView: View {
                     }
                 }
             } footer: {
-                Text("Styles group your bottles and set each cocktail's base spirit. The family decides where the style is listed.")
+                Text("Types group the bottles in My Bar and set each cocktail's base spirit. The family decides where the type is listed.")
             }
 
             if let style {

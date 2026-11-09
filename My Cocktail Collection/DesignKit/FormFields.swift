@@ -159,7 +159,7 @@ struct StylePicker: View {
     private let title: String
     private let addTitle: String
 
-    init(selection: Binding<V1.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Style") {
+    init(selection: Binding<V1.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Type") {
         _selection = selection
         self.title = title
         self.addTitle = addTitle
