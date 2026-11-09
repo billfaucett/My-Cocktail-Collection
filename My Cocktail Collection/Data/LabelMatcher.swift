@@ -345,6 +345,15 @@ enum LabelMatcher {
         return String(text[range])
     }
 
+    // MARK: - Filling the form
+
+    /// Adds the label's notes to what's already written, unless they're already there.
+    static func mergedNotes(_ existing: String, adding labelNotes: String) -> String {
+        let current = existing.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !labelNotes.isEmpty, !current.contains(labelNotes) else { return current }
+        return current.isEmpty ? labelNotes : current + "\n" + labelNotes
+    }
+
     // MARK: - Existing bottles
 
     /// The index of the brand that's the same as `brand`, ignoring case, accents and punctuation, and allowing

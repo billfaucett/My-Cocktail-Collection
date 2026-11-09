@@ -1737,6 +1737,38 @@ final class LabelMatcherTests: XCTestCase {
     }
 }
 
+/// Filling in the bottle form from a scan (label scanning, step 2).
+final class LabelScanFormTests: XCTestCase {
+    func testLabelNotesAreAddedOnce() {
+        XCTAssertEqual(LabelMatcher.mergedNotes("", adding: "90 proof · 750 ml"), "90 proof · 750 ml")
+        XCTAssertEqual(LabelMatcher.mergedNotes("Gift from Dad", adding: "90 proof"), "Gift from Dad\n90 proof")
+        XCTAssertEqual(LabelMatcher.mergedNotes("Gift from Dad\n90 proof", adding: "90 proof"), "Gift from Dad\n90 proof",
+                       "Scanning twice doesn't repeat the notes")
+        XCTAssertEqual(LabelMatcher.mergedNotes(" Gift ", adding: ""), "Gift")
+    }
+
+    func testEverySuggestedTypeExistsAsABuiltInType() {
+        // The form looks the suggested type up by name, so every rule must name a real built-in type.
+        let labels: [[LabelLine]] = [
+            [LabelLine("BOURBON", height: 0.1)], [LabelLine("LONDON DRY GIN", height: 0.1)],
+            [LabelLine("TEQUILA AÑEJO", height: 0.1)], [LabelLine("RHUM AGRICOLE", height: 0.1)],
+            [LabelLine("ORANGE BITTERS", height: 0.1)], [LabelLine("PEDRO XIMENEZ SHERRY", height: 0.1)],
+            [LabelLine("TAWNY PORT", height: 0.1)], [LabelLine("PINOT NOIR", height: 0.1)],
+            [LabelLine("HAZY IPA", height: 0.1)], [LabelLine("HARD CIDER", height: 0.1)],
+            [LabelLine("TONIC WATER", height: 0.1)], [LabelLine("GRENADINE", height: 0.1)],
+            [LabelLine("JUNMAI SAKE", height: 0.1)], [LabelLine("ABSINTHE", height: 0.1)],
+            [LabelLine("CITRON VODKA", height: 0.1)], [LabelLine("CALVADOS", height: 0.1)],
+        ]
+        for label in labels {
+            let suggestion = LabelMatcher.suggest(from: label)
+            let type = try? XCTUnwrap(suggestion.styleName, "\(label[0].text) should suggest a type")
+            if let type {
+                XCTAssertNotNil(SpiritTaxonomy.builtInStyle(named: type), "\(type) should be a built-in type")
+            }
+        }
+    }
+}
+
 /// Finding a bottle already in My Bar for a scanned brand.
 final class LabelMatcherBottleTests: StoreTestCase {
     func testFindsTheExistingBottle() throws {

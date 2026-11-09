@@ -55,8 +55,10 @@
 		5C4E3A01000000000000000A /* AppStartup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000009 /* AppStartup.swift */; };
 		5C4E3A01000000000000000C /* IngredientFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A01000000000000000B /* IngredientFormatting.swift */; };
 		C0FFEE1A2B3C4D5E6F700106 /* LabelMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F700105 /* LabelMatcher.swift */; };
+		C0FFEE1A2B3C4D5E6F700108 /* LabelReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F700107 /* LabelReader.swift */; };
 		B0771E000000000000000003 /* InventoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000002 /* InventoryListView.swift */; };
 		B0771E000000000000000005 /* AddEditBottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0771E000000000000000004 /* AddEditBottleView.swift */; };
+		C0FFEE1A2B3C4D5E6F70010A /* LabelScanSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F700109 /* LabelScanSection.swift */; };
 		57E1E5000000000000000002 /* StyleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000001 /* StyleListView.swift */; };
 		57E1E5000000000000000004 /* AddEditStyleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000003 /* AddEditStyleView.swift */; };
 /* End PBXBuildFile section */
@@ -132,8 +134,10 @@
 		5C4E3A010000000000000009 /* AppStartup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStartup.swift; sourceTree = "<group>"; };
 		5C4E3A01000000000000000B /* IngredientFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientFormatting.swift; sourceTree = "<group>"; };
 		C0FFEE1A2B3C4D5E6F700105 /* LabelMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelMatcher.swift; sourceTree = "<group>"; };
+		C0FFEE1A2B3C4D5E6F700107 /* LabelReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelReader.swift; sourceTree = "<group>"; };
 		B0771E000000000000000002 /* InventoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryListView.swift; sourceTree = "<group>"; };
 		B0771E000000000000000004 /* AddEditBottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditBottleView.swift; sourceTree = "<group>"; };
+		C0FFEE1A2B3C4D5E6F700109 /* LabelScanSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelScanSection.swift; sourceTree = "<group>"; };
 		57E1E5000000000000000001 /* StyleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleListView.swift; sourceTree = "<group>"; };
 		57E1E5000000000000000003 /* AddEditStyleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditStyleView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -286,6 +290,7 @@
 				5C4E3A010000000000000009 /* AppStartup.swift */,
 				5C4E3A01000000000000000B /* IngredientFormatting.swift */,
 				C0FFEE1A2B3C4D5E6F700105 /* LabelMatcher.swift */,
+				C0FFEE1A2B3C4D5E6F700107 /* LabelReader.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -347,6 +352,7 @@
 			isa = PBXGroup;
 			children = (
 				B0771E000000000000000004 /* AddEditBottleView.swift */,
+				C0FFEE1A2B3C4D5E6F700109 /* LabelScanSection.swift */,
 				B0771E000000000000000002 /* InventoryListView.swift */,
 			);
 			path = InventoryViews;
@@ -523,6 +529,7 @@
 				5C4E3A01000000000000000A /* AppStartup.swift in Sources */,
 				5C4E3A01000000000000000C /* IngredientFormatting.swift in Sources */,
 				C0FFEE1A2B3C4D5E6F700106 /* LabelMatcher.swift in Sources */,
+				C0FFEE1A2B3C4D5E6F700108 /* LabelReader.swift in Sources */,
 				8AFAEAA52B913F100000A087 /* MenuItemListView.swift in Sources */,
 				8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */,
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
@@ -535,6 +542,7 @@
 				8AC142E92B8D57AD002807F5 /* SpiritListView.swift in Sources */,
 				B0771E000000000000000003 /* InventoryListView.swift in Sources */,
 				B0771E000000000000000005 /* AddEditBottleView.swift in Sources */,
+				C0FFEE1A2B3C4D5E6F70010A /* LabelScanSection.swift in Sources */,
 				57E1E5000000000000000002 /* StyleListView.swift in Sources */,
 				57E1E5000000000000000004 /* AddEditStyleView.swift in Sources */,
 			);
@@ -703,6 +711,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "My-Cocktail-Collection-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Cocktail Collection";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo of a bottle's label to fill in its brand and type.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -738,6 +747,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "My-Cocktail-Collection-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Cocktail Collection";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo of a bottle's label to fill in its brand and type.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

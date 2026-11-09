@@ -44,6 +44,7 @@ struct InventoryListView: View {
     @State private var familyFilter: SpiritFamily?
     @State private var favoritesOnly = false
     @State private var showAddBottle = false
+    @State private var showScanBottle = false
     @State private var bottleToEdit: V1.Bottle?
     @State private var bottleToDelete: V1.Bottle?
     @State private var errorMessage: String?
@@ -98,9 +99,21 @@ struct InventoryListView: View {
                 }
                 .pickerStyle(.menu)
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showScanBottle = true
+                    } label: {
+                        Label("Scan a Bottle", systemImage: "camera.viewfinder")
+                    }
+                }
+            }
             .searchable(text: $searchText, prompt: "Search brands and types")
             .sheet(isPresented: $showAddBottle) {
                 AddEditBottleView()
+            }
+            .sheet(isPresented: $showScanBottle) {
+                AddEditBottleView(scanOnAppear: true)
             }
             .sheet(item: $bottleToEdit) { bottle in
                 AddEditBottleView(bottle: bottle)

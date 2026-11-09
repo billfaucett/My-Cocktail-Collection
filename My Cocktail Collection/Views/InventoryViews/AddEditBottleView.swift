@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct AddEditBottleView: View {
     @Environment(\.modelContext) private var context
@@ -25,11 +26,21 @@ struct AddEditBottleView: View {
     @State private var photoChanged = false
     @State private var hasLoaded = false
 
+    // Label scanning (adding only)
+    private let scanOnAppear: Bool
+    @State private var scanState = LabelScanState.idle
+    @State private var lastScan: LabelSuggestion?
+    @State private var showCamera = false
+    @State private var showPhotoLibrary = false
+    @State private var libraryItem: PhotosPickerItem?
+
     /// - Parameters:
     ///   - bottle: The bottle to edit. Leave out to add a new bottle.
     ///   - style: A style to pre-select when adding.
-    init(bottle: V1.Bottle? = nil, style: V1.SpiritStyle? = nil) {
+    ///   - scanOnAppear: Open the camera (or Photos, where there's no camera) straight away to scan a label.
+    init(bottle: V1.Bottle? = nil, style: V1.SpiritStyle? = nil, scanOnAppear: Bool = false) {
         self.bottle = bottle
+        self.scanOnAppear = scanOnAppear && bottle == nil
         _style = State(initialValue: style)
     }
 
@@ -37,6 +48,12 @@ struct AddEditBottleView: View {
 
     var body: some View {
         FormScreen(bottle == nil ? "Add Bottle" : "Edit Bottle", canSave: canSave, onSave: save) {
+            if bottle == nil {
+                LabelScanSection(state: scanState, libraryItem: $libraryItem) {
+                    showCamera = true
+                }
+            }
+
             PhotoSection(photo: $photo, photoChanged: $photoChanged, placeholder: .bottle, addTitle: "Add Label Photo")
 
             Section {
@@ -87,6 +104,63 @@ struct AddEditBottleView: View {
             if newLevel.isInStock && bottleCount == 0 { bottleCount = 1 }
         }
         .onAppear(perform: loadBottle)
+        .task {
+            guard scanOnAppear, scanState == .idle else { return }
+            // Let the sheet finish opening before presenting the camera over it.
+            try? await Task.sleep(for: .milliseconds(450))
+            if CameraPicker.isAvailable {
+                showCamera = true
+            } else {
+                showPhotoLibrary = true
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker { image in scan(image) }
+                .ignoresSafeArea()
+        }
+        .photosPicker(isPresented: $showPhotoLibrary, selection: $libraryItem, matching: .images)
+        .onChange(of: libraryItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                    scan(image)
+                }
+                libraryItem = nil
+            }
+        }
+    }
+
+    // MARK: Label scanning
+
+    /// Uses the photo as the bottle's picture, reads its label, and fills in the form.
+    private func scan(_ image: UIImage) {
+        photo = image
+        photoChanged = true
+        scanState = .reading
+        Task {
+            let lines = (try? await LabelReader.read(image)) ?? []
+            apply(LabelMatcher.suggest(from: lines))
+        }
+    }
+
+    /// Fills in fields that are empty, or that an earlier scan filled in, so nothing typed by hand is replaced.
+    private func apply(_ suggestion: LabelSuggestion) {
+        guard !suggestion.isEmpty else {
+            scanState = .unreadable
+            return
+        }
+        if let scannedBrand = suggestion.brand,
+           brand.trimmingCharacters(in: .whitespaces).isEmpty || brand == lastScan?.brand {
+            brand = scannedBrand
+        }
+        if let styleName = suggestion.styleName,
+           style == nil || style?.name == lastScan?.styleName,
+           let found = try? StyleStore(context: context).style(named: styleName) {
+            style = found
+        }
+        notes = LabelMatcher.mergedNotes(notes, adding: suggestion.notes)
+        lastScan = suggestion
+        scanState = .filled(suggestion)
     }
 
     private func loadBottle() {
