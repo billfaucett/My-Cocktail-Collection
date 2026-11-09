@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import SwiftData
 import PhotosUI
 
 // MARK: - Photo section
@@ -145,3 +146,46 @@ struct SpiritPicker: View {
         }
     }
 }
+
+// MARK: - Style picker (new database)
+
+/// Picks a style from the new database, grouped by family, with a button to add a new one.
+/// New styles appear in the picker right away.
+struct StylePicker: View {
+    @Query private var styles: [V1.SpiritStyle]
+    @Binding private var selection: V1.SpiritStyle?
+    @State private var showAddStyle = false
+
+    private let title: String
+    private let addTitle: String
+
+    init(selection: Binding<V1.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Type") {
+        _selection = selection
+        self.title = title
+        self.addTitle = addTitle
+    }
+
+    var body: some View {
+        let ordered = styles.sorted(by: StyleStore.displayOrder)
+        Picker(title, selection: $selection) {
+            Text("None").tag(nil as V1.SpiritStyle?)
+            ForEach(SpiritFamily.allCases) { family in
+                let familyStyles = ordered.filter { $0.family == family }
+                if !familyStyles.isEmpty {
+                    Section(family.displayName) {
+                        ForEach(familyStyles) { style in
+                            Text(style.name).tag(style as V1.SpiritStyle?)
+                        }
+                    }
+                }
+            }
+        }
+        Button(addTitle) {
+            showAddStyle = true
+        }
+        .sheet(isPresented: $showAddStyle) {
+            AddEditStyleView(family: selection?.family ?? .other)
+        }
+    }
+}
+

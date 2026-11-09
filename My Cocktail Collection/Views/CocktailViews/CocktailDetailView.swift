@@ -6,36 +6,38 @@
 //
 
 import SwiftUI
-import CoreData
+import SwiftData
 
-/// A cocktail's recipe. Shown pushed from the cocktail list.
+/// A cocktail's recipe, in parts. Shown pushed from the cocktail list.
 struct CocktailDetailView: View {
-    @Environment(\.managedObjectContext) private var context
+    @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @FetchRequest(sortDescriptors: []) private var spirits: FetchedResults<Spirit>
-    @ObservedObject private var drink: Drink
+    private let cocktail: V1.Cocktail
 
+    @AppStorage(PartSize.storageKey) private var partSize = PartSize.off
     @State private var showEdit = false
     @State private var confirmDelete = false
+    @State private var errorMessage: String?
 
-    init(drink: Drink) {
-        _drink = ObservedObject(wrappedValue: drink)
-    }
-
-    private var name: String { drink.drinkName ?? "Cocktail" }
-
-    private var spiritName: String? {
-        guard let id = drink.baseSpirit else { return nil }
-        return spirits.first { $0.id == id }?.spiritName
+    init(cocktail: V1.Cocktail) {
+        self.cocktail = cocktail
     }
 
     private var shareText: String {
-        "Check out this cocktail recipe: \nCocktail Name: \(drink.drinkName ?? "")\nIngredients: \(drink.ingredients ?? "")\nMethod: \(drink.method ?? "")"
+        var lines = [cocktail.name, ""]
+        lines += cocktail.orderedIngredients.map { ingredient in
+            let converted = partSize.converted(ingredient).map { " (\($0))" } ?? ""
+            return "• " + ingredient.displayText + converted
+        }
+        if !cocktail.method.isEmpty {
+            lines += ["", cocktail.method]
+        }
+        return lines.joined(separator: "\n")
     }
 
     var body: some View {
         // After a delete the object is gone; show nothing while the screen closes.
-        if drink.managedObjectContext == nil || drink.isDeleted {
+        if cocktail.modelContext == nil || cocktail.isDeleted {
             Color.clear
         } else {
             recipe
@@ -46,9 +48,9 @@ struct CocktailDetailView: View {
         List {
             Section {
                 VStack(spacing: 12) {
-                    Thumbnail(data: drink.image, placeholder: .cocktail, size: Theme.ImageSize.detail, cornerRadius: Theme.Radius.detail)
-                    if drink.rating > 0 {
-                        StarRatingView(rating: Double(drink.rating) / 2.0)
+                    Thumbnail(data: cocktail.photo, placeholder: .cocktail, size: Theme.ImageSize.detail, cornerRadius: Theme.Radius.detail)
+                    if cocktail.rating > 0 {
+                        StarRatingView(rating: Double(cocktail.rating) / 2.0)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -56,19 +58,56 @@ struct CocktailDetailView: View {
             }
 
             Section("Details") {
-                LabeledContent("Base Spirit", value: spiritName ?? "None")
-                LabeledContent("Source", value: SourceType(rawValue: drink.source)?.description ?? "Unknown")
+                LabeledContent("Base Spirit", value: baseSpiritText)
+                LabeledContent("Source", value: cocktail.source.displayName)
             }
 
-            Section("Ingredients") {
-                textOrPlaceholder(drink.ingredients, placeholder: "No ingredients added yet.")
+            Section {
+                if cocktail.orderedIngredients.isEmpty {
+                    Text("No ingredients added yet.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(cocktail.orderedIngredients) { ingredient in
+                        ConvertedIngredientRow(text: ingredient.displayText,
+                                               converted: partSize.converted(ingredient),
+                                               isSecondary: ingredient.isGarnish)
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Ingredients")
+                    Spacer()
+                    // A quick way to switch the part size without leaving the recipe.
+                    SwiftUI.Menu {
+                        Picker("Part Size", selection: $partSize) {
+                            ForEach(PartSize.allCases) { size in
+                                Text(size.displayName).tag(size)
+                            }
+                        }
+                    } label: {
+                        Label(partSize == .off ? "Parts" : partSize.displayName,
+                              systemImage: "ruler")
+                            .font(.caption)
+                            .textCase(nil)
+                    }
+                    .accessibilityLabel("Part Size")
+                }
+            } footer: {
+                if cocktail.needsIngredientReview {
+                    Label("Some ingredients couldn't be read clearly. Tap Edit to check them.", systemImage: "exclamationmark.triangle")
+                }
             }
 
             Section("How to Make") {
-                textOrPlaceholder(drink.method, placeholder: "No directions added yet.")
+                if cocktail.method.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("No directions added yet.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(cocktail.method)
+                }
             }
         }
-        .navigationTitle(name)
+        .navigationTitle(cocktail.name)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 // "SwiftUI." is needed because the app's Core Data entity is also named Menu.
@@ -85,50 +124,62 @@ struct CocktailDetailView: View {
                     Label("More", systemImage: "ellipsis.circle")
                 }
                 Button {
-                    DataController.toggleFavorite(drink, context: context)
+                    run { try CocktailStore(context: context).toggleFavorite(cocktail) }
                 } label: {
-                    Label(drink.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                          systemImage: drink.isFavorite ? "heart.fill" : "heart")
+                    Label(cocktail.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                          systemImage: cocktail.isFavorite ? "heart.fill" : "heart")
                 }
-                .tint(drink.isFavorite ? Theme.favorite : nil)
+                .tint(cocktail.isFavorite ? Theme.favorite : nil)
                 Button("Edit") {
                     showEdit = true
                 }
             }
         }
         .sheet(isPresented: $showEdit) {
-            AddEditCocktailRecipeView(drink: drink)
+            AddEditCocktailRecipeView(cocktail: cocktail)
         }
-        .alert("Delete \(name)?", isPresented: $confirmDelete) {
+        .alert("Delete \(cocktail.name)?", isPresented: $confirmDelete) {
             Button("Delete", role: .destructive) {
-                DataController.delete(drink, context: context)
-                dismiss()
+                run {
+                    try CocktailStore(context: context).delete(cocktail)
+                    dismiss()
+                }
             }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("It will be removed from your collection and from any menus.")
         }
+        .alert("Something Went Wrong", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "")
+        }
     }
 
-    @ViewBuilder
-    private func textOrPlaceholder(_ text: String?, placeholder: String) -> some View {
-        if let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            Text(text)
-        } else {
-            Text(placeholder)
-                .foregroundStyle(.secondary)
+    private var baseSpiritText: String {
+        guard let style = cocktail.baseStyle else { return "None" }
+        return style.name == style.family.displayName ? style.name : "\(style.name) · \(style.family.displayName)"
+    }
+
+    private func run(_ action: () throws -> Void) {
+        do {
+            try action()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }
 
 #Preview {
-    let context = DataController(inMemory: true).container.viewContext
-    DataController.seedSpirits(context: context)
-    DataController.seedCocktails(context: context)
-    let drink = try! context.fetch(NSFetchRequest<Drink>(entityName: "Drink")).first { $0.drinkName == "Old Fashioned" }!
-    drink.rating = 9
+    let container = try! CocktailModelContainer.make(inMemory: true)
+    try? ModelSeeder.seedBuiltIns(context: container.mainContext, defaults: nil)
+    let negroni = try! container.mainContext.fetch(FetchDescriptor<V1.Cocktail>()).first { $0.name == "Negroni" }!
+    negroni.rating = 9
     return NavigationStack {
-        CocktailDetailView(drink: drink)
+        CocktailDetailView(cocktail: negroni)
     }
-    .environment(\.managedObjectContext, context)
+    .modelContainer(container)
 }

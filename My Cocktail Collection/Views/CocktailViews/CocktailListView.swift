@@ -6,25 +6,31 @@
 //
 
 import SwiftUI
-import CoreData
+import SwiftData
 
+/// Which cocktails the base spirit filter shows.
+enum CocktailFilter: Hashable {
+    case all
+    case family(SpiritFamily)
+    case style(V1.SpiritStyle)
+}
+
+/// The Cocktails tab. Reads the new SwiftData database (data model refactor, phase 5).
 struct CocktailListView: View {
-    @Environment(\.managedObjectContext) private var context
-    @FetchRequest(sortDescriptors: [], animation: .default)
-    private var drinks: FetchedResults<Drink>
-    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Spirit.spiritName, ascending: true)])
-    private var spirits: FetchedResults<Spirit>
+    @Environment(\.modelContext) private var context
+    @Query(animation: .default) private var cocktails: [V1.Cocktail]
 
     @State private var searchText = ""
-    @State private var spiritFilter: Spirit?
+    @State private var filter = CocktailFilter.all
     @State private var sortOption = SortingOption.name
     @State private var favoritesOnly = false
-    @State private var showAddDrink = false
-    @State private var drinkToDelete: Drink?
+    @State private var showAddCocktail = false
+    @State private var showSettings = false
+    @State private var cocktailToDelete: V1.Cocktail?
+    @State private var errorMessage: String?
 
     var body: some View {
-        let spiritNames = spiritNamesByID
-        let visible = visibleDrinks
+        let visible = visibleCocktails
 
         NavigationStack {
             ListScreen(
@@ -32,16 +38,18 @@ struct CocktailListView: View {
                 isEmpty: visible.isEmpty,
                 emptyState: emptyState,
                 addLabel: "Add Cocktail",
-                onAdd: { showAddDrink = true },
+                onAdd: { showAddCocktail = true },
                 favoritesOnly: $favoritesOnly
             ) {
-                ForEach(visible) { drink in
-                    NavigationLink(value: drink) {
-                        CocktailRow(drink: drink, spiritName: drink.baseSpirit.flatMap { spiritNames[$0] })
+                ForEach(visible) { cocktail in
+                    NavigationLink(value: cocktail) {
+                        CocktailRow(cocktail: cocktail) {
+                            run { try CocktailStore(context: context).toggleFavorite(cocktail) }
+                        }
                     }
-                    .deleteSwipeAction { drinkToDelete = drink }
-                    .favoriteSwipeAction(isFavorite: drink.isFavorite) {
-                        DataController.toggleFavorite(drink, context: context)
+                    .deleteSwipeAction { cocktailToDelete = cocktail }
+                    .favoriteSwipeAction(isFavorite: cocktail.isFavorite) {
+                        run { try CocktailStore(context: context).toggleFavorite(cocktail) }
                     }
                 }
             } moreMenu: {
@@ -54,116 +62,152 @@ struct CocktailListView: View {
                 }
                 .pickerStyle(.menu)
 
-                Picker(selection: $spiritFilter) {
-                    Text("All Spirits").tag(nil as Spirit?)
-                    ForEach(spirits) { spirit in
-                        Text(spirit.spiritName ?? "").tag(spirit as Spirit?)
+                Picker(selection: $filter) {
+                    Text("All Cocktails").tag(CocktailFilter.all)
+                    ForEach(familiesInUse) { family in
+                        Section(family.displayName) {
+                            Text("All \(family.displayName)").tag(CocktailFilter.family(family))
+                            ForEach(stylesInUse(in: family)) { style in
+                                Text(style.name).tag(CocktailFilter.style(style))
+                            }
+                        }
                     }
                 } label: {
                     Label("Base Spirit", systemImage: "line.3.horizontal.decrease.circle")
                 }
                 .pickerStyle(.menu)
 
-                if !favoritesAdded {
+                Divider()
+                Button {
+                    showSettings = true
+                } label: {
+                    Label("Part Size…", systemImage: "ruler")
+                }
+
+                if !houseFavoritesAdded {
                     Divider()
                     Button {
-                        DataController.addBillsFaves(context: context)
+                        run { try ModelSeeder.addHouseFavorites(context: context) }
                     } label: {
                         Label("Add Our Favorite Cocktails", systemImage: "heart")
                     }
                 }
             }
             .searchable(text: $searchText, prompt: "Search names and ingredients")
-            .navigationDestination(for: Drink.self) { drink in
-                CocktailDetailView(drink: drink)
+            .navigationDestination(for: V1.Cocktail.self) { cocktail in
+                CocktailDetailView(cocktail: cocktail)
             }
-            .sheet(isPresented: $showAddDrink) {
+            .sheet(isPresented: $showAddCocktail) {
                 AddEditCocktailRecipeView()
             }
-            .confirmDelete($drinkToDelete) { drink in
-                "Are you sure you want to delete \(drink.drinkName ?? "this cocktail")?"
-            } onDelete: { drink in
-                DataController.delete(drink, context: context)
+            .sheet(isPresented: $showSettings) {
+                PartSizeSettingsView()
+            }
+            .confirmDelete($cocktailToDelete) { cocktail in
+                "Are you sure you want to delete \(cocktail.name)?"
+            } onDelete: { cocktail in
+                run { try CocktailStore(context: context).delete(cocktail) }
+            }
+            .alert("Something Went Wrong", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "")
             }
         }
     }
 
     // MARK: Filtering and sorting
 
-    private var visibleDrinks: [Drink] {
-        var result = Array(drinks)
-        if favoritesOnly {
-            result = result.filter(\.isFavorite)
-        }
-        if let spiritID = spiritFilter?.id {
-            result = result.filter { $0.baseSpirit == spiritID }
-        }
+    private var visibleCocktails: [V1.Cocktail] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
-        if !query.isEmpty {
-            result = result.filter {
-                ($0.drinkName ?? "").localizedCaseInsensitiveContains(query)
-                    || ($0.ingredients ?? "").localizedCaseInsensitiveContains(query)
+        return cocktails
+            .filter { cocktail in
+                switch filter {
+                case .all: break
+                case .family(let family): if cocktail.baseStyle?.family != family { return false }
+                case .style(let style): if cocktail.baseStyle !== style { return false }
+                }
+                if favoritesOnly && !cocktail.isFavorite { return false }
+                if query.isEmpty { return true }
+                return cocktail.name.localizedCaseInsensitiveContains(query)
+                    || (cocktail.ingredients ?? []).contains { $0.name.localizedCaseInsensitiveContains(query) }
             }
-        }
-        return result.sorted(by: sortingComparator)
-    }
-
-    private func sortingComparator(_ first: Drink, _ second: Drink) -> Bool {
-        let byName = (first.drinkName ?? "").localizedCaseInsensitiveCompare(second.drinkName ?? "") == .orderedAscending
-        switch sortOption {
-        case .name:
-            return byName
-        case .rating:
-            return first.rating == second.rating ? byName : first.rating > second.rating
-        }
-    }
-
-    private var spiritNamesByID: [UUID: String] {
-        var names: [UUID: String] = [:]
-        for spirit in spirits {
-            if let id = spirit.id {
-                names[id] = spirit.spiritName ?? ""
+            .sorted { first, second in
+                if sortOption == .rating && first.rating != second.rating {
+                    return first.rating > second.rating
+                }
+                return first.name.localizedCaseInsensitiveCompare(second.name) == .orderedAscending
             }
-        }
-        return names
     }
 
-    private var favoritesAdded: Bool {
-        drinks.contains { DataController.favoriteCocktailNames.contains($0.drinkName ?? "") }
+    /// Families that at least one cocktail uses as its base, in display order.
+    private var familiesInUse: [SpiritFamily] {
+        let used = Set(cocktails.compactMap { $0.baseStyle?.family })
+        return SpiritFamily.allCases.filter { used.contains($0) }
+    }
+
+    /// Base styles in use within a family, in display order.
+    private func stylesInUse(in family: SpiritFamily) -> [V1.SpiritStyle] {
+        var seen = Set<UUID>()
+        return cocktails
+            .compactMap(\.baseStyle)
+            .filter { $0.family == family && seen.insert($0.id).inserted }
+            .sorted(by: StyleStore.displayOrder)
+    }
+
+    private var houseFavoritesAdded: Bool {
+        let names = Set(SeedData.favorites.map(\.name))
+        return cocktails.contains { names.contains($0.name) }
     }
 
     private var emptyState: EmptyState {
-        if drinks.isEmpty {
-            return EmptyState(
-                title: "No Cocktails Yet",
-                systemImage: "wineglass",
-                message: "Add your first recipe to start your collection.",
-                actionTitle: "Add a Cocktail"
-            )
+        if cocktails.isEmpty {
+            return EmptyState(title: "No Cocktails Yet", systemImage: "wineglass",
+                              message: "Add your first recipe to start your collection.", actionTitle: "Add a Cocktail")
         }
-        return EmptyState(
-            title: "No Matches",
-            systemImage: "magnifyingglass",
-            message: "No cocktails match your search or base spirit filter."
-        )
+        return EmptyState(title: "No Matches", systemImage: "magnifyingglass",
+                          message: "No cocktails match your search or base spirit filter.")
+    }
+
+    private func run(_ action: () throws -> Void) {
+        do {
+            try action()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 
-/// One cocktail in the list: photo, name, base spirit and rating.
+/// One cocktail in the list: photo, name, base spirit, rating, and a heart to favorite it.
 struct CocktailRow: View {
-    @ObservedObject var drink: Drink
-    let spiritName: String?
+    let cocktail: V1.Cocktail
+    /// Called when the heart is tapped. Leave out to show the heart beside the name instead, with no button.
+    let onToggleFavorite: (() -> Void)?
+
+    init(cocktail: V1.Cocktail, onToggleFavorite: (() -> Void)? = nil) {
+        self.cocktail = cocktail
+        self.onToggleFavorite = onToggleFavorite
+    }
 
     var body: some View {
         ItemRow(
-            drink.drinkName ?? "Unnamed Cocktail",
-            subtitle: spiritName,
-            thumbnail: Thumbnail(data: drink.image, placeholder: .cocktail),
-            isFavorite: drink.isFavorite
+            cocktail.name,
+            subtitle: cocktail.baseStyle?.name,
+            thumbnail: Thumbnail(data: cocktail.photo, placeholder: .cocktail),
+            isFavorite: onToggleFavorite == nil && cocktail.isFavorite
         ) {
-            if drink.rating > 0 {
-                StarRatingView(rating: Double(drink.rating) / 2.0)
-                    .font(.caption2)
+            HStack(spacing: 4) {
+                if cocktail.rating > 0 {
+                    StarRatingView(rating: Double(cocktail.rating) / 2.0)
+                        .font(.caption2)
+                }
+                if let onToggleFavorite {
+                    FavoriteButton(isFavorite: cocktail.isFavorite, action: onToggleFavorite)
+                        .padding(.leading, 8)
+                }
             }
         }
     }
@@ -175,9 +219,8 @@ enum SortingOption: String, CaseIterable {
 }
 
 #Preview {
-    let context = DataController(inMemory: true).container.viewContext
-    DataController.seedSpirits(context: context)
-    DataController.seedCocktails(context: context)
+    let container = try! CocktailModelContainer.make(inMemory: true)
+    try? ModelSeeder.seedBuiltIns(context: container.mainContext, defaults: nil)
     return CocktailListView()
-        .environment(\.managedObjectContext, context)
+        .modelContainer(container)
 }

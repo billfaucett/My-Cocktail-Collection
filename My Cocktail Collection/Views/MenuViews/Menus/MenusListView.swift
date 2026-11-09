@@ -5,21 +5,22 @@
 //  Created by William Faucett on 2/29/24.
 //
 
+
 import SwiftUI
-import CoreData
+import SwiftData
 
+/// The Menus tab. Reads the new SwiftData database (data model refactor, phase 5).
 struct MenusListView: View {
-    @Environment(\.managedObjectContext) private var context
-    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Menu.dateCreated, ascending: false)], animation: .default)
-    private var menus: FetchedResults<Menu>
-    @FetchRequest(sortDescriptors: [])
-    private var menuItems: FetchedResults<MenuItem>
+    @Environment(\.modelContext) private var context
+    @Query(sort: \V1.Menu.dateCreated, order: .reverse, animation: .default)
+    private var menus: [V1.Menu]
 
-    @State private var path: [Menu] = []
+    @State private var path: [V1.Menu] = []
     @State private var showCreateMenu = false
     @State private var showSavedFiles = false
-    @State private var menuToDelete: Menu?
+    @State private var menuToDelete: V1.Menu?
     @State private var confirmDeleteAll = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -37,7 +38,7 @@ struct MenusListView: View {
             ) {
                 ForEach(menus) { menu in
                     NavigationLink(value: menu) {
-                        MenuListRow(menu: menu, cocktailCount: cocktailCount(for: menu))
+                        MenuListRow(menu: menu)
                     }
                     .deleteSwipeAction { menuToDelete = menu }
                 }
@@ -54,7 +55,7 @@ struct MenusListView: View {
                 }
                 .disabled(menus.isEmpty)
             }
-            .navigationDestination(for: Menu.self) { menu in
+            .navigationDestination(for: V1.Menu.self) { menu in
                 MenuDetailView(menu: menu)
             }
             .sheet(isPresented: $showCreateMenu) {
@@ -66,41 +67,43 @@ struct MenusListView: View {
                 DocPicker(url: URL.documentsDirectory)
             }
             .confirmDelete($menuToDelete, title: "Delete Menu?") { menu in
-                "\(menu.menuName ?? "This menu") will be deleted. The cocktails on it stay in your collection."
+                "\(menu.name) will be deleted. The cocktails on it stay in your collection."
             } onDelete: { menu in
-                delete(menu)
+                run { try MenuStore(context: context).delete(menu) }
             }
             .alert("Delete All Menus?", isPresented: $confirmDeleteAll) {
                 Button("Delete", role: .destructive) {
-                    DataController.deleteStuff(context: context)
+                    run { try MenuStore(context: context).deleteAll() }
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This removes every menu and its cocktail list. Your cocktail recipes are not affected.")
             }
+            .alert("Something Went Wrong", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
     }
 
-    private func cocktailCount(for menu: Menu) -> Int {
-        menuItems.filter { $0.menu == menu }.count
-    }
-
-    /// Deletes a menu and its cocktail entries (the recipes themselves are kept).
-    private func delete(_ menu: Menu) {
-        menuItems.filter { $0.menu == menu }.forEach { context.delete($0) }
-        context.delete(menu)
-        context.saveOrRollback()
+    private func run(_ action: () throws -> Void) {
+        do {
+            try action()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 
 #Preview {
-    let context = DataController(inMemory: true).container.viewContext
-    for (name, daysAgo) in [("Friday Night", 0), ("Holiday Party", 30)] {
-        let menu = Menu(context: context)
-        menu.id = UUID()
-        menu.menuName = name
-        menu.dateCreated = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())
-    }
+    let container = try! CocktailModelContainer.make(inMemory: true)
+    let store = MenuStore(context: container.mainContext)
+    _ = try? store.addMenu(name: "Holiday Party")
+    _ = try? store.addMenu(name: "Friday Night")
     return MenusListView()
-        .environment(\.managedObjectContext, context)
+        .modelContainer(container)
 }

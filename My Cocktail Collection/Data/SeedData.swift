@@ -227,3 +227,34 @@ enum SeedData {
         (typo: "cube of lce", correction: "cube of ice")
     ]
 }
+
+extension SeedData {
+    /// Applies the built-in recipe corrections to one recipe from an older database:
+    /// renames (Daquiri → Daiquiri, unless that name is already taken), the updated recipe for an
+    /// original classic that was never edited, and typo fixes for any other built-in recipe.
+    /// Recipes that aren't built-in come back unchanged.
+    static func corrected(name: String, ingredients: String?, method: String?, takenNames: Set<String>)
+        -> (name: String, ingredients: String?, method: String?) {
+        var name = name
+        if let newName = renamedCocktails[name], !takenNames.contains(newName) {
+            name = newName
+        }
+        guard (classics + favorites).contains(where: { $0.name == name }) else {
+            return (name, ingredients, method)
+        }
+        if let original = originalClassicRecipes[name],
+           ingredients == original.ingredients,
+           method == original.method,
+           let updated = classics.first(where: { $0.name == name }) {
+            return (name, updated.ingredientsText, updated.methodText)
+        }
+        var fixedIngredients = ingredients
+        var fixedMethod = method
+        for fix in typoFixes {
+            fixedIngredients = fixedIngredients?.replacingOccurrences(of: fix.typo, with: fix.correction)
+            fixedMethod = fixedMethod?.replacingOccurrences(of: fix.typo, with: fix.correction)
+        }
+        return (name, fixedIngredients, fixedMethod)
+    }
+}
+

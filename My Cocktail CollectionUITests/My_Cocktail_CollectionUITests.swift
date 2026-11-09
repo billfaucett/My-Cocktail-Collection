@@ -32,13 +32,12 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         let aviation = app.staticTexts["Aviation"]
         XCTAssertTrue(aviation.waitForExistence(timeout: 5), "The seeded classics should be listed")
         // The first rows alphabetically, so they are on screen on every iPhone.
-        let others = ["Aperol Spritz", "Bee's Knees", "Bloody Mary", "Boulevardier"]
+        let others = ["Aperol Spritz", "Bee's Knees", "Bloody Mary"]
         for name in others {
             XCTAssertTrue(app.staticTexts[name].exists, "\(name) should be listed before deleting")
         }
 
-        aviation.swipeLeft()
-        app.buttons["Delete"].firstMatch.tap()
+        revealSwipeAction("Delete", on: aviation, in: app).tap()
 
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
@@ -62,8 +61,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         let aviation = app.staticTexts["Aviation"]
         XCTAssertTrue(aviation.waitForExistence(timeout: 5))
 
-        aviation.swipeLeft()
-        app.buttons["Delete"].firstMatch.tap()
+        revealSwipeAction("Delete", on: aviation, in: app).tap()
         let alert = app.alerts["Confirm Delete"]
         XCTAssertTrue(alert.waitForExistence(timeout: 3))
         alert.buttons["Cancel"].tap()
@@ -96,6 +94,129 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
 
         app.buttons["Show All"].tap()
         XCTAssertTrue(aperolSpritz.waitForExistence(timeout: 2), "Show All should bring every cocktail back")
+    }
+
+    /// Tapping a row's heart favorites the cocktail without opening it; tapping again undoes it.
+    func testTappingTheHeartFavoritesACocktail() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let row = app.cells.containing(.staticText, identifier: "Aviation").firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.buttons["Add to Favorites"].tap()
+        XCTAssertTrue(row.buttons["Remove from Favorites"].waitForExistence(timeout: 2), "The heart fills in")
+        XCTAssertTrue(app.navigationBars["My Cocktails"].exists, "Tapping the heart doesn't open the recipe")
+
+        app.buttons["Show Favorites"].tap()
+        XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Aperol Spritz"].exists)
+
+        app.cells.containing(.staticText, identifier: "Aviation").firstMatch.buttons["Remove from Favorites"].tap()
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["Aviation"])
+        wait(for: [gone], timeout: 3)
+    }
+
+    /// The Spirits tab lists built-in spirit types from the new database, and search narrows them.
+    func testStylesTabListsStyles() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.tabBars.buttons["Spirits"].tap()
+        XCTAssertTrue(app.staticTexts["Bourbon"].waitForExistence(timeout: 5), "Whiskey styles come first")
+        XCTAssertTrue(app.staticTexts["Rye"].exists)
+
+        // The Styles search bar is always visible; some iOS versions show it as a Search button first.
+        let search = app.searchFields.firstMatch
+        if !search.waitForExistence(timeout: 2) {
+            let searchButton = app.buttons["Search"].firstMatch
+            if searchButton.exists {
+                searchButton.tap()
+            }
+        }
+        XCTAssertTrue(search.waitForExistence(timeout: 3), "The search field is available")
+        search.tap()
+        search.typeText("Aperitivo")
+        XCTAssertTrue(app.staticTexts["Aperitivo"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Bourbon"].exists, "Search hides other styles")
+    }
+
+    /// Adding a bottle on the My Bar tab lists it, and tapping it opens it for editing.
+    func testAddingABottleListsIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.tabBars.buttons["My Bar"].tap()
+        let addButton = app.buttons["Add Bottle"].firstMatch
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
+
+        let brand = app.textFields["Brand or name (e.g. Buffalo Trace)"]
+        XCTAssertTrue(brand.waitForExistence(timeout: 3))
+        brand.tap()
+        brand.typeText("Test Bottle")
+        app.navigationBars["Add Bottle"].buttons["Save"].tap()
+
+        let row = app.staticTexts["Test Bottle"]
+        XCTAssertTrue(row.waitForExistence(timeout: 3), "The new bottle should be listed")
+        XCTAssertTrue(app.staticTexts["No Type"].exists, "A bottle with no type is listed under No Type")
+
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Edit Bottle"].waitForExistence(timeout: 3))
+        app.navigationBars["Edit Bottle"].buttons["Cancel"].tap()
+    }
+
+    /// Creating a menu opens it, and cocktails picked from the collection are added to it.
+    func testCreatingAMenuAndAddingCocktails() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        app.tabBars.buttons["Menus"].tap()
+        let newMenu = app.buttons["New Menu"].firstMatch
+        XCTAssertTrue(newMenu.waitForExistence(timeout: 5))
+        newMenu.tap()
+
+        let name = app.textFields["Menu name (e.g. Friday Night)"]
+        XCTAssertTrue(name.waitForExistence(timeout: 3))
+        name.tap()
+        name.typeText("Test Night")
+        app.navigationBars["New Menu"].buttons["Create"].tap()
+
+        XCTAssertTrue(app.navigationBars["Test Night"].waitForExistence(timeout: 3), "A new menu opens straight away")
+        app.buttons["Add Cocktails"].firstMatch.tap()
+
+        let aviation = app.buttons.containing(.staticText, identifier: "Aviation").firstMatch
+        XCTAssertTrue(aviation.waitForExistence(timeout: 3))
+        aviation.tap()
+        app.navigationBars["Add Cocktails"].buttons["Add (1)"].tap()
+
+        XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 3), "The picked cocktail is on the menu")
+    }
+
+    /// Swipes a row left to reveal one of its trailing swipe actions, such as Delete.
+    /// It drags the whole row slowly rather than flicking the label, which the Simulator sometimes
+    /// reads as a scroll while the list is settling after launch. It tries up to three times, and
+    /// never swipes again once the button is showing (a second swipe would close it).
+    private func revealSwipeAction(_ title: String, on row: XCUIElement, in app: XCUIApplication) -> XCUIElement {
+        let button = app.buttons[title].firstMatch
+        let cell = app.cells.containing(.staticText, identifier: row.label).firstMatch
+        let target = cell.waitForExistence(timeout: 2) ? cell : row
+        for _ in 0..<3 {
+            if button.exists { return button }
+            let hittable = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: target)
+            _ = XCTWaiter.wait(for: [hittable], timeout: 2)
+            let start = target.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+            let end = target.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5))
+            start.press(forDuration: 0.1, thenDragTo: end)
+            if button.waitForExistence(timeout: 3) {
+                return button
+            }
+        }
+        XCTFail("Swiping didn't reveal \(title)")
+        return button
     }
 
     func testLaunchPerformance() throws {

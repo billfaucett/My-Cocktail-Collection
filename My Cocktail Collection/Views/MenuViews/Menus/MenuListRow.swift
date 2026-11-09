@@ -5,31 +5,25 @@
 //  Created by William Faucett on 3/4/24.
 //
 
+
 import SwiftUI
-import CoreData
+import SwiftData
 
 /// One menu in the list: name, date created and number of cocktails.
 struct MenuListRow: View {
-    @ObservedObject var menu: Menu
-    let cocktailCount: Int
-
-    init(menu: Menu, cocktailCount: Int) {
-        _menu = ObservedObject(wrappedValue: menu)
-        self.cocktailCount = cocktailCount
-    }
+    let menu: V1.Menu
 
     private var subtitle: String {
-        var parts: [String] = []
-        if let date = menu.dateCreated {
-            parts.append(date.formatted(date: .abbreviated, time: .omitted))
-        }
-        parts.append(cocktailCount == 1 ? "1 cocktail" : "\(cocktailCount) cocktails")
-        return parts.joined(separator: " · ")
+        let count = menu.entries?.count ?? 0
+        return [
+            menu.dateCreated.formatted(date: .abbreviated, time: .omitted),
+            count == 1 ? "1 cocktail" : "\(count) cocktails",
+        ].joined(separator: " · ")
     }
 
     var body: some View {
         ItemRow(
-            menu.menuName ?? "Untitled Menu",
+            menu.name.isEmpty ? "Untitled Menu" : menu.name,
             subtitle: subtitle,
             thumbnail: Thumbnail(image: nil, placeholder: .menu)
         )
