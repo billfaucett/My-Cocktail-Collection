@@ -152,6 +152,28 @@ struct ItemRow<Trailing: View>: View {
     }
 }
 
+/// A heart on the right of a row that favorites or unfavorites it with one tap.
+/// It sits apart from the rest of the row with its own 44-point tap area, so tapping the row still
+/// opens it, and it bounces with a light haptic so a stray tap is noticed (tap again to undo).
+struct FavoriteButton: View {
+    let isFavorite: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isFavorite ? "heart.fill" : "heart")
+                .font(.body)
+                .foregroundStyle(isFavorite ? Theme.favorite : Color.secondary.opacity(0.6))
+                .symbolEffect(.bounce, value: isFavorite)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .sensoryFeedback(.impact(weight: .light), trigger: isFavorite)
+        .accessibilityLabel(isFavorite ? "Remove from Favorites" : "Add to Favorites")
+    }
+}
+
 extension ItemRow where Trailing == EmptyView {
     /// A row with nothing on the right.
     init(_ title: String, subtitle: String? = nil, thumbnail: Thumbnail? = nil, isFavorite: Bool = false) {

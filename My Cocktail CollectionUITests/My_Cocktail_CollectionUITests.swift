@@ -96,6 +96,27 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(aperolSpritz.waitForExistence(timeout: 2), "Show All should bring every cocktail back")
     }
 
+    /// Tapping a row's heart favorites the cocktail without opening it; tapping again undoes it.
+    func testTappingTheHeartFavoritesACocktail() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let row = app.cells.containing(.staticText, identifier: "Aviation").firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.buttons["Add to Favorites"].tap()
+        XCTAssertTrue(row.buttons["Remove from Favorites"].waitForExistence(timeout: 2), "The heart fills in")
+        XCTAssertTrue(app.navigationBars["My Cocktails"].exists, "Tapping the heart doesn't open the recipe")
+
+        app.buttons["Show Favorites"].tap()
+        XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Aperol Spritz"].exists)
+
+        app.cells.containing(.staticText, identifier: "Aviation").firstMatch.buttons["Remove from Favorites"].tap()
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["Aviation"])
+        wait(for: [gone], timeout: 3)
+    }
+
     /// The Spirits tab lists built-in spirit types from the new database, and search narrows them.
     func testStylesTabListsStyles() throws {
         let app = XCUIApplication()

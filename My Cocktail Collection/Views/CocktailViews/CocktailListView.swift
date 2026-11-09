@@ -43,7 +43,9 @@ struct CocktailListView: View {
             ) {
                 ForEach(visible) { cocktail in
                     NavigationLink(value: cocktail) {
-                        CocktailRow(cocktail: cocktail)
+                        CocktailRow(cocktail: cocktail) {
+                            run { try CocktailStore(context: context).toggleFavorite(cocktail) }
+                        }
                     }
                     .deleteSwipeAction { cocktailToDelete = cocktail }
                     .favoriteSwipeAction(isFavorite: cocktail.isFavorite) {
@@ -179,20 +181,33 @@ struct CocktailListView: View {
     }
 }
 
-/// One cocktail in the list: photo, name, base style and rating.
+/// One cocktail in the list: photo, name, base spirit, rating, and a heart to favorite it.
 struct CocktailRow: View {
     let cocktail: V1.Cocktail
+    /// Called when the heart is tapped. Leave out to show the heart beside the name instead, with no button.
+    let onToggleFavorite: (() -> Void)?
+
+    init(cocktail: V1.Cocktail, onToggleFavorite: (() -> Void)? = nil) {
+        self.cocktail = cocktail
+        self.onToggleFavorite = onToggleFavorite
+    }
 
     var body: some View {
         ItemRow(
             cocktail.name,
             subtitle: cocktail.baseStyle?.name,
             thumbnail: Thumbnail(data: cocktail.photo, placeholder: .cocktail),
-            isFavorite: cocktail.isFavorite
+            isFavorite: onToggleFavorite == nil && cocktail.isFavorite
         ) {
-            if cocktail.rating > 0 {
-                StarRatingView(rating: Double(cocktail.rating) / 2.0)
-                    .font(.caption2)
+            HStack(spacing: 4) {
+                if cocktail.rating > 0 {
+                    StarRatingView(rating: Double(cocktail.rating) / 2.0)
+                        .font(.caption2)
+                }
+                if let onToggleFavorite {
+                    FavoriteButton(isFavorite: cocktail.isFavorite, action: onToggleFavorite)
+                        .padding(.leading, 8)
+                }
             }
         }
     }
