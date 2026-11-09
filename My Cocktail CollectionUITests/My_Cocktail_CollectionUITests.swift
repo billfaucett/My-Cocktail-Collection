@@ -110,11 +110,19 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
 
         app.buttons["Show Favorites"].tap()
         XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["Aperol Spritz"].exists)
+        let aperolGone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["Aperol Spritz"])
+        wait(for: [aperolGone], timeout: 3)
 
-        app.cells.containing(.staticText, identifier: "Aviation").firstMatch.buttons["Remove from Favorites"].tap()
-        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["Aviation"])
-        wait(for: [gone], timeout: 3)
+        // Wait for the filtered list to finish animating before tapping, so the tap lands on the heart.
+        let removeButton = app.cells.containing(.staticText, identifier: "Aviation").firstMatch.buttons["Remove from Favorites"]
+        let ready = expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: removeButton)
+        wait(for: [ready], timeout: 3)
+        removeButton.tap()
+
+        XCTAssertFalse(app.navigationBars["Aviation"].waitForExistence(timeout: 1),
+                       "Tapping the heart opened the recipe instead of unfavoriting")
+        XCTAssertTrue(app.staticTexts["No Favorites"].waitForExistence(timeout: 3),
+                      "Unfavoriting the only favorite empties the Show Favorites list")
     }
 
     /// The Spirits tab lists built-in spirit types from the new database, and search narrows them.
