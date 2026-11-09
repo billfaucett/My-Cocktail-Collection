@@ -11,6 +11,7 @@ import PhotosUI
 
 struct AddEditBottleView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
 
     /// The bottle being edited, or nil when adding a new one.
     private let bottle: V1.Bottle?
@@ -33,6 +34,9 @@ struct AddEditBottleView: View {
     @State private var showCamera = false
     @State private var showPhotoLibrary = false
     @State private var libraryItem: PhotosPickerItem?
+    /// A bottle already in My Bar with the scanned brand, to offer adding another bottle to it.
+    @State private var existingMatch: V1.Bottle?
+    @State private var errorMessage: String?
 
     /// - Parameters:
     ///   - bottle: The bottle to edit. Leave out to add a new bottle.
@@ -49,8 +53,12 @@ struct AddEditBottleView: View {
     var body: some View {
         FormScreen(bottle == nil ? "Add Bottle" : "Edit Bottle", canSave: canSave, onSave: save) {
             if bottle == nil {
-                LabelScanSection(state: scanState, libraryItem: $libraryItem) {
+                LabelScanSection(state: scanState, libraryItem: $libraryItem, currentBrand: brand) {
                     showCamera = true
+                } onPickBrand: { picked in
+                    brand = picked
+                    lastScan?.brand = picked
+                    offerExistingBottle(for: picked)
                 }
             }
 
@@ -119,6 +127,23 @@ struct AddEditBottleView: View {
                 .ignoresSafeArea()
         }
         .photosPicker(isPresented: $showPhotoLibrary, selection: $libraryItem, matching: .images)
+        .alert("Already in My Bar", isPresented: Binding(
+            get: { existingMatch != nil },
+            set: { if !$0 { existingMatch = nil } }
+        ), presenting: existingMatch) { match in
+            Button("Add Another Bottle") { addAnother(to: match) }
+            Button("Add as a Separate Bottle", role: .cancel) { }
+        } message: { match in
+            Text("You have \(match.brand) (\(match.stock.description), \(match.bottleCount == 1 ? "1 bottle" : "\(match.bottleCount) bottles")). Add one more to it, or keep adding this as a separate bottle?")
+        }
+        .alert("Couldn't Save", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "")
+        }
         .onChange(of: libraryItem) { _, item in
             guard let item else { return }
             Task {
@@ -161,6 +186,23 @@ struct AddEditBottleView: View {
         notes = LabelMatcher.mergedNotes(notes, adding: suggestion.notes)
         lastScan = suggestion
         scanState = .filled(suggestion)
+        offerExistingBottle(for: brand)
+    }
+
+    /// Asks whether to add another bottle when the brand is already in My Bar.
+    private func offerExistingBottle(for brandName: String) {
+        let bottles = (try? BottleStore(context: context).bottles()) ?? []
+        existingMatch = LabelMatcher.existingBottle(matching: brandName, in: bottles)
+    }
+
+    /// Adds one to the existing bottle's count (an Out bottle becomes Full) and closes the form.
+    private func addAnother(to match: V1.Bottle) {
+        do {
+            try BottleStore(context: context).addAnotherBottle(to: match, photo: photo)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func loadBottle() {

@@ -1771,6 +1771,28 @@ final class LabelScanFormTests: XCTestCase {
 
 /// Finding a bottle already in My Bar for a scanned brand.
 final class LabelMatcherBottleTests: StoreTestCase {
+    func testAddingAnotherBottleBumpsTheCountAndRestocks() throws {
+        let bottles = BottleStore(context: context)
+        let trace = try bottles.addBottle(brand: "Buffalo Trace", style: try style("Bourbon"), stock: .out, bottleCount: 0)
+        let photo = UIGraphicsImageRenderer(size: CGSize(width: 20, height: 20)).image { context in
+            UIColor.orange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+        }
+
+        try bottles.addAnotherBottle(to: trace, photo: photo)
+        XCTAssertEqual(trace.bottleCount, 1)
+        XCTAssertEqual(trace.stock, .full, "An Out bottle becomes Full")
+        XCTAssertNotNil(trace.photo, "The scan's photo fills in a missing label photo")
+
+        let firstPhoto = trace.photo
+        trace.stock = .low
+        try bottles.addAnotherBottle(to: trace, photo: photo)
+        XCTAssertEqual(trace.bottleCount, 2)
+        XCTAssertEqual(trace.stock, .low, "The open bottle's level is kept")
+        XCTAssertEqual(trace.photo, firstPhoto, "An existing photo isn't replaced")
+        XCTAssertEqual(try count(V1.Bottle.self), 1, "No second bottle record is made")
+    }
+
     func testFindsTheExistingBottle() throws {
         let bottles = BottleStore(context: context)
         let trace = try bottles.addBottle(brand: "Buffalo Trace", style: try style("Bourbon"))

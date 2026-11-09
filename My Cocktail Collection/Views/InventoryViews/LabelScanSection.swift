@@ -21,7 +21,11 @@ enum LabelScanState: Equatable {
 struct LabelScanSection: View {
     let state: LabelScanState
     @Binding var libraryItem: PhotosPickerItem?
+    /// The brand in the form now, to highlight the matching choice.
+    var currentBrand: String = ""
     let onUseCamera: () -> Void
+    /// Called with the brand picked from the label's other lines.
+    var onPickBrand: (String) -> Void = { _ in }
 
     var body: some View {
         Section {
@@ -35,6 +39,9 @@ struct LabelScanSection: View {
                 Label("Scan a Label from Photos", systemImage: "photo.on.rectangle")
             }
             .disabled(state == .reading)
+            if case .filled(let suggestion) = state, !suggestion.brandAlternatives.isEmpty {
+                brandChoices(suggestion)
+            }
             if state == .reading {
                 HStack(spacing: 10) {
                     ProgressView()
@@ -47,6 +54,27 @@ struct LabelScanSection: View {
         } footer: {
             footer
         }
+    }
+
+    /// The scanned brand and the other lines it could be, as buttons, for when the guess is wrong.
+    private func brandChoices(_ suggestion: LabelSuggestion) -> some View {
+        let options = ([suggestion.brand].compactMap { $0 } + suggestion.brandAlternatives)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Wrong brand? Tap the right one:")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(options, id: \.self) { option in
+                        Button(option) { onPickBrand(option) }
+                            .buttonStyle(.bordered)
+                            .tint(option == currentBrand ? .accentColor : .secondary)
+                            .accessibilityAddTraits(option == currentBrand ? .isSelected : [])
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder
