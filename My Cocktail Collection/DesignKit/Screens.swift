@@ -147,12 +147,17 @@ struct ListScreen<Content: View, MoreItems: View>: View {
     private var isShowingFavoritesOnly: Bool { favoritesOnly?.wrappedValue ?? false }
 
     var body: some View {
-        Group {
+        // The list always stays on screen and the empty messages sit over it. Swapping the list out for a
+        // message while a row was animating away (e.g. unfavoriting the last favorite) left the app busy.
+        List {
+            content
+        }
+        .overlay {
             if isEmpty && isShowingFavoritesOnly {
                 ContentUnavailableView {
                     Label("No Favorites", systemImage: "heart")
                 } description: {
-                    Text("Nothing here is a favorite yet, or no favorites match. Swipe right on an item to make it a favorite.")
+                    Text("Nothing here is a favorite yet, or no favorites match. Tap an item's heart or swipe right on it to make it a favorite.")
                 } actions: {
                     Button("Show All") {
                         if let favoritesOnly {
@@ -171,10 +176,6 @@ struct ListScreen<Content: View, MoreItems: View>: View {
                         Button(actionTitle, action: onAdd)
                             .buttonStyle(.borderedProminent)
                     }
-                }
-            } else {
-                List {
-                    content
                 }
             }
         }
