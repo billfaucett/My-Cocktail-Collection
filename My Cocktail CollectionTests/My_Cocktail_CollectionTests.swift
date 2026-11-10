@@ -1611,6 +1611,120 @@ final class CocktailStoreTests: StoreTestCase {
     }
 }
 
+/// The list of ingredients to pick from (pick-from-list entry, step 1).
+final class IngredientCatalogTests: XCTestCase {
+    private func names(_ items: [CatalogItem]) -> [String] { items.map(\.name) }
+
+    func testBuiltInListIsConsistent() {
+        let keys = IngredientCatalog.builtIn.map(\.id)
+        XCTAssertEqual(Set(keys).count, keys.count, "Each built-in ingredient appears once")
+        XCTAssertGreaterThanOrEqual(keys.count, 90)
+        for item in IngredientCatalog.builtIn {
+            if let type = item.styleName {
+                XCTAssertNotNil(SpiritTaxonomy.builtInStyle(named: type), "\(item.name): \(type) should be a built-in type")
+            }
+        }
+        let catalog = IngredientCatalog()
+        XCTAssertEqual(catalog.item(named: "Angostura Bitters")?.usualUnit, .dash)
+        XCTAssertEqual(catalog.item(named: "Club Soda")?.usualUnit, .topUp)
+        XCTAssertEqual(catalog.item(named: "Orange Peel")?.isGarnish, true)
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.group, .spirits)
+    }
+
+    func testRecipesCountUsesAndFreshMatchesPlain() {
+        let catalog = IngredientCatalog(used: [
+            UsedIngredient(name: "Fresh Lime Juice", unit: .part),
+            UsedIngredient(name: "Lime Juice", unit: .part),
+            UsedIngredient(name: "Bourbon", styleName: "Bourbon", family: .whiskey, unit: .part),
+            UsedIngredient(name: "Light Rum", styleName: "White Rum", family: .rum, unit: .part),
+        ])
+        XCTAssertEqual(catalog.item(named: "Lime Juice")?.useCount, 2, "\"Fresh Lime Juice\" counts as Lime Juice")
+        XCTAssertNil(catalog.items.first { $0.name == "Fresh Lime Juice" }, "No duplicate for the fresh version")
+        let lightRum = catalog.item(named: "Light Rum")
+        XCTAssertEqual(lightRum?.isBuiltIn, false)
+        XCTAssertEqual(lightRum?.group, .spirits)
+        XCTAssertEqual(names(catalog.mostUsed()), ["Lime Juice", "Bourbon", "Light Rum"])
+    }
+
+    func testItemsYouAddUseYourUsualMeasure() {
+        let catalog = IngredientCatalog(used: [
+            UsedIngredient(name: "Velvet Falernum", unit: .part),
+            UsedIngredient(name: "Velvet Falernum", unit: .part),
+            UsedIngredient(name: "Velvet Falernum", unit: .barspoon),
+            UsedIngredient(name: "Candied ginger", unit: .piece, isGarnish: true),
+        ])
+        XCTAssertEqual(catalog.item(named: "Velvet Falernum")?.usualUnit, .part)
+        let ginger = catalog.item(named: "candied ginger")
+        XCTAssertEqual(ginger?.group, .garnishes)
+        XCTAssertEqual(ginger?.isGarnish, true)
+    }
+
+    func testMyBarBottlesShowBesideTheirType() {
+        let catalog = IngredientCatalog(bottles: [
+            OwnedBottle(brand: "Buffalo Trace", styleName: "Bourbon", family: .whiskey),
+            OwnedBottle(brand: "Campari", styleName: "Aperitivo", family: .liqueursAndAmari),
+            OwnedBottle(brand: "Smith & Cross", styleName: "Navy Rum", family: .rum),
+        ])
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.bottleBrands, ["Buffalo Trace"])
+        XCTAssertEqual(catalog.item(named: "Campari")?.bottleBrands, ["Campari"])
+        XCTAssertEqual(catalog.item(named: "Aperol")?.bottleBrands, [], "Another aperitivo isn't marked as owned")
+        XCTAssertEqual(catalog.item(named: "Navy Rum")?.group, .spirits, "A type of your own gets an item")
+        XCTAssertEqual(names(catalog.inMyBar), ["Bourbon", "Campari", "Navy Rum"])
+    }
+
+    func testSearchRanksBestMatchesFirst() {
+        let catalog = IngredientCatalog()
+        XCTAssertEqual(catalog.search("bour").first?.name, "Bourbon")
+        XCTAssertEqual(catalog.search("ang").first?.name, "Angostura Bitters")
+        XCTAssertEqual(catalog.search("angostra").first?.name, "Angostura Bitters", "A one-letter typo still finds it")
+        XCTAssertEqual(catalog.search("lime").prefix(3).map(\.name), ["Lime Juice", "Lime Wedge", "Lime Wheel"])
+        let simple = names(catalog.search("simple"))
+        XCTAssertEqual(simple.first, "Simple Syrup")
+        XCTAssertTrue(simple.contains("Rich Simple Syrup"))
+        XCTAssertEqual(catalog.search("creme de").first?.name.hasPrefix("Crème de"), true, "Accents don't matter")
+        XCTAssertTrue(catalog.search("").isEmpty)
+        XCTAssertTrue(catalog.search("xyzzy").isEmpty)
+    }
+
+    func testSearchPrefersWhatYouUseMost() {
+        let catalog = IngredientCatalog(used: Array(repeating: UsedIngredient(name: "Lime Wheel", unit: .piece, isGarnish: true), count: 3))
+        XCTAssertEqual(catalog.search("lime").first?.name, "Lime Wheel")
+    }
+
+    func testNewItemsGuessTheirTypeAndMeasure() {
+        let syrup = IngredientCatalog.newItem(named: " Smoked Maple Syrup ")
+        XCTAssertEqual(syrup.name, "Smoked Maple Syrup")
+        XCTAssertEqual(syrup.styleName, "Syrup")
+        XCTAssertEqual(syrup.group, .syrups)
+        XCTAssertEqual(syrup.usualUnit, .part)
+
+        XCTAssertEqual(IngredientCatalog.newItem(named: "Blood Orange Juice").group, .juices)
+
+        let bitters = IngredientCatalog.newItem(named: "Celery Bitters")
+        XCTAssertEqual(bitters.group, .bitters)
+        XCTAssertEqual(bitters.usualUnit, .dash)
+
+        let twist = IngredientCatalog.newItem(named: "Grapefruit Twist")
+        XCTAssertTrue(twist.isGarnish)
+        XCTAssertEqual(twist.group, .garnishes)
+
+        XCTAssertEqual(IngredientCatalog.newItem(named: "Plantation Pineapple Rum").group, .spirits)
+    }
+}
+
+/// Building the ingredient list from the database.
+final class IngredientCatalogLoadTests: StoreTestCase {
+    func testLoadReadsRecipesAndMyBar() throws {
+        try CocktailStore(context: context).addCocktail(
+            name: "Old Fashioned", ingredients: IngredientParser.parse("2 oz Bourbon\n2 dashes Angostura Bitters\n¼ oz Simple Syrup").ingredients)
+        try BottleStore(context: context).addBottle(brand: "Buffalo Trace", style: try style("Bourbon"))
+        let catalog = try IngredientCatalog.load(context: context)
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.useCount, 1)
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.bottleBrands, ["Buffalo Trace"])
+        XCTAssertEqual(catalog.item(named: "Angostura Bitters")?.useCount, 1)
+    }
+}
+
 /// Reading a bottle's label into a brand, type and notes (label scanning, step 1).
 /// Each sample is a label typed out as Vision would read it: text, height and position on the photo.
 final class LabelMatcherTests: XCTestCase {

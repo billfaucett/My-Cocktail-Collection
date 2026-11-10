@@ -375,7 +375,8 @@ enum LabelMatcher {
         matchingBrandIndex(brand, in: bottles.map(\.brand)).map { bottles[$0] }
     }
 
-    private static func editDistance(_ first: String, _ second: String) -> Int {
+    /// How many single-letter changes turn one word into the other ("hendriks" → "hendricks" = 1).
+    static func editDistance(_ first: String, _ second: String) -> Int {
         let a = Array(first), b = Array(second)
         var previous = Array(0...b.count)
         for i in 1...max(a.count, 1) where !a.isEmpty {
@@ -391,7 +392,7 @@ enum LabelMatcher {
     // MARK: - Words
 
     /// Lowercase words without accents or apostrophes: "Hendrick's AÑEJO" → ["hendricks", "anejo"].
-    fileprivate static func words(_ text: String) -> [String] {
+    static func words(_ text: String) -> [String] {
         text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
             .lowercased()
             .replacingOccurrences(of: "'", with: "")

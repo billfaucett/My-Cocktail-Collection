@@ -161,8 +161,12 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
         addButton.tap()
 
-        let brand = app.textFields["Brand or name (e.g. Buffalo Trace)"]
-        XCTAssertTrue(brand.waitForExistence(timeout: 3))
+        // The form opens with the Scan Label section first; the brand field is the first text field below it.
+        XCTAssertTrue(app.navigationBars["Add Bottle"].waitForExistence(timeout: 5), "The Add Bottle form opens")
+        let brand = app.textFields["Brand or name (e.g. Buffalo Trace)"].exists
+            ? app.textFields["Brand or name (e.g. Buffalo Trace)"]
+            : app.textFields.firstMatch
+        XCTAssertTrue(brand.waitForExistence(timeout: 5), "The brand field is on the form")
         brand.tap()
         brand.typeText("Test Bottle")
         app.navigationBars["Add Bottle"].buttons["Save"].tap()
