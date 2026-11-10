@@ -188,6 +188,21 @@ struct BottleStore {
         }
     }
 
+    /// Adds one more bottle of a brand you already have, e.g. after scanning its label again.
+    /// An Out bottle becomes Full, and the photo fills in a missing label photo.
+    func addAnotherBottle(to bottle: V1.Bottle, photo: UIImage? = nil) throws {
+        let photoData = bottle.photo == nil ? photo?.cocktailPhotoData() : nil
+        try update(bottle) {
+            $0.bottleCount += 1
+            if $0.stock == .out {
+                $0.stock = .full
+            }
+            if let photoData {
+                $0.photo = photoData
+            }
+        }
+    }
+
     /// Sets the number of bottles. Setting it to 0 marks the bottle Out.
     func setBottleCount(_ count: Int, for bottle: V1.Bottle) throws {
         try update(bottle) { $0.bottleCount = count }

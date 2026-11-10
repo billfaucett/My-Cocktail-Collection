@@ -1611,6 +1611,198 @@ final class CocktailStoreTests: StoreTestCase {
     }
 }
 
+/// Reading a bottle's label into a brand, type and notes (label scanning, step 1).
+/// Each sample is a label typed out as Vision would read it: text, height and position on the photo.
+final class LabelMatcherTests: XCTestCase {
+    private func suggest(_ lines: [(String, Double, Double)]) -> LabelSuggestion {
+        LabelMatcher.suggest(from: lines.map { LabelLine($0.0, height: $0.1, top: $0.2) })
+    }
+
+    private func assertLabel(_ lines: [(String, Double, Double)], brand: String, type: String?, family: SpiritFamily,
+                             file: StaticString = #filePath, line: UInt = #line) {
+        let suggestion = suggest(lines)
+        XCTAssertEqual(suggestion.brand, brand, "brand", file: file, line: line)
+        XCTAssertEqual(suggestion.styleName, type, "type", file: file, line: line)
+        XCTAssertEqual(suggestion.family, family, "family", file: file, line: line)
+        if let type {
+            XCTAssertNotNil(SpiritTaxonomy.builtInStyle(named: type), "\(type) should be a built-in type", file: file, line: line)
+        }
+    }
+
+    func testBourbonWithProofAbvAndSize() {
+        let label = [("BUFFALO TRACE", 0.12, 0.2), ("KENTUCKY STRAIGHT", 0.05, 0.4), ("BOURBON WHISKEY", 0.07, 0.47),
+                     ("Distilled and bottled by Buffalo Trace Distillery, Frankfort, KY", 0.015, 0.85),
+                     ("90 PROOF", 0.03, 0.6), ("45% Alc./Vol.", 0.02, 0.65), ("750 ml", 0.02, 0.9)]
+        assertLabel(label, brand: "Buffalo Trace", type: "Bourbon", family: .whiskey)
+        let suggestion = suggest(label)
+        XCTAssertEqual(suggestion.notes, "90 proof · 45% ABV · 750 ml")
+        XCTAssertTrue(suggestion.brandAlternatives.isEmpty, "Small print sentences aren't offered as brands")
+    }
+
+    func testGinWithCentilitres() {
+        let label = [("HENDRICK'S", 0.11, 0.25), ("GIN", 0.08, 0.4), ("DISTILLED IN SCOTLAND", 0.02, 0.55),
+                     ("A MOST UNUSUAL GIN", 0.025, 0.6), ("44% vol", 0.02, 0.85), ("70cl", 0.02, 0.9)]
+        assertLabel(label, brand: "Hendrick's", type: "London Dry", family: .gin)
+        XCTAssertEqual(suggest(label).size, "700 ml")
+    }
+
+    func testBrandsWhoseLabelsDontNameAType() {
+        assertLabel([("CAMPARI", 0.13, 0.3), ("MILANO", 0.03, 0.45), ("Bitter", 0.03, 0.5), ("24% vol", 0.02, 0.9)],
+                    brand: "Campari", type: "Aperitivo", family: .liqueursAndAmari)
+        assertLabel([("COINTREAU", 0.1, 0.2), ("L'UNIQUE", 0.04, 0.3), ("40% vol", 0.02, 0.9)],
+                    brand: "Cointreau", type: "Orange Liqueur", family: .liqueursAndAmari)
+        assertLabel([("ST-GERMAIN", 0.1, 0.2), ("Liqueur", 0.04, 0.3)],
+                    brand: "St-Germain", type: "Fruit & Nut Liqueur", family: .liqueursAndAmari)
+    }
+
+    func testTequilaReposadoAcrossTwoLines() {
+        let label = [("ESPOLÒN", 0.12, 0.2), ("TEQUILA", 0.06, 0.4), ("REPOSADO", 0.06, 0.47),
+                     ("100% DE AGAVE", 0.03, 0.55), ("80 PROOF", 0.02, 0.8)]
+        assertLabel(label, brand: "Espolòn", type: "Tequila Reposado", family: .agave)
+        XCTAssertNil(suggest(label).abv, "\"100% de agave\" isn't an ABV")
+    }
+
+    func testCaskNotesInSmallPrintDontChangeTheType() {
+        assertLabel([("LAPHROAIG", 0.12, 0.2), ("ISLAY SINGLE MALT", 0.05, 0.4), ("SCOTCH WHISKY", 0.05, 0.46),
+                     ("AGED 10 YEARS", 0.04, 0.55), ("Finished in rum casks", 0.01, 0.8), ("43% vol", 0.02, 0.9)],
+                    brand: "Laphroaig", type: "Scotch", family: .whiskey)
+        assertLabel([("PLANTATION", 0.1, 0.2), ("XAYMACA", 0.05, 0.3), ("JAMAICA RUM", 0.05, 0.38),
+                     ("Aged in ex-bourbon casks", 0.015, 0.7)],
+                    brand: "Plantation", type: "Aged Rum", family: .rum)
+    }
+
+    func testAgeIsRead() {
+        let label = [("THE YAMAZAKI", 0.1, 0.2), ("SINGLE MALT JAPANESE WHISKY", 0.05, 0.3),
+                     ("AGED 12 YEARS", 0.04, 0.4), ("Product of Japan", 0.015, 0.9)]
+        assertLabel(label, brand: "The Yamazaki", type: "Japanese Whisky", family: .whiskey)
+        XCTAssertEqual(suggest(label).age, "12")
+        XCTAssertEqual(suggest(label).notes, "12 years old")
+    }
+
+    func testRyeAndBrandWithTypeOnTheSameLine() {
+        assertLabel([("RITTENHOUSE", 0.1, 0.2), ("STRAIGHT RYE WHISKY", 0.05, 0.3), ("100 PROOF", 0.03, 0.5)],
+                    brand: "Rittenhouse", type: "Rye", family: .whiskey)
+        assertLabel([("BULLEIT BOURBON", 0.1, 0.2), ("FRONTIER WHISKEY", 0.04, 0.3)],
+                    brand: "Bulleit", type: "Bourbon", family: .whiskey)
+        assertLabel([("OLD FORESTER", 0.1, 0.2), ("KENTUCKY STRAIGHT BOURBON WHISKY", 0.04, 0.3)],
+                    brand: "Old Forester", type: "Bourbon", family: .whiskey)
+    }
+
+    func testLiqueurBeatsTheSpiritItIsMadeWith() {
+        assertLabel([("Kahlúa", 0.12, 0.2), ("Rum & Coffee Liqueur", 0.04, 0.4), ("20% Alc./Vol. (40 Proof)", 0.02, 0.9)],
+                    brand: "Kahlúa", type: "Coffee Liqueur", family: .liqueursAndAmari)
+        assertLabel([("MAKER'S MARK", 0.1, 0.2), ("BOURBON CREAM LIQUEUR", 0.04, 0.3)],
+                    brand: "Maker's Mark", type: "Cream Liqueur", family: .liqueursAndAmari)
+    }
+
+    func testVermouthBittersAndRum() {
+        assertLabel([("CARPANO", 0.1, 0.2), ("ANTICA FORMULA", 0.06, 0.3), ("VERMOUTH", 0.05, 0.4)],
+                    brand: "Carpano", type: "Sweet Vermouth", family: .vermouthAndFortified)
+        assertLabel([("DOLIN", 0.1, 0.2), ("DRY", 0.07, 0.3), ("Vermouth de Chambéry", 0.04, 0.38)],
+                    brand: "Dolin", type: "Dry Vermouth", family: .vermouthAndFortified)
+        assertLabel([("ANGOSTURA", 0.08, 0.2), ("AROMATIC BITTERS", 0.05, 0.3), ("44.7% alc/vol", 0.015, 0.9)],
+                    brand: "Angostura", type: "Aromatic Bitters", family: .bitters)
+        assertLabel([("DIPLOMÁTICO", 0.1, 0.2), ("RESERVA EXCLUSIVA", 0.05, 0.3), ("RON DE VENEZUELA", 0.04, 0.38)],
+                    brand: "Diplomático", type: "Aged Rum", family: .rum)
+    }
+
+    func testCognacIsNotSparklingWine() {
+        assertLabel([("RÉMY MARTIN", 0.1, 0.2), ("V.S.O.P", 0.06, 0.25), ("FINE CHAMPAGNE COGNAC", 0.04, 0.3)],
+                    brand: "Rémy Martin", type: "Cognac", family: .brandy)
+        assertLabel([("LA MARCA", 0.1, 0.2), ("PROSECCO", 0.06, 0.3), ("11% alc. by vol.", 0.015, 0.9), ("750 ML", 0.015, 0.92)],
+                    brand: "La Marca", type: "Sparkling Wine", family: .wine)
+    }
+
+    func testMixersAndVodka() {
+        assertLabel([("FEVER-TREE", 0.08, 0.2), ("PREMIUM GINGER BEER", 0.05, 0.3)],
+                    brand: "Fever-Tree", type: "Ginger Beer & Ale", family: .mixersAndSyrups)
+        assertLabel([("TITO'S", 0.1, 0.2), ("HANDMADE VODKA", 0.05, 0.3)],
+                    brand: "Tito's", type: "Vodka", family: .vodka)
+    }
+
+    func testNothingReadableGivesAnEmptySuggestion() {
+        XCTAssertTrue(LabelMatcher.suggest(from: []).isEmpty)
+        XCTAssertTrue(suggest([("   ", 0.1, 0.2)]).isEmpty)
+    }
+
+    func testMatchingBrandsIgnoresCaseAccentsAndSmallDifferences() {
+        let brands = ["Buffalo Trace", "Hendrick's", "Espolòn", "Rye"]
+        XCTAssertEqual(LabelMatcher.matchingBrandIndex("BUFFALO TRACE", in: brands), 0)
+        XCTAssertEqual(LabelMatcher.matchingBrandIndex("Buffalo Trace Bourbon", in: brands), 0, "A longer name still matches")
+        XCTAssertEqual(LabelMatcher.matchingBrandIndex("Hendricks", in: brands), 1)
+        XCTAssertEqual(LabelMatcher.matchingBrandIndex("Espolon", in: brands), 2)
+        XCTAssertEqual(LabelMatcher.matchingBrandIndex("Hendrik's", in: brands), 1, "One letter off still matches")
+        XCTAssertNil(LabelMatcher.matchingBrandIndex("Bulleit", in: brands))
+        XCTAssertNil(LabelMatcher.matchingBrandIndex("Ryes", in: brands), "Short names must match exactly")
+    }
+}
+
+/// Filling in the bottle form from a scan (label scanning, step 2).
+final class LabelScanFormTests: XCTestCase {
+    func testLabelNotesAreAddedOnce() {
+        XCTAssertEqual(LabelMatcher.mergedNotes("", adding: "90 proof · 750 ml"), "90 proof · 750 ml")
+        XCTAssertEqual(LabelMatcher.mergedNotes("Gift from Dad", adding: "90 proof"), "Gift from Dad\n90 proof")
+        XCTAssertEqual(LabelMatcher.mergedNotes("Gift from Dad\n90 proof", adding: "90 proof"), "Gift from Dad\n90 proof",
+                       "Scanning twice doesn't repeat the notes")
+        XCTAssertEqual(LabelMatcher.mergedNotes(" Gift ", adding: ""), "Gift")
+    }
+
+    func testEverySuggestedTypeExistsAsABuiltInType() {
+        // The form looks the suggested type up by name, so every rule must name a real built-in type.
+        let labels: [[LabelLine]] = [
+            [LabelLine("BOURBON", height: 0.1)], [LabelLine("LONDON DRY GIN", height: 0.1)],
+            [LabelLine("TEQUILA AÑEJO", height: 0.1)], [LabelLine("RHUM AGRICOLE", height: 0.1)],
+            [LabelLine("ORANGE BITTERS", height: 0.1)], [LabelLine("PEDRO XIMENEZ SHERRY", height: 0.1)],
+            [LabelLine("TAWNY PORT", height: 0.1)], [LabelLine("PINOT NOIR", height: 0.1)],
+            [LabelLine("HAZY IPA", height: 0.1)], [LabelLine("HARD CIDER", height: 0.1)],
+            [LabelLine("TONIC WATER", height: 0.1)], [LabelLine("GRENADINE", height: 0.1)],
+            [LabelLine("JUNMAI SAKE", height: 0.1)], [LabelLine("ABSINTHE", height: 0.1)],
+            [LabelLine("CITRON VODKA", height: 0.1)], [LabelLine("CALVADOS", height: 0.1)],
+        ]
+        for label in labels {
+            let suggestion = LabelMatcher.suggest(from: label)
+            let type = try? XCTUnwrap(suggestion.styleName, "\(label[0].text) should suggest a type")
+            if let type {
+                XCTAssertNotNil(SpiritTaxonomy.builtInStyle(named: type), "\(type) should be a built-in type")
+            }
+        }
+    }
+}
+
+/// Finding a bottle already in My Bar for a scanned brand.
+final class LabelMatcherBottleTests: StoreTestCase {
+    func testAddingAnotherBottleBumpsTheCountAndRestocks() throws {
+        let bottles = BottleStore(context: context)
+        let trace = try bottles.addBottle(brand: "Buffalo Trace", style: try style("Bourbon"), stock: .out, bottleCount: 0)
+        let photo = UIGraphicsImageRenderer(size: CGSize(width: 20, height: 20)).image { context in
+            UIColor.orange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+        }
+
+        try bottles.addAnotherBottle(to: trace, photo: photo)
+        XCTAssertEqual(trace.bottleCount, 1)
+        XCTAssertEqual(trace.stock, .full, "An Out bottle becomes Full")
+        XCTAssertNotNil(trace.photo, "The scan's photo fills in a missing label photo")
+
+        let firstPhoto = trace.photo
+        trace.stock = .low
+        try bottles.addAnotherBottle(to: trace, photo: photo)
+        XCTAssertEqual(trace.bottleCount, 2)
+        XCTAssertEqual(trace.stock, .low, "The open bottle's level is kept")
+        XCTAssertEqual(trace.photo, firstPhoto, "An existing photo isn't replaced")
+        XCTAssertEqual(try count(V1.Bottle.self), 1, "No second bottle record is made")
+    }
+
+    func testFindsTheExistingBottle() throws {
+        let bottles = BottleStore(context: context)
+        let trace = try bottles.addBottle(brand: "Buffalo Trace", style: try style("Bourbon"))
+        try bottles.addBottle(brand: "Campari", style: try style("Aperitivo"))
+        let all = try bottles.bottles()
+        XCTAssertTrue(LabelMatcher.existingBottle(matching: "BUFFALO TRACE", in: all) === trace)
+        XCTAssertNil(LabelMatcher.existingBottle(matching: "Hendrick's", in: all))
+    }
+}
+
 /// Showing parts converted to ounces or millilitres (data model refactor, phase 6).
 final class PartSizeTests: StoreTestCase {
     func testOffShowsNothing() {

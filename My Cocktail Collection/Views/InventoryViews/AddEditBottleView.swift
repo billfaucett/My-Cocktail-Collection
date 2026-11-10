@@ -7,9 +7,11 @@
 
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct AddEditBottleView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
 
     /// The bottle being edited, or nil when adding a new one.
     private let bottle: V1.Bottle?
@@ -25,11 +27,24 @@ struct AddEditBottleView: View {
     @State private var photoChanged = false
     @State private var hasLoaded = false
 
+    // Label scanning (adding only)
+    private let scanOnAppear: Bool
+    @State private var scanState = LabelScanState.idle
+    @State private var lastScan: LabelSuggestion?
+    @State private var showCamera = false
+    @State private var showPhotoLibrary = false
+    @State private var libraryItem: PhotosPickerItem?
+    /// A bottle already in My Bar with the scanned brand, to offer adding another bottle to it.
+    @State private var existingMatch: V1.Bottle?
+    @State private var errorMessage: String?
+
     /// - Parameters:
     ///   - bottle: The bottle to edit. Leave out to add a new bottle.
     ///   - style: A style to pre-select when adding.
-    init(bottle: V1.Bottle? = nil, style: V1.SpiritStyle? = nil) {
+    ///   - scanOnAppear: Open the camera (or Photos, where there's no camera) straight away to scan a label.
+    init(bottle: V1.Bottle? = nil, style: V1.SpiritStyle? = nil, scanOnAppear: Bool = false) {
         self.bottle = bottle
+        self.scanOnAppear = scanOnAppear && bottle == nil
         _style = State(initialValue: style)
     }
 
@@ -37,6 +52,16 @@ struct AddEditBottleView: View {
 
     var body: some View {
         FormScreen(bottle == nil ? "Add Bottle" : "Edit Bottle", canSave: canSave, onSave: save) {
+            if bottle == nil {
+                LabelScanSection(state: scanState, libraryItem: $libraryItem, currentBrand: brand) {
+                    showCamera = true
+                } onPickBrand: { picked in
+                    brand = picked
+                    lastScan?.brand = picked
+                    offerExistingBottle(for: picked)
+                }
+            }
+
             PhotoSection(photo: $photo, photoChanged: $photoChanged, placeholder: .bottle, addTitle: "Add Label Photo")
 
             Section {
@@ -87,6 +112,97 @@ struct AddEditBottleView: View {
             if newLevel.isInStock && bottleCount == 0 { bottleCount = 1 }
         }
         .onAppear(perform: loadBottle)
+        .task {
+            guard scanOnAppear, scanState == .idle else { return }
+            // Let the sheet finish opening before presenting the camera over it.
+            try? await Task.sleep(for: .milliseconds(450))
+            if CameraPicker.isAvailable {
+                showCamera = true
+            } else {
+                showPhotoLibrary = true
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker { image in scan(image) }
+                .ignoresSafeArea()
+        }
+        .photosPicker(isPresented: $showPhotoLibrary, selection: $libraryItem, matching: .images)
+        .alert("Already in My Bar", isPresented: Binding(
+            get: { existingMatch != nil },
+            set: { if !$0 { existingMatch = nil } }
+        ), presenting: existingMatch) { match in
+            Button("Add Another Bottle") { addAnother(to: match) }
+            Button("Add as a Separate Bottle", role: .cancel) { }
+        } message: { match in
+            Text("You have \(match.brand) (\(match.stock.description), \(match.bottleCount == 1 ? "1 bottle" : "\(match.bottleCount) bottles")). Add one more to it, or keep adding this as a separate bottle?")
+        }
+        .alert("Couldn't Save", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+        .onChange(of: libraryItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                    scan(image)
+                }
+                libraryItem = nil
+            }
+        }
+    }
+
+    // MARK: Label scanning
+
+    /// Uses the photo as the bottle's picture, reads its label, and fills in the form.
+    private func scan(_ image: UIImage) {
+        photo = image
+        photoChanged = true
+        scanState = .reading
+        Task {
+            let lines = (try? await LabelReader.read(image)) ?? []
+            apply(LabelMatcher.suggest(from: lines))
+        }
+    }
+
+    /// Fills in fields that are empty, or that an earlier scan filled in, so nothing typed by hand is replaced.
+    private func apply(_ suggestion: LabelSuggestion) {
+        guard !suggestion.isEmpty else {
+            scanState = .unreadable
+            return
+        }
+        if let scannedBrand = suggestion.brand,
+           brand.trimmingCharacters(in: .whitespaces).isEmpty || brand == lastScan?.brand {
+            brand = scannedBrand
+        }
+        if let styleName = suggestion.styleName,
+           style == nil || style?.name == lastScan?.styleName,
+           let found = try? StyleStore(context: context).style(named: styleName) {
+            style = found
+        }
+        notes = LabelMatcher.mergedNotes(notes, adding: suggestion.notes)
+        lastScan = suggestion
+        scanState = .filled(suggestion)
+        offerExistingBottle(for: brand)
+    }
+
+    /// Asks whether to add another bottle when the brand is already in My Bar.
+    private func offerExistingBottle(for brandName: String) {
+        let bottles = (try? BottleStore(context: context).bottles()) ?? []
+        existingMatch = LabelMatcher.existingBottle(matching: brandName, in: bottles)
+    }
+
+    /// Adds one to the existing bottle's count (an Out bottle becomes Full) and closes the form.
+    private func addAnother(to match: V1.Bottle) {
+        do {
+            try BottleStore(context: context).addAnotherBottle(to: match, photo: photo)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func loadBottle() {
