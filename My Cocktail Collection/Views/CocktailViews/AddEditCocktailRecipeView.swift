@@ -11,8 +11,8 @@ import SwiftData
 import UIKit
 
 /// Form for adding a cocktail or editing one, on the new database (data model refactor, phase 5).
-/// Ingredients are a list of rows: tap one to edit it, swipe to delete, Reorder to drag,
-/// or Add from Text to paste a recipe.
+/// Ingredients are a list of rows: Add Ingredient picks them from a list with a few taps,
+/// tap a row to fine-tune it, swipe to delete, Reorder to drag, or Add from Text to paste a recipe.
 struct AddEditCocktailRecipeView: View {
     @Environment(\.modelContext) private var context
 
@@ -52,21 +52,6 @@ struct AddEditCocktailRecipeView: View {
                 TextField("Name (e.g. Old Fashioned)", text: $name)
                     .textInputAutocapitalization(.words)
                 StylePicker(selection: $baseStyle)
-            }
-
-            Section("Source") {
-                Picker("Source", selection: $source) {
-                    ForEach(CocktailSource.allCases, id: \.self) { source in
-                        Text(source.displayName).tag(source)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-            }
-
-            Section("Rating") {
-                Toggle("Favorite", isOn: $isFavorite)
-                RatingPicker(rating: $rating)
             }
 
             Section {
@@ -110,7 +95,7 @@ struct AddEditCocktailRecipeView: View {
                     Label("\(reviewCount == 1 ? "1 ingredient needs" : "\(reviewCount) ingredients need") checking. Tap it to fix.",
                           systemImage: "exclamationmark.triangle")
                 } else if rows.isEmpty {
-                    Text("Add each ingredient in parts. A part is whatever measure you use.")
+                    Text("Tap Add Ingredient to pick from the list. A part is whatever measure you use.")
                 }
             }
             .environment(\.editMode, .constant(isReordering ? .active : .inactive))
@@ -118,6 +103,21 @@ struct AddEditCocktailRecipeView: View {
             Section("How to Make") {
                 TextField("e.g. Stir with ice and strain over a large cube", text: $method, axis: .vertical)
                     .lineLimit(4...12)
+            }
+
+            Section("Source") {
+                Picker("Source", selection: $source) {
+                    ForEach(CocktailSource.allCases, id: \.self) { source in
+                        Text(source.displayName).tag(source)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            Section("Rating") {
+                Toggle("Favorite", isOn: $isFavorite)
+                RatingPicker(rating: $rating)
             }
         }
         .onAppear(perform: loadCocktail)
@@ -129,7 +129,7 @@ struct AddEditCocktailRecipeView: View {
             }
         }
         .sheet(isPresented: $showAddIngredient) {
-            IngredientEditorView { rows.append($0) }
+            QuickAddIngredientsView(rows: $rows)
         }
         .sheet(isPresented: $showPasteIngredients) {
             PasteIngredientsView { rows.append(contentsOf: $0) }

@@ -14,6 +14,8 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
 
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
+        // The app allows landscape, and a Simulator left sideways hides most of each form. Always test upright.
+        XCUIDevice.shared.orientation = .portrait
 
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     }
@@ -161,12 +163,10 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
         addButton.tap()
 
-        // The form opens with the Scan Label section first; the brand field is the first text field below it.
+        // The form opens with the Scan Label section first, so the brand field may be further down.
         XCTAssertTrue(app.navigationBars["Add Bottle"].waitForExistence(timeout: 5), "The Add Bottle form opens")
-        let brand = app.textFields["Brand or name (e.g. Buffalo Trace)"].exists
-            ? app.textFields["Brand or name (e.g. Buffalo Trace)"]
-            : app.textFields.firstMatch
-        XCTAssertTrue(brand.waitForExistence(timeout: 5), "The brand field is on the form")
+        let brand = scrollTo(app.textFields["Brand or name (e.g. Buffalo Trace)"], in: app)
+        XCTAssertTrue(brand.exists, "The brand field is on the form")
         brand.tap()
         brand.typeText("Test Bottle")
         app.navigationBars["Add Bottle"].buttons["Save"].tap()
@@ -206,6 +206,86 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         app.navigationBars["Add Cocktails"].buttons["Add (1)"].tap()
 
         XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 3), "The picked cocktail is on the menu")
+    }
+
+    /// A whole recipe entered by tapping: Parts → 2 → Bourbon, Dashes → 4 → Angostura Bitters, Parts → 1 → Simple Syrup.
+    func testAddingIngredientsByTapping() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let addCocktail = app.buttons["Add Cocktail"].firstMatch
+        XCTAssertTrue(addCocktail.waitForExistence(timeout: 5))
+        addCocktail.tap()
+        let name = app.textFields["Name (e.g. Old Fashioned)"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("Tapped Old Fashioned\n") // Return closes the keyboard
+
+        scrollTo(app.buttons["Add Ingredient"].firstMatch, in: app).tap()
+        XCTAssertTrue(app.navigationBars["Add Ingredients"].waitForExistence(timeout: 5))
+        let search = app.searchFields["Search or add an ingredient"]
+
+        func pick(_ measure: String, _ amount: String, search text: String, item: String) {
+            app.buttons["measure.\(measure)"].tap()
+            app.buttons["amount.\(amount)"].tap()
+            search.tap()
+            search.typeText(text)
+            let row = app.buttons["catalog.\(item)"].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 3), "\(item) is in the list")
+            row.tap()
+        }
+        pick("Parts", "2", search: "bourbon", item: "Bourbon")
+        pick("Dashes", "4", search: "ango", item: "Angostura Bitters")
+        pick("Parts", "1", search: "simple", item: "Simple Syrup")
+
+        for line in ["2 parts Bourbon", "4 dashes Angostura Bitters", "1 part Simple Syrup"] {
+            XCTAssertTrue(app.staticTexts[line].waitForExistence(timeout: 3), "\(line) is in the recipe")
+        }
+        app.navigationBars["Add Ingredients"].buttons["Done"].tap()
+        // On the form each row is a button, so its text is part of the button's label. The Ingredients
+        // section is below Base Spirit, Source and Rating, so scroll down to it.
+        XCTAssertTrue(app.navigationBars["Add Cocktail"].waitForExistence(timeout: 3), "Back on the cocktail form")
+        let formRow = scrollTo(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "4 dashes Angostura Bitters")).firstMatch, in: app)
+        XCTAssertTrue(formRow.exists, "The rows are on the cocktail form")
+        app.navigationBars["Add Cocktail"].buttons["Save"].tap()
+        let formClosed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Add Cocktail"])
+        wait(for: [formClosed], timeout: 5)
+        XCTAssertTrue(scrollTo(app.staticTexts["Tapped Old Fashioned"], in: app, maxSwipes: 10).exists, "The cocktail is saved and listed")
+    }
+
+    /// An ingredient that isn't in the list can be added from the search field.
+    func testAddingANewIngredientFromSearch() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let addCocktail = app.buttons["Add Cocktail"].firstMatch
+        XCTAssertTrue(addCocktail.waitForExistence(timeout: 5))
+        addCocktail.tap()
+        XCTAssertTrue(app.navigationBars["Add Cocktail"].waitForExistence(timeout: 5))
+        scrollTo(app.buttons["Add Ingredient"].firstMatch, in: app).tap()
+        let search = app.searchFields["Search or add an ingredient"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        app.buttons["measure.Parts"].tap()
+        app.buttons["amount.½"].tap()
+        search.tap()
+        search.typeText("Smoked Maple Syrup")
+        app.buttons["catalog.addNew"].tap()
+        XCTAssertTrue(app.staticTexts["½ part Smoked Maple Syrup"].waitForExistence(timeout: 3))
+    }
+
+    /// Scrolls up until the element is on screen. Forms and lists only create the rows that are visible,
+    /// so something further down doesn't exist until it's scrolled to.
+    @discardableResult
+    private func scrollTo(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) -> XCUIElement {
+        _ = element.waitForExistence(timeout: 1)
+        var swipes = 0
+        while !(element.exists && element.isHittable) && swipes < maxSwipes {
+            app.swipeUp(velocity: .slow)
+            swipes += 1
+        }
+        return element
     }
 
     /// Swipes a row left to reveal one of its trailing swipe actions, such as Delete.

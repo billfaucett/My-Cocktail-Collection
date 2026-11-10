@@ -1712,6 +1712,61 @@ final class IngredientCatalogTests: XCTestCase {
     }
 }
 
+/// Turning a measure, an amount and a picked ingredient into a recipe row (pick-from-list entry, step 2).
+final class QuickMeasureTests: XCTestCase {
+    private func item(_ name: String) -> CatalogItem {
+        IngredientCatalog().item(named: name) ?? IngredientCatalog.newItem(named: name)
+    }
+
+    func testTheOldFashionedByTaps() {
+        let rows = [
+            QuickMeasure.parts.row(for: item("Bourbon"), amount: 2, style: nil),
+            QuickMeasure.dashes.row(for: item("Angostura Bitters"), amount: 4, style: nil),
+            QuickMeasure.parts.row(for: item("Simple Syrup"), amount: 1, style: nil),
+            QuickMeasure.garnish.row(for: item("Orange Peel"), amount: 2, style: nil),
+        ]
+        XCTAssertEqual(rows.map(\.displayText),
+                       ["2 parts Bourbon", "4 dashes Angostura Bitters", "1 part Simple Syrup", "Orange Peel, to garnish"])
+        XCTAssertTrue(rows[3].isGarnish)
+        XCTAssertNil(rows[3].amount, "A garnish has no amount")
+    }
+
+    func testOtherMeasures() {
+        XCTAssertEqual(QuickMeasure.topUp.row(for: item("Club Soda"), amount: nil, style: nil).displayText, "Club Soda, to top")
+        XCTAssertEqual(QuickMeasure.count.row(for: item("Egg White"), amount: 1, style: nil).displayText, "1 Egg White")
+        XCTAssertEqual(QuickMeasure.parts.row(for: item("Lime Juice"), amount: 0.75, style: nil).displayText, "¾ part Lime Juice")
+        XCTAssertEqual(QuickMeasure.barspoons.row(for: item("Absinthe"), amount: nil, style: nil).displayText, "1 barspoon Absinthe",
+                       "No amount picked uses the measure's default")
+    }
+
+    func testEveryAmountReadsBackThroughTheParser() {
+        for measure in QuickMeasure.allCases {
+            XCTAssertEqual(measure.defaultAmount == nil, measure.amounts.isEmpty, "\(measure.rawValue)")
+            for amount in measure.amounts {
+                let row = measure.row(for: item("Gin"), amount: amount, style: nil)
+                let reread = IngredientParser.parseLine(row.displayText)
+                XCTAssertEqual(reread.amount ?? -1, amount, accuracy: 0.001, "\(row.displayText)")
+                XCTAssertEqual(reread.unit, row.unit, "\(row.displayText)")
+            }
+        }
+    }
+}
+
+/// Picked rows keep the type the picker linked.
+final class QuickAddStoreTests: StoreTestCase {
+    func testPickedRowsSaveWithTheirType() throws {
+        let bourbon = try style("Bourbon")
+        let catalog = IngredientCatalog()
+        let rows = [
+            QuickMeasure.parts.row(for: try XCTUnwrap(catalog.item(named: "Bourbon")), amount: 2, style: bourbon),
+            QuickMeasure.dashes.row(for: try XCTUnwrap(catalog.item(named: "Angostura Bitters")), amount: 4, style: try style("Aromatic Bitters")),
+        ]
+        let cocktail = try CocktailStore(context: context).addCocktail(name: "Tapped Old Fashioned", baseStyle: bourbon, rows: rows)
+        XCTAssertEqual(cocktail.orderedIngredients.map { $0.style?.name }, ["Bourbon", "Aromatic Bitters"])
+        XCTAssertFalse(cocktail.needsIngredientReview)
+    }
+}
+
 /// Building the ingredient list from the database.
 final class IngredientCatalogLoadTests: StoreTestCase {
     func testLoadReadsRecipesAndMyBar() throws {
