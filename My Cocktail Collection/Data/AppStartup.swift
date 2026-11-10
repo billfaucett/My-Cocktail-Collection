@@ -57,3 +57,33 @@ enum AppStartup {
     }
     #endif
 }
+
+// MARK: - Version
+
+/// The app's version, build number and data model version, for the splash screen and Settings.
+/// Version and build come from the project's build settings (MARKETING_VERSION, CURRENT_PROJECT_VERSION).
+enum AppInfo {
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    }
+
+    static var build: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+    }
+
+    /// The SwiftData schema version, e.g. "1.0.0". Changes when the database's design changes.
+    static var dataModelVersion: String {
+        let version = CocktailSchemaV1.versionIdentifier
+        return "\(version.major).\(version.minor).\(version.patch)"
+    }
+
+    /// "Version 2.0 (3)"
+    static func versionLine(version: String = AppInfo.version, build: String = AppInfo.build) -> String {
+        "Version \(version) (\(build))"
+    }
+
+    /// "Data model 1.0.0"
+    static func dataModelLine(_ dataModel: String = AppInfo.dataModelVersion) -> String {
+        "Data model \(dataModel)"
+    }
+}

@@ -81,7 +81,7 @@ struct CocktailListView: View {
                 Button {
                     showSettings = true
                 } label: {
-                    Label("Part Size…", systemImage: "ruler")
+                    Label("Settings…", systemImage: "gearshape")
                 }
 
                 if !houseFavoritesAdded {

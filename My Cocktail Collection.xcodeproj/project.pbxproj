@@ -27,6 +27,7 @@
 		8AB706322B926F4D009A2EC3 /* MenuDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB706312B926F4D009A2EC3 /* MenuDetailView.swift */; };
 		8AC142A92B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142A82B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift */; };
 		8AC142AB2B8A6ACE002807F5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142AA2B8A6ACE002807F5 /* ContentView.swift */; };
+		C0FFEE1A2B3C4D5E6F700110 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F70010F /* AboutView.swift */; };
 		8AC142AD2B8A6ACF002807F5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8AC142AC2B8A6ACF002807F5 /* Assets.xcassets */; };
 		8AC142B02B8A6ACF002807F5 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8AC142AF2B8A6ACF002807F5 /* Preview Assets.xcassets */; };
 		8AC142BA2B8A6ACF002807F5 /* My_Cocktail_CollectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC142B92B8A6ACF002807F5 /* My_Cocktail_CollectionTests.swift */; };
@@ -97,6 +98,7 @@
 		8AC142A52B8A6ACE002807F5 /* My Cocktail Collection.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "My Cocktail Collection.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8AC142A82B8A6ACE002807F5 /* My_Cocktail_CollectionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = My_Cocktail_CollectionApp.swift; sourceTree = "<group>"; };
 		8AC142AA2B8A6ACE002807F5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		C0FFEE1A2B3C4D5E6F70010F /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		8AC142AC2B8A6ACF002807F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8AC142AF2B8A6ACF002807F5 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		8AC142B52B8A6ACF002807F5 /* My Cocktail CollectionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "My Cocktail CollectionTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -275,6 +277,7 @@
 			isa = PBXGroup;
 			children = (
 				8AC142AA2B8A6ACE002807F5 /* ContentView.swift */,
+				C0FFEE1A2B3C4D5E6F70010F /* AboutView.swift */,
 				8AFAEA9C2B912D1F0000A087 /* CocktailViews */,
 				8AFAEA9F2B912D8D0000A087 /* MenuViews */,
 				8AFAEA9D2B912D4F0000A087 /* SpiritViews */,
@@ -541,6 +544,7 @@
 				8AC142E12B8B9E54002807F5 /* MessageComposer.swift in Sources */,
 				8A10F1612BA7661D000E511C /* StarRatingView.swift in Sources */,
 				8AC142AB2B8A6ACE002807F5 /* ContentView.swift in Sources */,
+				C0FFEE1A2B3C4D5E6F700110 /* AboutView.swift in Sources */,
 				8AFAEAA12B912DC10000A087 /* AddEditMenuView.swift in Sources */,
 				8AFAEA962B90D17C0000A087 /* ImagePicker.swift in Sources */,
 				8AFAEAA72B91442C0000A087 /* MenusListView.swift in Sources */,
@@ -711,7 +715,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"My Cocktail Collection/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -732,7 +736,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Lemursoft.My-Cocktail-Collection";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -747,7 +751,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"My Cocktail Collection/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -768,7 +772,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Lemursoft.My-Cocktail-Collection";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

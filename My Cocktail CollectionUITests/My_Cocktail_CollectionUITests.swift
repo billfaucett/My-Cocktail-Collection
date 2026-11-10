@@ -315,6 +315,26 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertEqual(name.value as? String, "Angostura Bitters", "The exact name is filled in")
     }
 
+    /// Settings opens an About screen with the version, build and data model.
+    func testAboutScreenShowsVersions() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let more = app.navigationBars["My Cocktails"].buttons["More"]
+        XCTAssertTrue(more.waitForExistence(timeout: 5))
+        more.tap()
+        app.buttons["Settings…"].tap()
+        let about = scrollTo(app.buttons["About My Cocktail Collection"], in: app)
+        XCTAssertTrue(about.exists)
+        about.tap()
+        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 3))
+        for label in ["Version", "Build", "Data Model"] {
+            XCTAssertTrue(app.staticTexts[label].exists, "\(label) is shown")
+        }
+        XCTAssertTrue(app.staticTexts["1.0.0"].exists, "The data model version is shown")
+    }
+
     /// Scrolls up until the element is on screen. Forms and lists only create the rows that are visible,
     /// so something further down doesn't exist until it's scrolled to.
     @discardableResult

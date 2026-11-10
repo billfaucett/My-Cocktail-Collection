@@ -2087,6 +2087,26 @@ final class LabelMatcherBottleTests: StoreTestCase {
     }
 }
 
+/// Version, build and data model version for the splash screen and Settings.
+final class AppInfoTests: XCTestCase {
+    func testVersionLines() {
+        XCTAssertEqual(AppInfo.versionLine(version: "2.0", build: "3"), "Version 2.0 (3)")
+        XCTAssertEqual(AppInfo.dataModelLine("1.0.0"), "Data model 1.0.0")
+        XCTAssertEqual(AppInfo.dataModelVersion, "1.0.0", "Matches CocktailSchemaV1")
+    }
+
+    func testImportSummaryOnTheAboutScreen() {
+        XCTAssertEqual(AboutView.importSummary(V1.ImportRecord(cocktailCount: 31, bottleCount: 1, menuCount: 2)),
+                       "31 cocktails · 1 bottle · 2 menus")
+    }
+
+    func testVersionComesFromTheBuildSettings() {
+        XCTAssertNotEqual(AppInfo.version, "?")
+        XCTAssertNotEqual(AppInfo.build, "?")
+        XCTAssertNotNil(Int(AppInfo.build), "The build number is a whole number")
+    }
+}
+
 /// Showing parts converted to ounces or millilitres (data model refactor, phase 6).
 final class PartSizeTests: StoreTestCase {
     func testOffShowsNothing() {

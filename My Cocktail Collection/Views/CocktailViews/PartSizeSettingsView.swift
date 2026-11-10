@@ -36,6 +36,16 @@ struct PartSizeSettingsView: View {
                         ConvertedIngredientRow(text: "2 dashes Angostura Bitters", converted: nil)
                     }
                 }
+
+                Section {
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        Label("About My Cocktail Collection", systemImage: "info.circle")
+                    }
+                } footer: {
+                    Text("\(AppInfo.versionLine()) · \(AppInfo.dataModelLine())")
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
