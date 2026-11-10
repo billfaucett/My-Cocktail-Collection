@@ -208,7 +208,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Aviation"].waitForExistence(timeout: 3), "The picked cocktail is on the menu")
     }
 
-    /// A whole recipe entered by tapping: Parts → 2 → Bourbon, Dashes → 4 → Angostura Bitters, Parts → 1 → Simple Syrup.
+    /// A whole recipe entered by tapping: Bourbon → 2, Angostura Bitters → 4, Simple Syrup → 1, Orange Peel (one tap).
     func testAddingIngredientsByTapping() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting"]
@@ -226,25 +226,29 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Add Ingredients"].waitForExistence(timeout: 5))
         let search = app.searchFields["Search or add an ingredient"]
 
-        func pick(_ measure: String, _ amount: String, search text: String, item: String) {
-            app.buttons["measure.\(measure)"].tap()
-            app.buttons["amount.\(amount)"].tap()
+        /// Finds the ingredient, opens its row, and taps the amount (or nothing, for one-tap garnishes).
+        func pick(search text: String, item: String, amount: String?) {
             search.tap()
             search.typeText(text)
             let row = app.buttons["catalog.\(item)"].firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 3), "\(item) is in the list")
             row.tap()
+            if let amount {
+                let button = app.buttons["amount.\(amount)"].firstMatch
+                XCTAssertTrue(button.waitForExistence(timeout: 3), "\(item) opens with amount \(amount)")
+                button.tap()
+            }
         }
-        pick("Parts", "2", search: "bourbon", item: "Bourbon")
-        pick("Dashes", "4", search: "ango", item: "Angostura Bitters")
-        pick("Parts", "1", search: "simple", item: "Simple Syrup")
+        pick(search: "bourbon", item: "Bourbon", amount: "2")
+        pick(search: "ango", item: "Angostura Bitters", amount: "4")
+        pick(search: "simple", item: "Simple Syrup", amount: "1")
+        pick(search: "orange peel", item: "Orange Peel", amount: nil)
 
-        for line in ["2 parts Bourbon", "4 dashes Angostura Bitters", "1 part Simple Syrup"] {
+        for line in ["2 parts Bourbon", "4 dashes Angostura Bitters", "1 part Simple Syrup", "Orange Peel, to garnish"] {
             XCTAssertTrue(app.staticTexts[line].waitForExistence(timeout: 3), "\(line) is in the recipe")
         }
         app.navigationBars["Add Ingredients"].buttons["Done"].tap()
-        // On the form each row is a button, so its text is part of the button's label. The Ingredients
-        // section is below Base Spirit, Source and Rating, so scroll down to it.
+        // On the form each row is a button, so its text is part of the button's label.
         XCTAssertTrue(app.navigationBars["Add Cocktail"].waitForExistence(timeout: 3), "Back on the cocktail form")
         let formRow = scrollTo(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "4 dashes Angostura Bitters")).firstMatch, in: app)
         XCTAssertTrue(formRow.exists, "The rows are on the cocktail form")
@@ -254,7 +258,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(scrollTo(app.staticTexts["Tapped Old Fashioned"], in: app, maxSwipes: 10).exists, "The cocktail is saved and listed")
     }
 
-    /// An ingredient that isn't in the list can be added from the search field.
+    /// An ingredient that isn't in the list can be added from the search field, then given an amount.
     func testAddingANewIngredientFromSearch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting"]
@@ -267,11 +271,12 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         scrollTo(app.buttons["Add Ingredient"].firstMatch, in: app).tap()
         let search = app.searchFields["Search or add an ingredient"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
-        app.buttons["measure.Parts"].tap()
-        app.buttons["amount.½"].tap()
         search.tap()
         search.typeText("Smoked Maple Syrup")
         app.buttons["catalog.addNew"].tap()
+        let half = app.buttons["amount.½"].firstMatch
+        XCTAssertTrue(half.waitForExistence(timeout: 3), "A new syrup opens with amounts in parts")
+        half.tap()
         XCTAssertTrue(app.staticTexts["½ part Smoked Maple Syrup"].waitForExistence(timeout: 3))
     }
 

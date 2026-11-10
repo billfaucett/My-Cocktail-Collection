@@ -1752,6 +1752,46 @@ final class QuickMeasureTests: XCTestCase {
     }
 }
 
+/// Opening an ingredient's row: its usual measure and the amount to highlight.
+final class QuickMeasureSuggestionTests: XCTestCase {
+    func testEachIngredientOpensInItsUsualMeasure() {
+        let catalog = IngredientCatalog()
+        func measure(_ name: String) -> QuickMeasure? { catalog.item(named: name).map(QuickMeasure.init(for:)) }
+        XCTAssertEqual(measure("Bourbon"), .parts)
+        XCTAssertEqual(measure("Angostura Bitters"), .dashes)
+        XCTAssertEqual(measure("Absinthe"), .barspoons)
+        XCTAssertEqual(measure("Egg White"), .count)
+        XCTAssertEqual(measure("Club Soda"), .topUp)
+        XCTAssertEqual(measure("Orange Peel"), .garnish)
+        XCTAssertEqual(measure("Salt"), .noAmount)
+        XCTAssertTrue(QuickMeasure.garnish.amounts.isEmpty && QuickMeasure.topUp.amounts.isEmpty,
+                      "Garnishes and top-ups add with one tap")
+    }
+
+    func testYourUsualAmountIsHighlightedAndOffered() {
+        let catalog = IngredientCatalog(used: [
+            UsedIngredient(name: "Bourbon", unit: .part, amount: 1.75, recipe: "a"),
+            UsedIngredient(name: "Simple Syrup", unit: .part, amount: 0.75, recipe: "a"),
+        ])
+        let bourbon = catalog.item(named: "Bourbon")!
+        XCTAssertEqual(QuickMeasure.parts.highlightedAmount(for: bourbon), 1.75)
+        XCTAssertEqual(QuickMeasure.parts.amounts(for: bourbon), [0.25, 0.5, 0.75, 1, 1.5, 1.75, 2, 2.5, 3],
+                       "An unusual usual amount gets its own button")
+        let syrup = catalog.item(named: "Simple Syrup")!
+        XCTAssertEqual(QuickMeasure.parts.highlightedAmount(for: syrup), 0.75)
+        XCTAssertEqual(QuickMeasure.parts.amounts(for: syrup), QuickMeasure.parts.amounts)
+        XCTAssertEqual(QuickMeasure.barspoons.highlightedAmount(for: syrup), 1, "Another measure highlights its default")
+        XCTAssertNil(QuickMeasure.garnish.highlightedAmount(for: syrup))
+    }
+
+    func testNoAmountRow() {
+        let salt = IngredientCatalog().item(named: "Salt")!
+        let row = QuickMeasure.noAmount.row(for: salt, amount: nil, style: nil)
+        XCTAssertEqual(row.displayText, "Salt")
+        XCTAssertFalse(row.isGarnish)
+    }
+}
+
 /// Picked rows keep the type the picker linked.
 final class QuickAddStoreTests: StoreTestCase {
     func testPickedRowsSaveWithTheirType() throws {
