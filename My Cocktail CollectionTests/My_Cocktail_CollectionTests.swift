@@ -1767,6 +1767,69 @@ final class QuickAddStoreTests: StoreTestCase {
     }
 }
 
+/// Usual amounts and Goes With suggestions (pick-from-list entry, option 2, step 1).
+final class IngredientSuggestionTests: XCTestCase {
+    private func used(_ name: String, _ amount: Double?, _ unit: IngredientUnit = .part, in recipe: String,
+                      garnish: Bool = false) -> UsedIngredient {
+        UsedIngredient(name: name, unit: unit, isGarnish: garnish, amount: amount, recipe: recipe)
+    }
+
+    /// Four small recipes: an Old Fashioned, a Manhattan, a Whiskey Sour and a Gimlet.
+    private var catalog: IngredientCatalog {
+        IngredientCatalog(used: [
+            used("Bourbon", 2, in: "old fashioned"), used("Angostura Bitters", 2, .dash, in: "old fashioned"),
+            used("Simple Syrup", 0.25, in: "old fashioned"), used("Orange Peel", nil, .unspecified, in: "old fashioned", garnish: true),
+            used("Rye Whiskey", 2, in: "manhattan"), used("Sweet Vermouth", 1, in: "manhattan"),
+            used("Angostura Bitters", 2, .dash, in: "manhattan"),
+            used("Bourbon", 2, in: "whiskey sour"), used("Fresh Lemon Juice", 0.75, in: "whiskey sour"),
+            used("Simple Syrup", 0.75, in: "whiskey sour"),
+            used("Gin", 2, in: "gimlet"), used("Lime Juice", 0.75, in: "gimlet"), used("Simple Syrup", 0.75, in: "gimlet"),
+        ])
+    }
+
+    func testUsualAmountFollowsYourRecipes() {
+        let catalog = catalog
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.usualAmount, 2)
+        XCTAssertEqual(catalog.item(named: "Simple Syrup")?.usualAmount, 0.75, "The amount used most wins")
+        XCTAssertEqual(catalog.item(named: "Angostura Bitters")?.usualAmount, 2)
+        XCTAssertNil(catalog.item(named: "Orange Peel")?.usualAmount, "Garnishes have no amount")
+    }
+
+    func testUsualAmountIgnoresOtherMeasuresAndTiesGoLarger() {
+        let catalog = IngredientCatalog(used: [
+            used("Bourbon", 1.5, in: "a"), used("Bourbon", 2, in: "b"), used("Bourbon", 1, .barspoon, in: "c"),
+        ])
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.usualAmount, 2, "A tie goes to the larger amount; barspoons don't count")
+    }
+
+    func testDefaultsForIngredientsNotUsedYet() {
+        let catalog = IngredientCatalog()
+        XCTAssertEqual(catalog.item(named: "Mezcal")?.usualAmount, 2)
+        XCTAssertEqual(catalog.item(named: "Campari")?.usualAmount, 0.75)
+        XCTAssertEqual(catalog.item(named: "Grapefruit Juice")?.usualAmount, 0.75)
+        XCTAssertEqual(catalog.item(named: "Orgeat")?.usualAmount, 0.5)
+        XCTAssertEqual(catalog.item(named: "Peychaud's Bitters")?.usualAmount, 2)
+        XCTAssertEqual(catalog.item(named: "Egg White")?.usualAmount, 1)
+        XCTAssertNil(catalog.item(named: "Club Soda")?.usualAmount, "Top-ups have no amount")
+        XCTAssertNil(catalog.item(named: "Lemon Twist")?.usualAmount)
+        XCTAssertEqual(IngredientCatalog.newItem(named: "Smoked Maple Syrup").usualAmount, 0.5)
+        let withBottle = IngredientCatalog(bottles: [OwnedBottle(brand: "Smith & Cross", styleName: "Navy Rum", family: .rum)])
+        XCTAssertEqual(withBottle.item(named: "Navy Rum")?.usualAmount, 2)
+    }
+
+    func testGoesWithSuggestsWhatYourRecipesPair() {
+        let catalog = catalog
+        XCTAssertEqual(catalog.goesWith(["Bourbon"]).map(\.name),
+                       ["Simple Syrup", "Angostura Bitters", "Lemon Juice", "Orange Peel"])
+        XCTAssertEqual(catalog.goesWith(["Bourbon", "Simple Syrup"]).map(\.name),
+                       ["Angostura Bitters", "Lemon Juice", "Orange Peel", "Gin", "Lime Juice"],
+                       "Picked ingredients are left out, and suggestions for both are added together")
+        XCTAssertEqual(catalog.goesWith(["Bourbon"], limit: 2).count, 2)
+        XCTAssertTrue(catalog.goesWith([]).isEmpty)
+        XCTAssertTrue(catalog.goesWith(["Absinthe"]).isEmpty, "Nothing to suggest for an ingredient no recipe uses")
+    }
+}
+
 /// Building the ingredient list from the database.
 final class IngredientCatalogLoadTests: StoreTestCase {
     func testLoadReadsRecipesAndMyBar() throws {
@@ -1777,6 +1840,8 @@ final class IngredientCatalogLoadTests: StoreTestCase {
         XCTAssertEqual(catalog.item(named: "Bourbon")?.useCount, 1)
         XCTAssertEqual(catalog.item(named: "Bourbon")?.bottleBrands, ["Buffalo Trace"])
         XCTAssertEqual(catalog.item(named: "Angostura Bitters")?.useCount, 1)
+        XCTAssertEqual(catalog.item(named: "Bourbon")?.usualAmount, 2)
+        XCTAssertEqual(catalog.goesWith(["Bourbon"]).map(\.name), ["Angostura Bitters", "Simple Syrup"])
     }
 }
 

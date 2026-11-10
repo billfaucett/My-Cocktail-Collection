@@ -66,6 +66,8 @@ struct CatalogItem: Identifiable, Hashable {
     var group: CatalogGroup
     /// How it's usually measured, e.g. dashes for bitters.
     var usualUnit: IngredientUnit
+    /// The amount usually used in that measure, e.g. 2 (parts of bourbon). Nil for garnishes and top-ups.
+    var usualAmount: Double?
     var isGarnish = false
     /// How many recipe rows use it.
     var useCount = 0
@@ -84,6 +86,9 @@ struct UsedIngredient {
     var family: SpiritFamily?
     var unit: IngredientUnit
     var isGarnish = false
+    var amount: Double?
+    /// Which recipe it's in, so ingredients used together can be suggested together.
+    var recipe: String?
 }
 
 /// A bottle in My Bar, for building the catalog.
@@ -96,6 +101,8 @@ struct OwnedBottle {
 struct IngredientCatalog {
     /// Every item: built-in, then from your recipes and bottles. Each name appears once.
     private(set) var items: [CatalogItem]
+    /// How many recipes use each pair of ingredients, by key: pairs["bourbon"]["simple syrup"] = 2.
+    private var pairs: [String: [String: Int]] = [:]
 
     init(used: [UsedIngredient] = [], bottles: [OwnedBottle] = []) {
         var items = Self.builtIn
@@ -104,6 +111,8 @@ struct IngredientCatalog {
         // Your recipes: count uses of known items, and add the rest.
         var unitsByKey: [String: [IngredientUnit: Int]] = [:]
         var garnishVotes: [String: Int] = [:]
+        var amountsByKey: [String: [(unit: IngredientUnit, amount: Double)]] = [:]
+        var keysByRecipe: [String: Set<String>] = [:]
         for ingredient in used {
             let name = ingredient.name.trimmingCharacters(in: .whitespaces)
             let key = Self.key(name)
@@ -117,6 +126,12 @@ struct IngredientCatalog {
             items[index[key]!].useCount += 1
             unitsByKey[key, default: [:]][ingredient.unit, default: 0] += 1
             garnishVotes[key, default: 0] += ingredient.isGarnish ? 1 : -1
+            if let amount = ingredient.amount {
+                amountsByKey[key, default: []].append((ingredient.unit, amount))
+            }
+            if let recipe = ingredient.recipe {
+                keysByRecipe[recipe, default: []].insert(key)
+            }
         }
         // Items you added use the measure you use most.
         for (key, units) in unitsByKey {
@@ -126,6 +141,27 @@ struct IngredientCatalog {
             items[position].isGarnish = (garnishVotes[key] ?? 0) > 0
             if items[position].isGarnish { items[position].group = .garnishes }
         }
+
+        // The amount you use most in each item's usual measure (ties go to the larger amount);
+        // items you haven't measured yet get a sensible default for their group.
+        for position in items.indices {
+            let item = items[position]
+            let amounts = (amountsByKey[item.id] ?? []).filter { $0.unit == item.usualUnit }.map(\.amount)
+            let counts = Dictionary(amounts.map { ($0, 1) }, uniquingKeysWith: +)
+            items[position].usualAmount = counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key < $1.key }?.key
+                ?? Self.defaultAmount(group: item.group, unit: item.usualUnit)
+        }
+
+        // Ingredients used together in the same recipe, for Goes With.
+        var pairs: [String: [String: Int]] = [:]
+        for keys in keysByRecipe.values {
+            for first in keys {
+                for second in keys where second != first {
+                    pairs[first, default: [:]][second, default: 0] += 1
+                }
+            }
+        }
+        self.pairs = pairs
 
         // My Bar: show the bottles beside their type ("Bourbon: Buffalo Trace"), or beside the brand's own item
         // (a Campari bottle beside Campari). A type with no item yet gets one.
@@ -144,13 +180,18 @@ struct IngredientCatalog {
             }
             items[index[styleKey]!].bottleBrands.append(bottle.brand)
         }
+        // Types added from My Bar start with the default amount for their group.
+        for position in items.indices where items[position].usualAmount == nil {
+            items[position].usualAmount = Self.defaultAmount(group: items[position].group, unit: items[position].usualUnit)
+        }
         self.items = items
     }
 
     /// Reads your recipes and My Bar from the database.
     static func load(context: ModelContext) throws -> IngredientCatalog {
         let used = try context.fetch(FetchDescriptor<V1.RecipeIngredient>()).map {
-            UsedIngredient(name: $0.name, styleName: $0.style?.name, family: $0.style?.family, unit: $0.unit, isGarnish: $0.isGarnish)
+            UsedIngredient(name: $0.name, styleName: $0.style?.name, family: $0.style?.family, unit: $0.unit, isGarnish: $0.isGarnish,
+                           amount: $0.amount, recipe: $0.cocktail?.id.uuidString)
         }
         let bottles = try context.fetch(FetchDescriptor<V1.Bottle>()).map {
             OwnedBottle(brand: $0.brand, styleName: $0.style?.name, family: $0.style?.family)
@@ -181,6 +222,46 @@ struct IngredientCatalog {
     func item(named name: String) -> CatalogItem? {
         let key = Self.key(name)
         return items.first { $0.id == key }
+    }
+
+    /// Ingredients your recipes use alongside the ones already picked, most often paired first.
+    /// "Bourbon" → Simple Syrup, Angostura Bitters, Lemon Juice… Ingredients already picked are left out.
+    func goesWith(_ picked: [String], limit: Int = 6) -> [CatalogItem] {
+        let pickedKeys = Set(picked.map(Self.key))
+        guard !pickedKeys.isEmpty else { return [] }
+        var scores: [String: Int] = [:]
+        for key in pickedKeys {
+            for (other, count) in pairs[key] ?? [:] where !pickedKeys.contains(other) {
+                scores[other, default: 0] += count
+            }
+        }
+        return items
+            .compactMap { item in scores[item.id].map { (item: item, score: $0) } }
+            .sorted { first, second in
+                if first.score != second.score { return first.score > second.score }
+                if first.item.useCount != second.item.useCount { return first.item.useCount > second.item.useCount }
+                return Self.byName(first.item, second.item)
+            }
+            .prefix(limit)
+            .map(\.item)
+    }
+
+    /// A starting amount for an ingredient you haven't measured yet: 2 parts of a spirit, ¾ of a liqueur or juice,
+    /// ½ of a syrup, 2 dashes of bitters. Garnishes and top-ups have no amount.
+    static func defaultAmount(group: CatalogGroup, unit: IngredientUnit) -> Double? {
+        switch unit {
+        case .topUp, .unspecified: return nil
+        case .dash: return 2
+        case .drop: return 3
+        case .barspoon, .piece, .slice, .sprig: return 1
+        case .part:
+            switch group {
+            case .spirits: return 2
+            case .liqueursAndVermouth, .juices: return 0.75
+            case .syrups: return 0.5
+            case .bitters, .mixers, .other, .garnishes: return 1
+            }
+        }
     }
 
     // MARK: Search
@@ -231,6 +312,7 @@ struct IngredientCatalog {
         let group: CatalogGroup = looksLikeGarnish ? .garnishes
             : (looksLikeJuice && styleName == nil ? .juices : CatalogGroup.group(forStyle: styleName, family: family))
         return CatalogItem(name: clean, styleName: styleName, group: group, usualUnit: group.usualUnit,
+                           usualAmount: defaultAmount(group: group, unit: group.usualUnit),
                            isGarnish: looksLikeGarnish, isBuiltIn: false)
     }
 
