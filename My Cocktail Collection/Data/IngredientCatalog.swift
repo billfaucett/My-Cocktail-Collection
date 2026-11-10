@@ -296,6 +296,14 @@ struct IngredientCatalog {
             .map(\.item)
     }
 
+    /// Names to offer while typing an ingredient's name: the best search matches, leaving out the name
+    /// exactly as typed (there's nothing to complete).
+    func suggestions(for typed: String, limit: Int = 6) -> [CatalogItem] {
+        let typedKey = Self.key(typed)
+        guard !typedKey.isEmpty else { return [] }
+        return Array(search(typed).filter { $0.id != typedKey }.prefix(limit))
+    }
+
     // MARK: New items
 
     /// An item for a name that isn't in the list yet ("Add “Falernum”"), with its type and usual measure guessed.

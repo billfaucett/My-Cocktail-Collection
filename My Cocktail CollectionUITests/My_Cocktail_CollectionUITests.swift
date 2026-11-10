@@ -280,6 +280,41 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["½ part Smoked Maple Syrup"].waitForExistence(timeout: 3))
     }
 
+    /// The row editor suggests ingredient names while typing; tapping one fills in the exact name.
+    func testEditorSuggestsIngredientNames() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let addCocktail = app.buttons["Add Cocktail"].firstMatch
+        XCTAssertTrue(addCocktail.waitForExistence(timeout: 5))
+        addCocktail.tap()
+        XCTAssertTrue(app.navigationBars["Add Cocktail"].waitForExistence(timeout: 5))
+        scrollTo(app.buttons["Add Ingredient"].firstMatch, in: app).tap()
+
+        // Add 2 parts Bourbon with quick add, then open that row in the editor.
+        let search = app.searchFields["Search or add an ingredient"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("bourbon")
+        app.buttons["catalog.Bourbon"].firstMatch.tap()
+        app.buttons["amount.2"].firstMatch.tap()
+        app.navigationBars["Add Ingredients"].buttons["Done"].tap()
+        let row = scrollTo(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "2 parts Bourbon")).firstMatch, in: app)
+        XCTAssertTrue(row.exists)
+        row.tap()
+        XCTAssertTrue(app.navigationBars["Edit Ingredient"].waitForExistence(timeout: 3))
+
+        // Replace the name by typing a few letters and tapping a suggestion.
+        let name = scrollTo(app.textFields["Name (e.g. Bourbon, Lime Juice)"], in: app)
+        name.tap()
+        name.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 12) + "ango")
+        let suggestion = app.buttons["suggestion.Angostura Bitters"].firstMatch
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 3), "Angostura Bitters is suggested")
+        suggestion.tap()
+        XCTAssertEqual(name.value as? String, "Angostura Bitters", "The exact name is filled in")
+    }
+
     /// Scrolls up until the element is on screen. Forms and lists only create the rows that are visible,
     /// so something further down doesn't exist until it's scrolled to.
     @discardableResult

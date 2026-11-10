@@ -1691,6 +1691,16 @@ final class IngredientCatalogTests: XCTestCase {
         XCTAssertEqual(catalog.search("lime").first?.name, "Lime Wheel")
     }
 
+    func testSuggestionsWhileTyping() {
+        let catalog = IngredientCatalog()
+        XCTAssertEqual(catalog.suggestions(for: "ang").first?.name, "Angostura Bitters")
+        XCTAssertEqual(catalog.suggestions(for: "lime").map(\.name).prefix(3), ["Lime Juice", "Lime Wedge", "Lime Wheel"])
+        XCTAssertFalse(catalog.suggestions(for: "Bourbon").contains { $0.name == "Bourbon" },
+                       "A name typed in full isn't offered again")
+        XCTAssertEqual(catalog.suggestions(for: "s", limit: 3).count, 3)
+        XCTAssertTrue(catalog.suggestions(for: "  ").isEmpty)
+    }
+
     func testNewItemsGuessTheirTypeAndMeasure() {
         let syrup = IngredientCatalog.newItem(named: " Smoked Maple Syrup ")
         XCTAssertEqual(syrup.name, "Smoked Maple Syrup")

@@ -131,6 +131,10 @@ struct IngredientEditorView: View {
     @State private var note: String
 
     @Query private var styles: [V1.SpiritStyle]
+    @Environment(\.modelContext) private var context
+    /// The ingredient list, for name suggestions while typing.
+    @State private var catalog = IngredientCatalog()
+    @FocusState private var nameFocused: Bool
 
     /// - Parameters:
     ///   - ingredient: The row to edit. Leave out to add a new one (1 part, no name).
@@ -230,6 +234,15 @@ struct IngredientEditorView: View {
             Section {
                 TextField("Name (e.g. Bourbon, Lime Juice)", text: $name)
                     .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .focused($nameFocused)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            if nameFocused {
+                                nameSuggestions
+                            }
+                        }
+                    }
                     .onChange(of: name) { _, newName in
                         suggestStyle(for: newName)
                     }
@@ -252,9 +265,49 @@ struct IngredientEditorView: View {
                 TextField("Note (e.g. freshly squeezed)", text: $note)
             }
         }
+        .task {
+            if let loaded = try? IngredientCatalog.load(context: context) {
+                catalog = loaded
+            }
+        }
     }
 
     /// Fills in the style the name suggests (Campari → Aperitivo), until one is picked by hand.
+    /// Ingredient names matching what's typed, as buttons above the keyboard. Tapping one fills in the exact
+    /// name and its type, so there are no typos.
+    @ViewBuilder
+    private var nameSuggestions: some View {
+        let suggestions = catalog.suggestions(for: name)
+        if suggestions.isEmpty {
+            Text(trimmedName.isEmpty ? "Start typing to see ingredients" : "No matches. Your name will be used as typed.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer()
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(suggestions) { item in
+                        Button(item.name) { pickSuggestion(item) }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("suggestion.\(item.name)")
+                    }
+                }
+            }
+        }
+    }
+
+    /// Fills in a suggested ingredient: its exact name and, when it has one, its type.
+    private func pickSuggestion(_ item: CatalogItem) {
+        name = item.name
+        if let styleName = item.styleName {
+            style = styles.first { $0.name.caseInsensitiveCompare(styleName) == .orderedSame }
+            styleChosenByHand = true
+        } else {
+            styleChosenByHand = false
+        }
+        nameFocused = false
+    }
+
     private func suggestStyle(for newName: String) {
         guard !styleChosenByHand else { return }
         guard let styleName = IngredientParser.styleName(forIngredient: newName) else {
