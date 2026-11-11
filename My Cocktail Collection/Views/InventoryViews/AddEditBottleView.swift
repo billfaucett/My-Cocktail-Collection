@@ -22,7 +22,6 @@ struct AddEditBottleView: View {
     @State private var bottleCount = 1
     @State private var notes = ""
     @State private var isFavorite = false
-    @State private var rating = 0
     @State private var photo: UIImage?
     @State private var photoChanged = false
     @State private var hasLoaded = false
@@ -68,6 +67,7 @@ struct AddEditBottleView: View {
                 TextField("Brand or name (e.g. Buffalo Trace)", text: $brand)
                     .textInputAutocapitalization(.words)
                 StylePicker(selection: $style, title: "Type")
+                Toggle("Favorite", isOn: $isFavorite)
             } header: {
                 Text("Bottle")
             } footer: {
@@ -92,11 +92,6 @@ struct AddEditBottleView: View {
                 Text("Stock")
             } footer: {
                 Text("How much is left in the bottle you're using, and how many bottles you have including backups. Low and Out bottles go on the shopping list.")
-            }
-
-            Section("Rating") {
-                Toggle("Favorite", isOn: $isFavorite)
-                RatingPicker(rating: $rating)
             }
 
             Section("Notes") {
@@ -215,7 +210,6 @@ struct AddEditBottleView: View {
         bottleCount = bottle.bottleCount
         notes = bottle.notes
         isFavorite = bottle.isFavorite
-        rating = bottle.rating
         photo = bottle.photo.flatMap(UIImage.init(data:))
     }
 
@@ -230,7 +224,6 @@ struct AddEditBottleView: View {
                 $0.bottleCount = bottleCount
                 $0.notes = notes
                 $0.isFavorite = isFavorite
-                $0.rating = rating
                 if photoChanged {
                     $0.photo = photoData
                 }
@@ -243,7 +236,6 @@ struct AddEditBottleView: View {
                 bottleCount: bottleCount,
                 notes: notes,
                 isFavorite: isFavorite,
-                rating: rating,
                 photo: photo
             )
         }
@@ -263,7 +255,7 @@ struct AddEditBottleView: View {
     try? ModelSeeder.addMissingStyles(context: context, defaults: nil)
     let bottle = try! BottleStore(context: context).addBottle(
         brand: "Buffalo Trace", style: try? StyleStore(context: context).style(named: "Bourbon"), stock: .low, bottleCount: 2,
-        notes: "Our go-to for Old Fashioneds", isFavorite: true, rating: 8
+        notes: "Our go-to for Old Fashioneds", isFavorite: true
     )
     return AddEditBottleView(bottle: bottle)
         .modelContainer(container)

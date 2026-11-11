@@ -47,13 +47,8 @@ struct CocktailDetailView: View {
     private var recipe: some View {
         List {
             Section {
-                VStack(spacing: 12) {
-                    Thumbnail(data: cocktail.photo, placeholder: .cocktail, size: Theme.ImageSize.detail, cornerRadius: Theme.Radius.detail)
-                    if cocktail.rating > 0 {
-                        StarRatingView(rating: Double(cocktail.rating) / 2.0)
-                    }
-                }
-                .frame(maxWidth: .infinity)
+                Thumbnail(data: cocktail.photo, placeholder: .cocktail, size: Theme.ImageSize.detail, cornerRadius: Theme.Radius.detail)
+                    .frame(maxWidth: .infinity)
                 .listRowBackground(Color.clear)
             }
 
@@ -177,7 +172,6 @@ struct CocktailDetailView: View {
     let container = try! CocktailModelContainer.make(inMemory: true)
     try? ModelSeeder.seedBuiltIns(context: container.mainContext, defaults: nil)
     let negroni = try! container.mainContext.fetch(FetchDescriptor<V1.Cocktail>()).first { $0.name == "Negroni" }!
-    negroni.rating = 9
     return NavigationStack {
         CocktailDetailView(cocktail: negroni)
     }

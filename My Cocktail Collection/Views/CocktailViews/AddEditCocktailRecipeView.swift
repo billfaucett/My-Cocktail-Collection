@@ -22,7 +22,6 @@ struct AddEditCocktailRecipeView: View {
     @State private var name = ""
     @State private var source: CocktailSource = .original
     @State private var baseStyle: V1.SpiritStyle?
-    @State private var rating = 0
     @State private var isFavorite = false
     @State private var rows: [IngredientInput] = []
     @State private var loadedRows: [IngredientInput] = []
@@ -52,6 +51,7 @@ struct AddEditCocktailRecipeView: View {
                 TextField("Name (e.g. Old Fashioned)", text: $name)
                     .textInputAutocapitalization(.words)
                 StylePicker(selection: $baseStyle)
+                Toggle("Favorite", isOn: $isFavorite)
             }
 
             Section {
@@ -114,11 +114,6 @@ struct AddEditCocktailRecipeView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
-
-            Section("Rating") {
-                Toggle("Favorite", isOn: $isFavorite)
-                RatingPicker(rating: $rating)
-            }
         }
         .onAppear(perform: loadCocktail)
         .sheet(item: $editingRow) { row in
@@ -143,7 +138,6 @@ struct AddEditCocktailRecipeView: View {
         name = cocktail.name
         source = cocktail.source
         baseStyle = cocktail.baseStyle
-        rating = cocktail.rating
         isFavorite = cocktail.isFavorite
         rows = cocktail.orderedIngredients.map { ingredient in
             // Re-read each line to find the ones that still need checking.
@@ -163,7 +157,6 @@ struct AddEditCocktailRecipeView: View {
                 $0.name = name
                 $0.source = source
                 $0.baseStyle = baseStyle
-                $0.rating = rating
                 $0.isFavorite = isFavorite
                 $0.method = method
                 if photoChanged {
@@ -181,7 +174,6 @@ struct AddEditCocktailRecipeView: View {
                 baseStyle: baseStyle,
                 rows: rows,
                 method: method,
-                rating: rating,
                 isFavorite: isFavorite,
                 photo: photo
             )

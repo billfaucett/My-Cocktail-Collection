@@ -22,7 +22,6 @@ struct CocktailListView: View {
 
     @State private var searchText = ""
     @State private var filter = CocktailFilter.all
-    @State private var sortOption = SortingOption.name
     @State private var favoritesOnly = false
     @State private var showAddCocktail = false
     @State private var showSettings = false
@@ -53,15 +52,6 @@ struct CocktailListView: View {
                     }
                 }
             } moreMenu: {
-                Picker(selection: $sortOption) {
-                    ForEach(SortingOption.allCases, id: \.self) { option in
-                        Text(option.rawValue).tag(option)
-                    }
-                } label: {
-                    Label("Sort By", systemImage: "arrow.up.arrow.down")
-                }
-                .pickerStyle(.menu)
-
                 Picker(selection: $filter) {
                     Text("All Cocktails").tag(CocktailFilter.all)
                     ForEach(familiesInUse) { family in
@@ -135,12 +125,7 @@ struct CocktailListView: View {
                 return cocktail.name.localizedCaseInsensitiveContains(query)
                     || (cocktail.ingredients ?? []).contains { $0.name.localizedCaseInsensitiveContains(query) }
             }
-            .sorted { first, second in
-                if sortOption == .rating && first.rating != second.rating {
-                    return first.rating > second.rating
-                }
-                return first.name.localizedCaseInsensitiveCompare(second.name) == .orderedAscending
-            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// Families that at least one cocktail uses as its base, in display order.
@@ -181,7 +166,7 @@ struct CocktailListView: View {
     }
 }
 
-/// One cocktail in the list: photo, name, base spirit, rating, and a heart to favorite it.
+/// One cocktail in the list: photo, name, base spirit, and a heart to favorite it.
 struct CocktailRow: View {
     let cocktail: V1.Cocktail
     /// Called when the heart is tapped. Leave out to show the heart beside the name instead, with no button.
@@ -199,23 +184,11 @@ struct CocktailRow: View {
             thumbnail: Thumbnail(data: cocktail.photo, placeholder: .cocktail),
             isFavorite: onToggleFavorite == nil && cocktail.isFavorite
         ) {
-            HStack(spacing: 4) {
-                if cocktail.rating > 0 {
-                    StarRatingView(rating: Double(cocktail.rating) / 2.0)
-                        .font(.caption2)
-                }
-                if let onToggleFavorite {
-                    FavoriteButton(isFavorite: cocktail.isFavorite, action: onToggleFavorite)
-                        .padding(.leading, 8)
-                }
+            if let onToggleFavorite {
+                FavoriteButton(isFavorite: cocktail.isFavorite, action: onToggleFavorite)
             }
         }
     }
-}
-
-enum SortingOption: String, CaseIterable {
-    case name = "Name"
-    case rating = "Rating"
 }
 
 #Preview {
