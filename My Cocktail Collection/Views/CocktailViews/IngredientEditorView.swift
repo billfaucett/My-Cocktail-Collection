@@ -236,16 +236,12 @@ struct IngredientEditorView: View {
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
                     .focused($nameFocused)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            if nameFocused {
-                                nameSuggestions
-                            }
-                        }
-                    }
                     .onChange(of: name) { _, newName in
                         suggestStyle(for: newName)
                     }
+                if nameFocused && !catalog.suggestions(for: name).isEmpty {
+                    nameSuggestions
+                }
                 StylePicker(selection: Binding(
                     get: { style },
                     set: { newStyle in
@@ -273,26 +269,18 @@ struct IngredientEditorView: View {
     }
 
     /// Fills in the style the name suggests (Campari → Aperitivo), until one is picked by hand.
-    /// Ingredient names matching what's typed, as buttons above the keyboard. Tapping one fills in the exact
-    /// name and its type, so there are no typos.
-    @ViewBuilder
+    /// Ingredient names matching what's typed, as buttons just under the name field. Tapping one fills in
+    /// the exact name and its type, so there are no typos. Anything else typed is used as it is.
     private var nameSuggestions: some View {
-        let suggestions = catalog.suggestions(for: name)
-        if suggestions.isEmpty {
-            Text(trimmedName.isEmpty ? "Start typing to see ingredients" : "No matches. Your name will be used as typed.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            Spacer()
-        } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(suggestions) { item in
-                        Button(item.name) { pickSuggestion(item) }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("suggestion.\(item.name)")
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(catalog.suggestions(for: name)) { item in
+                    Button(item.name) { pickSuggestion(item) }
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("suggestion.\(item.name)")
                 }
             }
+            .padding(.vertical, 2)
         }
     }
 

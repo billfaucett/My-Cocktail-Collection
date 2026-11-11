@@ -329,10 +329,13 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(about.exists)
         about.tap()
         XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 3))
-        for label in ["Version", "Build", "Data Model"] {
-            XCTAssertTrue(app.staticTexts[label].exists, "\(label) is shown")
+        // Each row reads as one line, e.g. "Data Model, 1.0.0".
+        func row(_ pattern: String) -> XCUIElement {
+            app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", pattern)).firstMatch
         }
-        XCTAssertTrue(app.staticTexts["1.0.0"].exists, "The data model version is shown")
+        XCTAssertTrue(row("Version, [0-9]+(\\.[0-9]+)*").exists, "The version is shown")
+        XCTAssertTrue(row("Build, [0-9]+").exists, "The build number is shown")
+        XCTAssertTrue(row("Data Model, [0-9]+\\.[0-9]+\\.[0-9]+").exists, "The data model version is shown")
     }
 
     /// Scrolls up until the element is on screen. Forms and lists only create the rows that are visible,
