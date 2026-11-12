@@ -97,6 +97,15 @@ struct RatingPicker: View {
 
 // MARK: - Template picker
 
+/// A template's name with its icon, for the Template picker and filter menu.
+struct TemplateLabel: View {
+    let template: CocktailTemplate
+
+    var body: some View {
+        Label(template.displayName, systemImage: template.symbolName)
+    }
+}
+
 /// Picks a cocktail's Cocktail Codex template. When none is chosen and the ingredients point to one,
 /// offers it as a suggestion to tap; nothing is set until you do.
 struct TemplatePicker: View {
@@ -112,7 +121,7 @@ struct TemplatePicker: View {
         Picker(selection: $selection) {
             Text("Not Set").tag(nil as CocktailTemplate?)
             ForEach(CocktailTemplate.allCases) { template in
-                Label(template.displayName, systemImage: template.symbolName)
+                TemplateLabel(template: template)
                     .tag(template as CocktailTemplate?)
             }
         } label: {

@@ -72,7 +72,7 @@ struct CocktailListView: View {
                 Picker(selection: $templateFilter) {
                     Text("All Templates").tag(nil as CocktailTemplate?)
                     ForEach(templatesInUse) { template in
-                        Label(template.displayName, systemImage: template.symbolName).tag(template as CocktailTemplate?)
+                        TemplateLabel(template: template).tag(template as CocktailTemplate?)
                     }
                 } label: {
                     Label("Template", systemImage: "square.grid.3x2")

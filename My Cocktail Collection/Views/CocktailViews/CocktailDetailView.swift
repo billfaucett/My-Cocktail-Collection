@@ -55,16 +55,8 @@ struct CocktailDetailView: View {
             Section("Details") {
                 LabeledContent("Base Spirit", value: baseSpiritText)
                 if let template = cocktail.template {
-                    LabeledContent {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Label(template.displayName, systemImage: template.symbolName)
-                            Text(template.formula)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } label: {
-                        Text("Template")
-                    }
+                    LabeledContent("Template", value: template.displayName)
+                        .accessibilityHint(template.formula)
                 }
                 LabeledContent("Source", value: cocktail.source.displayName)
             }
