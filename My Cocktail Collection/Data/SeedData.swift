@@ -270,15 +270,16 @@ extension SeedData {
         "Mezcal Negroni": .martini, "Boulevardier": .martini, "Vieux Carré": .martini,
         // Daiquiri: spirit, citrus, sugar
         "Daiquiri": .daiquiri, "Gimlet": .daiquiri, "Whiskey Sour": .daiquiri, "Bee's Knees": .daiquiri,
-        "Gold Rush": .daiquiri, "Penicillin": .daiquiri, "Mojito": .daiquiri, "Tommy's Margarita": .daiquiri,
+        "Gold Rush": .daiquiri, "Penicillin": .daiquiri, "Tommy's Margarita": .daiquiri,
         "French 75": .daiquiri, "Pisco Sour": .daiquiri, "Irish Whiskey Sour": .daiquiri,
-        "Cherry Bourbon Sour": .daiquiri, "Bourbon Renewal": .daiquiri,
+        "Cherry Bourbon Sour": .daiquiri,
         // Sidecar: spirit, citrus, liqueur
         "Sidecar": .sidecar, "Margarita": .sidecar, "Cosmopolitan": .sidecar, "Last Word": .sidecar,
         "Aviation": .sidecar, "Paper Plane": .sidecar, "Mai Tai": .sidecar, "Blood Orange Margarita": .sidecar,
+        "Bourbon Renewal": .sidecar,
         // Highball: spirit and a sparkling mixer
         "Tom Collins": .highball, "Paloma": .highball, "Moscow Mule": .highball, "Dark 'n' Stormy": .highball,
-        "Aperol Spritz": .highball, "Ranch Water": .highball, "Bloody Mary": .highball,
+        "Aperol Spritz": .highball, "Ranch Water": .highball, "Bloody Mary": .highball, "Mojito": .highball,
         // Flip: rich, with egg, cream or another creamy ingredient
         "White Russian": .flip, "Piña Colada": .flip, "Espresso Martini": .flip,
         "Chocolate Peanutbutter Sundae": .flip,

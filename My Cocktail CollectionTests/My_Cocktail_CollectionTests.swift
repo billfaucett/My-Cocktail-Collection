@@ -2140,6 +2140,55 @@ final class CocktailTemplateTests: StoreTestCase {
     }
 }
 
+/// Suggesting a recipe's template from its ingredients (cocktail templates, step 2).
+final class TemplateSuggesterTests: XCTestCase {
+    private func suggest(_ text: String) -> CocktailTemplate? {
+        TemplateSuggester.suggest(parsed: IngredientParser.parse(text).ingredients)
+    }
+
+    func testEveryBuiltInRecipeGetsItsTemplate() {
+        for seed in SeedData.classics + SeedData.favorites {
+            XCTAssertEqual(suggest(seed.ingredientsText), SeedData.templates[seed.name], seed.name)
+        }
+    }
+
+    func testEachRule() {
+        XCTAssertEqual(suggest("2 oz Rye\n1 tsp Demerara Syrup\n2 dashes Angostura Bitters"), .oldFashioned)
+        XCTAssertEqual(suggest("2 oz Gin\n1 oz Dry Vermouth"), .martini)
+        XCTAssertEqual(suggest("2 oz Rum\n1 oz Lime Juice\n¾ oz Simple Syrup"), .daiquiri)
+        XCTAssertEqual(suggest("2 oz Brandy\n¾ oz Cointreau\n¾ oz Lemon Juice"), .sidecar)
+        XCTAssertEqual(suggest("2 oz Gin\nTonic water, to top"), .highball)
+        XCTAssertEqual(suggest("1½ oz Brandy\n1 Whole Egg\n½ oz Simple Syrup"), .flip)
+    }
+
+    func testTrickyCases() {
+        XCTAssertEqual(suggest("2 oz Pisco\n1 oz Lime Juice\n¾ oz Simple Syrup\n1 Egg White"), .daiquiri,
+                       "An egg-white sour is still a Daiquiri, because citrus leads")
+        XCTAssertEqual(suggest("1 oz Gin\n½ oz Lemon Juice\n½ oz Simple Syrup\n3 oz Champagne"), .daiquiri,
+                       "Sparkling wine with citrus stays with the citrus")
+        XCTAssertEqual(suggest("3 oz Prosecco\n2 oz Aperol\n1 oz Club Soda"), .highball)
+        XCTAssertEqual(suggest("2 oz Bourbon\n¾ oz Lemon Juice\n¾ oz Simple Syrup\n1 Egg White (optional)"), .daiquiri,
+                       "Optional ingredients don't count")
+        XCTAssertEqual(suggest("2 oz Gin\n1 oz Campari\n1 oz Sweet Vermouth"), .martini, "A liqueur without citrus doesn't make a Sidecar")
+    }
+
+    func testUnsureRecipesGetNoSuggestion() {
+        XCTAssertNil(suggest("1 oz Lime Juice\n1 oz Simple Syrup\nClub soda, to top"), "No spirit: nothing to suggest")
+        XCTAssertNil(suggest("2 oz Gin"), "A spirit on its own")
+        XCTAssertNil(suggest(""))
+    }
+
+    func testRowsFromTheForm() {
+        let rows = [
+            IngredientInput(amount: 2, unit: .part, name: "Bourbon"),
+            IngredientInput(amount: 4, unit: .dash, name: "Angostura Bitters"),
+            IngredientInput(amount: 1, unit: .part, name: "Simple Syrup"),
+            IngredientInput(unit: .unspecified, name: "Orange Peel", isGarnish: true),
+        ]
+        XCTAssertEqual(TemplateSuggester.suggest(rows: rows), .oldFashioned)
+    }
+}
+
 /// A database made with data model version 1 upgrades to version 2 with everything intact.
 final class SchemaMigrationTests: XCTestCase {
     private var folder: URL!
