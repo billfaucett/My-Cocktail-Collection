@@ -1222,10 +1222,13 @@ final class SwiftDataModelTests: XCTestCase {
 
     // MARK: Schema
 
-    func testSchemaHasSevenModelsAtVersionOne() {
+    func testSchemaVersions() {
         XCTAssertEqual(DB.models.count, 7)
-        XCTAssertEqual(DB.versionIdentifier, Schema.Version(1, 0, 0))
-        XCTAssertEqual(CocktailMigrationPlan.schemas.count, 1)
+        XCTAssertEqual(DB.versionIdentifier, Schema.Version(2, 0, 0), "The app uses version 2")
+        XCTAssertEqual(CocktailSchemaV1.versionIdentifier, Schema.Version(1, 0, 0), "Version 1 is kept for upgrades")
+        XCTAssertEqual(CocktailSchemaV1.models.count, 7)
+        XCTAssertEqual(CocktailMigrationPlan.schemas.count, 2)
+        XCTAssertEqual(CocktailMigrationPlan.stages.count, 1, "One step: version 1 to version 2")
     }
 
     // MARK: Defaults and enums
