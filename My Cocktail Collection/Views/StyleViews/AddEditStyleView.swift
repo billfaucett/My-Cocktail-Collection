@@ -12,7 +12,7 @@ struct AddEditStyleView: View {
     @Environment(\.modelContext) private var context
 
     /// The style being edited, or nil when adding a new one.
-    private let style: V1.SpiritStyle?
+    private let style: DB.SpiritStyle?
 
     @State private var name = ""
     @State private var family: SpiritFamily
@@ -21,7 +21,7 @@ struct AddEditStyleView: View {
     /// - Parameters:
     ///   - style: The style to edit. Leave out to add a new style.
     ///   - family: The family to pre-select when adding.
-    init(style: V1.SpiritStyle? = nil, family: SpiritFamily = .other) {
+    init(style: DB.SpiritStyle? = nil, family: SpiritFamily = .other) {
         self.style = style
         _family = State(initialValue: style?.family ?? family)
     }

@@ -44,13 +44,13 @@ enum AppStartup {
     /// Development only: empties the new database and copies the old one in again, so screens that have
     /// moved to the new database can be tested against the latest old data during the refactor.
     static func resetAndReimport(_ context: ModelContext) throws {
-        try context.delete(model: V1.MenuEntry.self)
-        try context.delete(model: V1.Menu.self)
-        try context.delete(model: V1.RecipeIngredient.self)
-        try context.delete(model: V1.Cocktail.self)
-        try context.delete(model: V1.Bottle.self)
-        try context.delete(model: V1.SpiritStyle.self)
-        try context.delete(model: V1.ImportRecord.self)
+        try context.delete(model: DB.MenuEntry.self)
+        try context.delete(model: DB.Menu.self)
+        try context.delete(model: DB.RecipeIngredient.self)
+        try context.delete(model: DB.Cocktail.self)
+        try context.delete(model: DB.Bottle.self)
+        try context.delete(model: DB.SpiritStyle.self)
+        try context.delete(model: DB.ImportRecord.self)
         try context.save()
         try LegacyImporter(context: context).importIfNeeded()
         try ModelSeeder.seedBuiltIns(context: context, defaults: .standard)
@@ -73,7 +73,7 @@ enum AppInfo {
 
     /// The SwiftData schema version, e.g. "1.0.0". Changes when the database's design changes.
     static var dataModelVersion: String {
-        let version = CocktailSchemaV1.versionIdentifier
+        let version = DB.versionIdentifier
         return "\(version.major).\(version.minor).\(version.patch)"
     }
 

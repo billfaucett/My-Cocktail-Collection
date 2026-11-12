@@ -11,6 +11,7 @@
 		57E1E5000000000000000002 /* StyleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000001 /* StyleListView.swift */; };
 		57E1E5000000000000000004 /* AddEditStyleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E1E5000000000000000003 /* AddEditStyleView.swift */; };
 		5C4E3A010000000000000002 /* CocktailSchemaV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000001 /* CocktailSchemaV1.swift */; };
+		C0FFEE1A2B3C4D5E6F700112 /* CocktailSchemaV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE1A2B3C4D5E6F700111 /* CocktailSchemaV2.swift */; };
 		5C4E3A010000000000000004 /* ModelStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000003 /* ModelStores.swift */; };
 		5C4E3A010000000000000006 /* ModelSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000005 /* ModelSeeder.swift */; };
 		5C4E3A010000000000000008 /* LegacyImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E3A010000000000000007 /* LegacyImporter.swift */; };
@@ -81,6 +82,7 @@
 		57E1E5000000000000000001 /* StyleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleListView.swift; sourceTree = "<group>"; };
 		57E1E5000000000000000003 /* AddEditStyleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditStyleView.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000001 /* CocktailSchemaV1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailSchemaV1.swift; sourceTree = "<group>"; };
+		C0FFEE1A2B3C4D5E6F700111 /* CocktailSchemaV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CocktailSchemaV2.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000003 /* ModelStores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelStores.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000005 /* ModelSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelSeeder.swift; sourceTree = "<group>"; };
 		5C4E3A010000000000000007 /* LegacyImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyImporter.swift; sourceTree = "<group>"; };
@@ -298,6 +300,7 @@
 				7A70E0E70000000000000001 /* SpiritTaxonomy.swift */,
 				1A9D1E470000000000000001 /* IngredientParser.swift */,
 				5C4E3A010000000000000001 /* CocktailSchemaV1.swift */,
+				C0FFEE1A2B3C4D5E6F700111 /* CocktailSchemaV2.swift */,
 				5C4E3A010000000000000003 /* ModelStores.swift */,
 				5C4E3A010000000000000005 /* ModelSeeder.swift */,
 				5C4E3A010000000000000007 /* LegacyImporter.swift */,
@@ -531,6 +534,7 @@
 				7A70E0E70000000000000002 /* SpiritTaxonomy.swift in Sources */,
 				1A9D1E470000000000000002 /* IngredientParser.swift in Sources */,
 				5C4E3A010000000000000002 /* CocktailSchemaV1.swift in Sources */,
+				C0FFEE1A2B3C4D5E6F700112 /* CocktailSchemaV2.swift in Sources */,
 				5C4E3A010000000000000004 /* ModelStores.swift in Sources */,
 				5C4E3A010000000000000006 /* ModelSeeder.swift in Sources */,
 				5C4E3A010000000000000008 /* LegacyImporter.swift in Sources */,

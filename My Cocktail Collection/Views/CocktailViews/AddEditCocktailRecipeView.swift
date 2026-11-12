@@ -17,11 +17,11 @@ struct AddEditCocktailRecipeView: View {
     @Environment(\.modelContext) private var context
 
     /// The cocktail being edited, or nil when adding a new one.
-    private let cocktail: V1.Cocktail?
+    private let cocktail: DB.Cocktail?
 
     @State private var name = ""
     @State private var source: CocktailSource = .original
-    @State private var baseStyle: V1.SpiritStyle?
+    @State private var baseStyle: DB.SpiritStyle?
     @State private var isFavorite = false
     @State private var rows: [IngredientInput] = []
     @State private var loadedRows: [IngredientInput] = []
@@ -35,7 +35,7 @@ struct AddEditCocktailRecipeView: View {
     @State private var hasLoaded = false
 
     /// - Parameter cocktail: The cocktail to edit. Leave out to add a new cocktail.
-    init(cocktail: V1.Cocktail? = nil) {
+    init(cocktail: DB.Cocktail? = nil) {
         self.cocktail = cocktail
     }
 
@@ -191,7 +191,7 @@ struct AddEditCocktailRecipeView: View {
 #Preview("Edit") {
     let container = try! CocktailModelContainer.make(inMemory: true)
     try? ModelSeeder.seedBuiltIns(context: container.mainContext, defaults: nil)
-    let oldFashioned = try! container.mainContext.fetch(FetchDescriptor<V1.Cocktail>()).first { $0.name == "Old Fashioned" }!
+    let oldFashioned = try! container.mainContext.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Old Fashioned" }!
     return AddEditCocktailRecipeView(cocktail: oldFashioned)
         .modelContainer(container)
 }

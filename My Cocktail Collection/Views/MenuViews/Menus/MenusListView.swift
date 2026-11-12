@@ -12,13 +12,13 @@ import SwiftData
 /// The Menus tab. Reads the new SwiftData database (data model refactor, phase 5).
 struct MenusListView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \V1.Menu.dateCreated, order: .reverse, animation: .default)
-    private var menus: [V1.Menu]
+    @Query(sort: \DB.Menu.dateCreated, order: .reverse, animation: .default)
+    private var menus: [DB.Menu]
 
-    @State private var path: [V1.Menu] = []
+    @State private var path: [DB.Menu] = []
     @State private var showCreateMenu = false
     @State private var showSavedFiles = false
-    @State private var menuToDelete: V1.Menu?
+    @State private var menuToDelete: DB.Menu?
     @State private var confirmDeleteAll = false
     @State private var errorMessage: String?
 
@@ -55,7 +55,7 @@ struct MenusListView: View {
                 }
                 .disabled(menus.isEmpty)
             }
-            .navigationDestination(for: V1.Menu.self) { menu in
+            .navigationDestination(for: DB.Menu.self) { menu in
                 MenuDetailView(menu: menu)
             }
             .sheet(isPresented: $showCreateMenu) {

@@ -36,7 +36,7 @@ enum StockFilter: String, CaseIterable, Identifiable {
 /// The My Bar tab (the bottles you have). Reads the new SwiftData database (data model refactor, phase 5).
 struct InventoryListView: View {
     @Environment(\.modelContext) private var context
-    @Query(animation: .default) private var bottles: [V1.Bottle]
+    @Query(animation: .default) private var bottles: [DB.Bottle]
 
     @State private var searchText = ""
     @State private var stockFilter = StockFilter.all
@@ -45,8 +45,8 @@ struct InventoryListView: View {
     @State private var favoritesOnly = false
     @State private var showAddBottle = false
     @State private var showScanBottle = false
-    @State private var bottleToEdit: V1.Bottle?
-    @State private var bottleToDelete: V1.Bottle?
+    @State private var bottleToEdit: DB.Bottle?
+    @State private var bottleToDelete: DB.Bottle?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -136,7 +136,7 @@ struct InventoryListView: View {
 
     // MARK: Filtering and grouping
 
-    private var visibleBottles: [V1.Bottle] {
+    private var visibleBottles: [DB.Bottle] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
         return bottles
             .filter { bottle in
@@ -158,7 +158,7 @@ struct InventoryListView: View {
     }
 
     /// Bottles in family order (Whiskey, Gin, Rum…), with bottles that have no style last.
-    private func groups(of bottles: [V1.Bottle]) -> [BottleGroup] {
+    private func groups(of bottles: [DB.Bottle]) -> [BottleGroup] {
         var groups = SpiritFamily.allCases.compactMap { family -> BottleGroup? in
             let inFamily = bottles.filter { $0.style?.family == family }
             return inFamily.isEmpty ? nil : BottleGroup(title: family.displayName, systemImage: family.symbolName, bottles: inFamily)
@@ -205,12 +205,12 @@ struct InventoryListView: View {
 private struct BottleGroup {
     let title: String
     let systemImage: String
-    let bottles: [V1.Bottle]
+    let bottles: [DB.Bottle]
 }
 
 /// One bottle in the list: photo, brand, style, stock level and count.
 struct BottleRow: View {
-    let bottle: V1.Bottle
+    let bottle: DB.Bottle
 
     var body: some View {
         ItemRow(

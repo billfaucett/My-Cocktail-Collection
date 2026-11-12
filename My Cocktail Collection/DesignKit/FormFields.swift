@@ -152,14 +152,14 @@ struct SpiritPicker: View {
 /// Picks a style from the new database, grouped by family, with a button to add a new one.
 /// New styles appear in the picker right away.
 struct StylePicker: View {
-    @Query private var styles: [V1.SpiritStyle]
-    @Binding private var selection: V1.SpiritStyle?
+    @Query private var styles: [DB.SpiritStyle]
+    @Binding private var selection: DB.SpiritStyle?
     @State private var showAddStyle = false
 
     private let title: String
     private let addTitle: String
 
-    init(selection: Binding<V1.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Type") {
+    init(selection: Binding<DB.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Type") {
         _selection = selection
         self.title = title
         self.addTitle = addTitle
@@ -168,13 +168,13 @@ struct StylePicker: View {
     var body: some View {
         let ordered = styles.sorted(by: StyleStore.displayOrder)
         Picker(title, selection: $selection) {
-            Text("None").tag(nil as V1.SpiritStyle?)
+            Text("None").tag(nil as DB.SpiritStyle?)
             ForEach(SpiritFamily.allCases) { family in
                 let familyStyles = ordered.filter { $0.family == family }
                 if !familyStyles.isEmpty {
                     Section(family.displayName) {
                         ForEach(familyStyles) { style in
-                            Text(style.name).tag(style as V1.SpiritStyle?)
+                            Text(style.name).tag(style as DB.SpiritStyle?)
                         }
                     }
                 }

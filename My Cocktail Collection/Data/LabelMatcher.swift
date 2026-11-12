@@ -371,7 +371,7 @@ enum LabelMatcher {
     }
 
     /// A bottle in My Bar with the same brand, if there is one.
-    static func existingBottle(matching brand: String, in bottles: [V1.Bottle]) -> V1.Bottle? {
+    static func existingBottle(matching brand: String, in bottles: [DB.Bottle]) -> DB.Bottle? {
         matchingBrandIndex(brand, in: bottles.map(\.brand)).map { bottles[$0] }
     }
 

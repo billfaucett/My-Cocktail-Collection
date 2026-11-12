@@ -258,3 +258,29 @@ extension SeedData {
     }
 }
 
+// MARK: - Templates
+
+extension SeedData {
+    /// Which Cocktail Codex template each built-in recipe follows.
+    static let templates: [String: CocktailTemplate] = [
+        // Old Fashioned: spirit, sugar, bitters
+        "Old Fashioned": .oldFashioned, "Sazerac": .oldFashioned, "Mint Julep": .oldFashioned,
+        // Martini: spirit and aromatized wine (including the Manhattan and Negroni lines)
+        "Martini": .martini, "Manhattan": .martini, "Rob Roy": .martini, "Negroni": .martini,
+        "Mezcal Negroni": .martini, "Boulevardier": .martini, "Vieux Carré": .martini,
+        // Daiquiri: spirit, citrus, sugar
+        "Daiquiri": .daiquiri, "Gimlet": .daiquiri, "Whiskey Sour": .daiquiri, "Bee's Knees": .daiquiri,
+        "Gold Rush": .daiquiri, "Penicillin": .daiquiri, "Mojito": .daiquiri, "Tommy's Margarita": .daiquiri,
+        "French 75": .daiquiri, "Pisco Sour": .daiquiri, "Irish Whiskey Sour": .daiquiri,
+        "Cherry Bourbon Sour": .daiquiri, "Bourbon Renewal": .daiquiri,
+        // Sidecar: spirit, citrus, liqueur
+        "Sidecar": .sidecar, "Margarita": .sidecar, "Cosmopolitan": .sidecar, "Last Word": .sidecar,
+        "Aviation": .sidecar, "Paper Plane": .sidecar, "Mai Tai": .sidecar, "Blood Orange Margarita": .sidecar,
+        // Highball: spirit and a sparkling mixer
+        "Tom Collins": .highball, "Paloma": .highball, "Moscow Mule": .highball, "Dark 'n' Stormy": .highball,
+        "Aperol Spritz": .highball, "Ranch Water": .highball, "Bloody Mary": .highball,
+        // Flip: rich, with egg, cream or another creamy ingredient
+        "White Russian": .flip, "Piña Colada": .flip, "Espresso Martini": .flip,
+        "Chocolate Peanutbutter Sundae": .flip,
+    ]
+}

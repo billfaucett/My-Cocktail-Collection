@@ -13,9 +13,9 @@ struct AddEditMenuView: View {
     @Environment(\.modelContext) private var context
 
     /// The menu being renamed, or nil when creating a new one.
-    private let menu: V1.Menu?
+    private let menu: DB.Menu?
     /// Called with the menu after it's saved, e.g. to open a newly created menu.
-    private let onSave: ((V1.Menu) -> Void)?
+    private let onSave: ((DB.Menu) -> Void)?
 
     @State private var name = ""
     @State private var hasLoaded = false
@@ -23,7 +23,7 @@ struct AddEditMenuView: View {
     /// - Parameters:
     ///   - menu: The menu to rename. Leave out to create a new menu.
     ///   - onSave: Called with the saved menu.
-    init(menu: V1.Menu? = nil, onSave: ((V1.Menu) -> Void)? = nil) {
+    init(menu: DB.Menu? = nil, onSave: ((DB.Menu) -> Void)? = nil) {
         self.menu = menu
         self.onSave = onSave
     }
@@ -57,7 +57,7 @@ struct AddEditMenuView: View {
 
     private func save() throws {
         let store = MenuStore(context: context)
-        let saved: V1.Menu
+        let saved: DB.Menu
         if let menu {
             try store.rename(menu, to: trimmedName)
             saved = menu

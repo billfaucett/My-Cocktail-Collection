@@ -12,15 +12,15 @@ import SwiftData
 /// Pick one or more cocktails to add to a menu.
 struct AddMenuItemView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \V1.Cocktail.name) private var cocktails: [V1.Cocktail]
+    @Query(sort: \DB.Cocktail.name) private var cocktails: [DB.Cocktail]
 
-    private let menu: V1.Menu
+    private let menu: DB.Menu
 
     @State private var selected: Set<UUID> = []
     @State private var searchText = ""
     @State private var favoritesOnly = false
 
-    init(menu: V1.Menu) {
+    init(menu: DB.Menu) {
         self.menu = menu
     }
 
@@ -28,7 +28,7 @@ struct AddMenuItemView: View {
         Set((menu.entries ?? []).compactMap { $0.cocktail?.id })
     }
 
-    private var visibleCocktails: [V1.Cocktail] {
+    private var visibleCocktails: [DB.Cocktail] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
         return cocktails
             .filter { cocktail in
@@ -93,7 +93,7 @@ struct AddMenuItemView: View {
         return favoritesOnly ? "No favorite cocktails match your search." : "No cocktails match your search."
     }
 
-    private func toggle(_ cocktail: V1.Cocktail) {
+    private func toggle(_ cocktail: DB.Cocktail) {
         if selected.contains(cocktail.id) {
             selected.remove(cocktail.id)
         } else {

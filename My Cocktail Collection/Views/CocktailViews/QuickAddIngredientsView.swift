@@ -94,7 +94,7 @@ enum QuickMeasure: String, CaseIterable, Identifiable {
     }
 
     /// The recipe row for an ingredient picked with this measure, e.g. Parts, 2, Bourbon → "2 parts Bourbon".
-    func row(for item: CatalogItem, amount: Double?, style: V1.SpiritStyle?) -> IngredientInput {
+    func row(for item: CatalogItem, amount: Double?, style: DB.SpiritStyle?) -> IngredientInput {
         switch self {
         case .garnish:
             return IngredientInput(unit: .unspecified, name: item.name, isGarnish: true)
@@ -114,7 +114,7 @@ enum QuickMeasure: String, CaseIterable, Identifiable {
 struct QuickAddIngredientsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query private var styles: [V1.SpiritStyle]
+    @Query private var styles: [DB.SpiritStyle]
     @Binding private var rows: [IngredientInput]
 
     @State private var catalog = IngredientCatalog()

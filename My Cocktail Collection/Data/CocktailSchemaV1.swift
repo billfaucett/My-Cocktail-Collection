@@ -2,11 +2,12 @@
 //  CocktailSchemaV1.swift
 //  My Cocktail Collection
 //
-//  Data model refactor, phase 3: the new SwiftData models.
+//  Data model version 1, the first SwiftData models. Kept unchanged so databases created with it can be
+//  migrated; the app uses the current version (see CocktailSchemaV2.swift and `DB`).
 //
 //  The models live inside a versioned schema. That's how SwiftData expects models to be organised
-//  for future migrations, and for now it also keeps them apart from today's Core Data classes,
-//  which use some of the same names (Bottle, Menu). Not used by the app yet.
+//  for migrations, and it also keeps them apart from the old Core Data classes, which use some of
+//  the same names (Bottle, Menu).
 //
 //  iCloud-ready: every attribute has a default or is optional, every relationship is optional,
 //  and there are no unique constraints (uniqueness is enforced by the stores).
@@ -259,33 +260,5 @@ enum CocktailSchemaV1: VersionedSchema {
             self.bottleCount = bottleCount
             self.menuCount = menuCount
         }
-    }
-}
-
-// MARK: - Migration plan
-
-/// Lists every schema version in order. New versions and their migration stages are added here.
-enum CocktailMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [CocktailSchemaV1.self] }
-    static var stages: [MigrationStage] { [] }
-}
-
-// MARK: - Container
-
-/// Creates the new database. It lives in its own file ("Cocktails.store"),
-/// separate from today's Core Data file, which the importer will read from.
-enum CocktailModelContainer {
-    static let storeName = "Cocktails"
-
-    /// - Parameter inMemory: Keeps everything in memory (tests and previews); nothing touches disk.
-    static func make(inMemory: Bool = false) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: CocktailSchemaV1.self)
-        let configuration = ModelConfiguration(
-            storeName,
-            schema: schema,
-            isStoredInMemoryOnly: inMemory,
-            cloudKitDatabase: .none
-        )
-        return try ModelContainer(for: schema, migrationPlan: CocktailMigrationPlan.self, configurations: configuration)
     }
 }
