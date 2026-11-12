@@ -55,8 +55,12 @@ struct CocktailDetailView: View {
             Section("Details") {
                 LabeledContent("Base Spirit", value: baseSpiritText)
                 if let template = cocktail.template {
-                    LabeledContent("Template", value: template.displayName)
-                        .accessibilityHint(template.formula)
+                    LabeledContent {
+                        TemplateInline(template: template)
+                    } label: {
+                        Text("Template")
+                    }
+                    .accessibilityHint(template.formula)
                 }
                 LabeledContent("Source", value: cocktail.source.displayName)
             }

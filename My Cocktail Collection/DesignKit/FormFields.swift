@@ -106,6 +106,42 @@ struct TemplateLabel: View {
     }
 }
 
+/// A template on one line, icon then name, for a row's value (the recipe screen's Details).
+/// The icon takes its size from the text, slightly smaller and dimmer, and only its width is fixed,
+/// so names line up and no icon (the Sidecar's car especially) can make the row taller.
+struct TemplateInline: View {
+    let template: CocktailTemplate
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: template.symbolName)
+                .imageScale(.small)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            Text(template.displayName)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(template.displayName)
+    }
+}
+
+#Preview("Template rows") {
+    // Every template as it appears on the recipe screen, to check they're all the same height.
+    List {
+        Section("Details") {
+            LabeledContent("Base Spirit", value: "Bourbon · Whiskey")
+            ForEach(CocktailTemplate.allCases) { template in
+                LabeledContent {
+                    TemplateInline(template: template)
+                } label: {
+                    Text("Template")
+                }
+            }
+            LabeledContent("Source", value: "Classic")
+        }
+    }
+}
+
 /// Picks a cocktail's Cocktail Codex template. When none is chosen and the ingredients point to one,
 /// offers it as a suggestion to tap; nothing is set until you do.
 struct TemplatePicker: View {
