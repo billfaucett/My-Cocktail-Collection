@@ -12,20 +12,22 @@ import SwiftData
 enum CocktailFilter: Hashable {
     case all
     case family(SpiritFamily)
-    case style(V1.SpiritStyle)
+    case style(DB.SpiritStyle)
 }
 
 /// The Cocktails tab. Reads the new SwiftData database (data model refactor, phase 5).
 struct CocktailListView: View {
     @Environment(\.modelContext) private var context
-    @Query(animation: .default) private var cocktails: [V1.Cocktail]
+    @Query(animation: .default) private var cocktails: [DB.Cocktail]
 
     @State private var searchText = ""
     @State private var filter = CocktailFilter.all
+    /// Only cocktails following this Cocktail Codex template, or all when nil.
+    @State private var templateFilter: CocktailTemplate?
     @State private var favoritesOnly = false
     @State private var showAddCocktail = false
     @State private var showSettings = false
-    @State private var cocktailToDelete: V1.Cocktail?
+    @State private var cocktailToDelete: DB.Cocktail?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -67,6 +69,16 @@ struct CocktailListView: View {
                 }
                 .pickerStyle(.menu)
 
+                Picker(selection: $templateFilter) {
+                    Text("All Templates").tag(nil as CocktailTemplate?)
+                    ForEach(templatesInUse) { template in
+                        TemplateLabel(template: template).tag(template as CocktailTemplate?)
+                    }
+                } label: {
+                    Label("Template", systemImage: "square.grid.3x2")
+                }
+                .pickerStyle(.menu)
+
                 Divider()
                 Button {
                     showSettings = true
@@ -84,7 +96,7 @@ struct CocktailListView: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Search names and ingredients")
-            .navigationDestination(for: V1.Cocktail.self) { cocktail in
+            .navigationDestination(for: DB.Cocktail.self) { cocktail in
                 CocktailDetailView(cocktail: cocktail)
             }
             .sheet(isPresented: $showAddCocktail) {
@@ -111,7 +123,7 @@ struct CocktailListView: View {
 
     // MARK: Filtering and sorting
 
-    private var visibleCocktails: [V1.Cocktail] {
+    private var visibleCocktails: [DB.Cocktail] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
         return cocktails
             .filter { cocktail in
@@ -120,12 +132,19 @@ struct CocktailListView: View {
                 case .family(let family): if cocktail.baseStyle?.family != family { return false }
                 case .style(let style): if cocktail.baseStyle !== style { return false }
                 }
+                if let templateFilter, cocktail.template != templateFilter { return false }
                 if favoritesOnly && !cocktail.isFavorite { return false }
                 if query.isEmpty { return true }
                 return cocktail.name.localizedCaseInsensitiveContains(query)
                     || (cocktail.ingredients ?? []).contains { $0.name.localizedCaseInsensitiveContains(query) }
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Templates at least one cocktail follows, in Cocktail Codex order.
+    private var templatesInUse: [CocktailTemplate] {
+        let used = Set(cocktails.compactMap(\.template))
+        return CocktailTemplate.allCases.filter { used.contains($0) }
     }
 
     /// Families that at least one cocktail uses as its base, in display order.
@@ -135,7 +154,7 @@ struct CocktailListView: View {
     }
 
     /// Base styles in use within a family, in display order.
-    private func stylesInUse(in family: SpiritFamily) -> [V1.SpiritStyle] {
+    private func stylesInUse(in family: SpiritFamily) -> [DB.SpiritStyle] {
         var seen = Set<UUID>()
         return cocktails
             .compactMap(\.baseStyle)
@@ -154,7 +173,7 @@ struct CocktailListView: View {
                               message: "Add your first recipe to start your collection.", actionTitle: "Add a Cocktail")
         }
         return EmptyState(title: "No Matches", systemImage: "magnifyingglass",
-                          message: "No cocktails match your search or base spirit filter.")
+                          message: "No cocktails match your search, base spirit or template filter.")
     }
 
     private func run(_ action: () throws -> Void) {
@@ -168,11 +187,11 @@ struct CocktailListView: View {
 
 /// One cocktail in the list: photo, name, base spirit, and a heart to favorite it.
 struct CocktailRow: View {
-    let cocktail: V1.Cocktail
+    let cocktail: DB.Cocktail
     /// Called when the heart is tapped. Leave out to show the heart beside the name instead, with no button.
     let onToggleFavorite: (() -> Void)?
 
-    init(cocktail: V1.Cocktail, onToggleFavorite: (() -> Void)? = nil) {
+    init(cocktail: DB.Cocktail, onToggleFavorite: (() -> Void)? = nil) {
         self.cocktail = cocktail
         self.onToggleFavorite = onToggleFavorite
     }

@@ -14,10 +14,10 @@ struct AddEditBottleView: View {
     @Environment(\.dismiss) private var dismiss
 
     /// The bottle being edited, or nil when adding a new one.
-    private let bottle: V1.Bottle?
+    private let bottle: DB.Bottle?
 
     @State private var brand = ""
-    @State private var style: V1.SpiritStyle?
+    @State private var style: DB.SpiritStyle?
     @State private var stock: StockLevel = .full
     @State private var bottleCount = 1
     @State private var notes = ""
@@ -34,14 +34,14 @@ struct AddEditBottleView: View {
     @State private var showPhotoLibrary = false
     @State private var libraryItem: PhotosPickerItem?
     /// A bottle already in My Bar with the scanned brand, to offer adding another bottle to it.
-    @State private var existingMatch: V1.Bottle?
+    @State private var existingMatch: DB.Bottle?
     @State private var errorMessage: String?
 
     /// - Parameters:
     ///   - bottle: The bottle to edit. Leave out to add a new bottle.
     ///   - style: A style to pre-select when adding.
     ///   - scanOnAppear: Open the camera (or Photos, where there's no camera) straight away to scan a label.
-    init(bottle: V1.Bottle? = nil, style: V1.SpiritStyle? = nil, scanOnAppear: Bool = false) {
+    init(bottle: DB.Bottle? = nil, style: DB.SpiritStyle? = nil, scanOnAppear: Bool = false) {
         self.bottle = bottle
         self.scanOnAppear = scanOnAppear && bottle == nil
         _style = State(initialValue: style)
@@ -191,7 +191,7 @@ struct AddEditBottleView: View {
     }
 
     /// Adds one to the existing bottle's count (an Out bottle becomes Full) and closes the form.
-    private func addAnother(to match: V1.Bottle) {
+    private func addAnother(to match: DB.Bottle) {
         do {
             try BottleStore(context: context).addAnotherBottle(to: match, photo: photo)
             dismiss()

@@ -51,7 +51,7 @@ struct LegacyImporter {
 
     /// True once an import has completed into this database.
     var hasImported: Bool {
-        ((try? context.fetchCount(FetchDescriptor<V1.ImportRecord>())) ?? 0) > 0
+        ((try? context.fetchCount(FetchDescriptor<DB.ImportRecord>())) ?? 0) > 0
     }
 
     /// Imports if there's an old database and it hasn't been imported yet. Returns nil when there was nothing to do.
@@ -130,27 +130,27 @@ struct LegacyImporter {
         var summary = ImportSummary()
 
         // 1. Built-in styles, then a style for each old spirit (see the mapping in SpiritTaxonomy).
-        var stylesByName: [String: V1.SpiritStyle] = [:]
-        for style in try context.fetch(FetchDescriptor<V1.SpiritStyle>()) {
+        var stylesByName: [String: DB.SpiritStyle] = [:]
+        for style in try context.fetch(FetchDescriptor<DB.SpiritStyle>()) {
             stylesByName[style.name.lowercased()] = style
         }
         for builtIn in SpiritTaxonomy.builtInStyles where stylesByName[builtIn.name.lowercased()] == nil {
-            let style = V1.SpiritStyle(name: builtIn.name, family: builtIn.family, isBuiltIn: true)
+            let style = DB.SpiritStyle(name: builtIn.name, family: builtIn.family, isBuiltIn: true)
             context.insert(style)
             stylesByName[builtIn.name.lowercased()] = style
         }
 
-        var styleForSpiritID: [UUID: V1.SpiritStyle] = [:]
-        var styleForSpiritObject: [NSManagedObjectID: V1.SpiritStyle] = [:]
+        var styleForSpiritID: [UUID: DB.SpiritStyle] = [:]
+        var styleForSpiritObject: [NSManagedObjectID: DB.SpiritStyle] = [:]
         for spirit in try old.fetch(NSFetchRequest<Spirit>(entityName: "Spirit")) {
             let name = (spirit.spiritName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty else { continue }
             let placement = SpiritTaxonomy.placement(forLegacySpirit: name, type: SpiritType(rawValue: spirit.type) ?? .liquor)
-            let style: V1.SpiritStyle
+            let style: DB.SpiritStyle
             if let existing = stylesByName[placement.styleName.lowercased()] {
                 style = existing
             } else {
-                style = V1.SpiritStyle(name: placement.styleName, family: placement.family)
+                style = DB.SpiritStyle(name: placement.styleName, family: placement.family)
                 context.insert(style)
                 stylesByName[placement.styleName.lowercased()] = style
                 summary.customStyles += 1
@@ -166,7 +166,7 @@ struct LegacyImporter {
         let classicsByName = Dictionary(SeedData.classics.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
         let drinks = try old.fetch(NSFetchRequest<Drink>(entityName: "Drink"))
         let takenNames = Set(drinks.map { Self.clean($0.drinkName, fallback: "") })
-        var cocktailForDrink: [NSManagedObjectID: V1.Cocktail] = [:]
+        var cocktailForDrink: [NSManagedObjectID: DB.Cocktail] = [:]
         for drink in drinks {
             let recipe = SeedData.corrected(
                 name: Self.clean(drink.drinkName, fallback: "Untitled Cocktail"),
@@ -174,7 +174,7 @@ struct LegacyImporter {
                 method: drink.method,
                 takenNames: takenNames
             )
-            let cocktail = V1.Cocktail(
+            let cocktail = DB.Cocktail(
                 name: recipe.name,
                 source: CocktailSource(legacy: SourceType(rawValue: drink.source) ?? .original),
                 method: recipe.method ?? ""
@@ -194,7 +194,7 @@ struct LegacyImporter {
 
             let parsed = IngredientParser.parse(recipe.ingredients ?? "").ingredients
             for (position, line) in parsed.enumerated() {
-                let ingredient = V1.RecipeIngredient(parsed: line, position: position)
+                let ingredient = DB.RecipeIngredient(parsed: line, position: position)
                 context.insert(ingredient)
                 ingredient.cocktail = cocktail
                 ingredient.style = line.styleName.flatMap { stylesByName[$0.lowercased()] }
@@ -210,7 +210,7 @@ struct LegacyImporter {
 
         // 3. Bottles (version 2 and later databases).
         for bottle in try old.fetch(NSFetchRequest<Bottle>(entityName: "Bottle")) {
-            let newBottle = V1.Bottle(
+            let newBottle = DB.Bottle(
                 brand: Self.clean(bottle.brand, fallback: "Unnamed Bottle"),
                 stock: StockLevel(rawValue: bottle.stockLevel) ?? .full,
                 bottleCount: max(Int(bottle.bottleCount), 0)
@@ -228,7 +228,7 @@ struct LegacyImporter {
         // 4. Menus. Entries in cocktail name order; each cocktail once; entries whose cocktail is gone are skipped.
         let oldItems = try old.fetch(NSFetchRequest<MenuItem>(entityName: "MenuItem"))
         for menu in try old.fetch(NSFetchRequest<Menu>(entityName: "Menu")) {
-            let newMenu = V1.Menu(name: Self.clean(menu.menuName, fallback: "Untitled Menu"), dateCreated: menu.dateCreated ?? Date())
+            let newMenu = DB.Menu(name: Self.clean(menu.menuName, fallback: "Untitled Menu"), dateCreated: menu.dateCreated ?? Date())
             context.insert(newMenu)
             summary.menus += 1
 
@@ -239,7 +239,7 @@ struct LegacyImporter {
                 .filter { seen.insert($0.id).inserted }
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             for (position, cocktail) in cocktails.enumerated() {
-                let entry = V1.MenuEntry(position: position)
+                let entry = DB.MenuEntry(position: position)
                 context.insert(entry)
                 entry.menu = newMenu
                 entry.cocktail = cocktail
@@ -248,7 +248,7 @@ struct LegacyImporter {
         }
 
         // 5. Mark the import complete, in the same save as the data.
-        context.insert(V1.ImportRecord(cocktailCount: summary.cocktails, bottleCount: summary.bottles, menuCount: summary.menus))
+        context.insert(DB.ImportRecord(cocktailCount: summary.cocktails, bottleCount: summary.bottles, menuCount: summary.menus))
 
         // Classics already offered by the old app, so ones you deleted there stay deleted.
         // Older installs have no record: every version seeded the original five classics, so those

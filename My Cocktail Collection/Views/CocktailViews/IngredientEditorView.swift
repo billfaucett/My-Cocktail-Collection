@@ -123,14 +123,14 @@ struct IngredientEditorView: View {
     @State private var maxWhole: Int
     @State private var maxFraction: Double
     @State private var name: String
-    @State private var style: V1.SpiritStyle?
+    @State private var style: DB.SpiritStyle?
     /// True once the style was picked by hand, so typing the name stops changing it.
     @State private var styleChosenByHand: Bool
     @State private var isGarnish: Bool
     @State private var isOptional: Bool
     @State private var note: String
 
-    @Query private var styles: [V1.SpiritStyle]
+    @Query private var styles: [DB.SpiritStyle]
     @Environment(\.modelContext) private var context
     /// The ingredient list, for name suggestions while typing.
     @State private var catalog = IngredientCatalog()

@@ -11,19 +11,19 @@ import SwiftData
 
 struct StyleListView: View {
     @Environment(\.modelContext) private var context
-    @Query private var styles: [V1.SpiritStyle]
+    @Query private var styles: [DB.SpiritStyle]
 
     @State private var searchText = ""
     @State private var showAddStyle = false
-    @State private var styleToEdit: V1.SpiritStyle?
-    @State private var styleToDelete: V1.SpiritStyle?
+    @State private var styleToEdit: DB.SpiritStyle?
+    @State private var styleToDelete: DB.SpiritStyle?
     @State private var errorMessage: String?
     #if DEBUG
     @State private var confirmReimport = false
     #endif
 
     /// Styles matching the search, in display order: by family, built-ins first, then yours A–Z.
-    private var visibleStyles: [V1.SpiritStyle] {
+    private var visibleStyles: [DB.SpiritStyle] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
         let matching = query.isEmpty ? styles : styles.filter {
             $0.name.localizedCaseInsensitiveContains(query) || $0.family.displayName.localizedCaseInsensitiveContains(query)
@@ -117,7 +117,7 @@ struct StyleListView: View {
 
 /// One style: its name, what uses it, and a badge for styles you added.
 struct StyleRow: View {
-    let style: V1.SpiritStyle
+    let style: DB.SpiritStyle
 
     private var usage: String {
         let bottles = style.bottles?.count ?? 0

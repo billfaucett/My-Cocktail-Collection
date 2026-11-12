@@ -95,6 +95,98 @@ struct RatingPicker: View {
     }
 }
 
+// MARK: - Template picker
+
+/// A template's name with its icon, for the Template picker and filter menu.
+struct TemplateLabel: View {
+    let template: CocktailTemplate
+
+    var body: some View {
+        Label(template.displayName, systemImage: template.symbolName)
+    }
+}
+
+/// A template on one line, icon then name, for a row's value (the recipe screen's Details).
+/// The icon takes its size from the text, slightly smaller and dimmer, and only its width is fixed,
+/// so names line up and no icon (the Sidecar's car especially) can make the row taller.
+struct TemplateInline: View {
+    let template: CocktailTemplate
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: template.symbolName)
+                .imageScale(.small)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            Text(template.displayName)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(template.displayName)
+    }
+}
+
+#Preview("Template rows") {
+    // Every template as it appears on the recipe screen, to check they're all the same height.
+    List {
+        Section("Details") {
+            LabeledContent("Base Spirit", value: "Bourbon · Whiskey")
+            ForEach(CocktailTemplate.allCases) { template in
+                LabeledContent {
+                    TemplateInline(template: template)
+                } label: {
+                    Text("Template")
+                }
+            }
+            LabeledContent("Source", value: "Classic")
+        }
+    }
+}
+
+/// Picks a cocktail's Cocktail Codex template. When none is chosen and the ingredients point to one,
+/// offers it as a suggestion to tap; nothing is set until you do.
+struct TemplatePicker: View {
+    @Binding private var selection: CocktailTemplate?
+    private let suggestion: CocktailTemplate?
+
+    init(selection: Binding<CocktailTemplate?>, suggestion: CocktailTemplate?) {
+        _selection = selection
+        self.suggestion = suggestion
+    }
+
+    var body: some View {
+        Picker(selection: $selection) {
+            Text("Not Set").tag(nil as CocktailTemplate?)
+            ForEach(CocktailTemplate.allCases) { template in
+                TemplateLabel(template: template)
+                    .tag(template as CocktailTemplate?)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Template")
+                if let selection {
+                    Text(selection.formula)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        if selection == nil, let suggestion {
+            Button {
+                selection = suggestion
+            } label: {
+                HStack {
+                    Label("Suggested: \(suggestion.displayName)", systemImage: "sparkles")
+                    Spacer()
+                    Text("Use")
+                        .fontWeight(.semibold)
+                }
+            }
+            .accessibilityLabel("Use suggested template, \(suggestion.displayName)")
+            .accessibilityIdentifier("suggestedTemplate")
+        }
+    }
+}
+
 // MARK: - Favorites toggle
 
 /// A "Favorites Only" switch for filtering a list inside a form.
@@ -152,14 +244,14 @@ struct SpiritPicker: View {
 /// Picks a style from the new database, grouped by family, with a button to add a new one.
 /// New styles appear in the picker right away.
 struct StylePicker: View {
-    @Query private var styles: [V1.SpiritStyle]
-    @Binding private var selection: V1.SpiritStyle?
+    @Query private var styles: [DB.SpiritStyle]
+    @Binding private var selection: DB.SpiritStyle?
     @State private var showAddStyle = false
 
     private let title: String
     private let addTitle: String
 
-    init(selection: Binding<V1.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Type") {
+    init(selection: Binding<DB.SpiritStyle?>, title: String = "Base Spirit", addTitle: String = "Add a New Type") {
         _selection = selection
         self.title = title
         self.addTitle = addTitle
@@ -168,13 +260,13 @@ struct StylePicker: View {
     var body: some View {
         let ordered = styles.sorted(by: StyleStore.displayOrder)
         Picker(title, selection: $selection) {
-            Text("None").tag(nil as V1.SpiritStyle?)
+            Text("None").tag(nil as DB.SpiritStyle?)
             ForEach(SpiritFamily.allCases) { family in
                 let familyStyles = ordered.filter { $0.family == family }
                 if !familyStyles.isEmpty {
                     Section(family.displayName) {
                         ForEach(familyStyles) { style in
-                            Text(style.name).tag(style as V1.SpiritStyle?)
+                            Text(style.name).tag(style as DB.SpiritStyle?)
                         }
                     }
                 }

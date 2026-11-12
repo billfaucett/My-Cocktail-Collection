@@ -11,7 +11,7 @@ import SwiftData
 
 /// One menu in the list: name, date created and number of cocktails.
 struct MenuListRow: View {
-    let menu: V1.Menu
+    let menu: DB.Menu
 
     private var subtitle: String {
         let count = menu.entries?.count ?? 0

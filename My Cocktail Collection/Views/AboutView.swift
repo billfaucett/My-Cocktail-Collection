@@ -10,11 +10,11 @@ import SwiftUI
 import SwiftData
 
 struct AboutView: View {
-    @Query private var cocktails: [V1.Cocktail]
-    @Query private var bottles: [V1.Bottle]
-    @Query private var menus: [V1.Menu]
-    @Query private var styles: [V1.SpiritStyle]
-    @Query private var imports: [V1.ImportRecord]
+    @Query private var cocktails: [DB.Cocktail]
+    @Query private var bottles: [DB.Bottle]
+    @Query private var menus: [DB.Menu]
+    @Query private var styles: [DB.SpiritStyle]
+    @Query private var imports: [DB.ImportRecord]
 
     var body: some View {
         Form {
@@ -71,7 +71,7 @@ struct AboutView: View {
     }
 
     /// "31 cocktails · 12 bottles · 2 menus"
-    static func importSummary(_ record: V1.ImportRecord) -> String {
+    static func importSummary(_ record: DB.ImportRecord) -> String {
         func count(_ number: Int, _ word: String) -> String { number == 1 ? "1 \(word)" : "\(number) \(word)s" }
         return [count(record.cocktailCount, "cocktail"), count(record.bottleCount, "bottle"), count(record.menuCount, "menu")]
             .joined(separator: " · ")

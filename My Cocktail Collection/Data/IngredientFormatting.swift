@@ -65,7 +65,7 @@ enum IngredientFormatter {
     }
 
     /// Several rows as text, one per line, in recipe order.
-    static func text(for ingredients: [V1.RecipeIngredient]) -> String {
+    static func text(for ingredients: [DB.RecipeIngredient]) -> String {
         ingredients.map(\.displayText).joined(separator: "\n")
     }
 
@@ -83,7 +83,7 @@ enum IngredientFormatter {
     }
 }
 
-extension CocktailSchemaV1.RecipeIngredient {
+extension DB.RecipeIngredient {
     /// This ingredient as a line of text, in parts.
     var displayText: String {
         IngredientFormatter.line(amount: amount, amountMax: amountMax, unit: unit, name: name,
@@ -149,7 +149,7 @@ enum PartSize: String, CaseIterable, Identifiable {
     }
 
     /// The converted amount for an ingredient measured in parts. Dashes, garnishes and the like stay as they are.
-    func converted(_ ingredient: V1.RecipeIngredient) -> String? {
+    func converted(_ ingredient: DB.RecipeIngredient) -> String? {
         guard ingredient.unit == .part else { return nil }
         return converted(amount: ingredient.amount, amountMax: ingredient.amountMax)
     }

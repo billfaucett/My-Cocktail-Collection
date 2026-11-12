@@ -12,7 +12,7 @@ import SwiftData
 /// A menu's cocktails, in menu order. Shown pushed from the Menus list.
 struct MenuDetailView: View {
     @Environment(\.modelContext) private var context
-    private let menu: V1.Menu
+    private let menu: DB.Menu
 
     @State private var showAddCocktails = false
     @State private var showRename = false
@@ -21,13 +21,13 @@ struct MenuDetailView: View {
     @State private var savedFileMessage: String?
     @State private var errorMessage: String?
 
-    init(menu: V1.Menu) {
+    init(menu: DB.Menu) {
         self.menu = menu
     }
 
     private var menuName: String { menu.name.isEmpty ? "Menu" : menu.name }
 
-    private var visibleEntries: [V1.MenuEntry] {
+    private var visibleEntries: [DB.MenuEntry] {
         let entries = menu.orderedEntries
         return favoritesOnly ? entries.filter { $0.cocktail?.isFavorite == true } : entries
     }

@@ -338,6 +338,51 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(row("Data Model, [0-9]+\\.[0-9]+\\.[0-9]+").exists, "The data model version is shown")
     }
 
+    /// The cocktail form suggests a template from the ingredients, and tapping it sets the template.
+    func testTemplateIsSuggestedFromTheIngredients() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let addCocktail = app.buttons["Add Cocktail"].firstMatch
+        XCTAssertTrue(addCocktail.waitForExistence(timeout: 5))
+        addCocktail.tap()
+        let name = app.textFields["Name (e.g. Old Fashioned)"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("House Old Fashioned\n")
+        XCTAssertFalse(app.buttons["suggestedTemplate"].exists, "No suggestion before there are ingredients")
+
+        scrollTo(app.buttons["Add Ingredient"].firstMatch, in: app).tap()
+        let search = app.searchFields["Search or add an ingredient"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        for (text, item, amount) in [("bourbon", "Bourbon", "2"), ("ango", "Angostura Bitters", "4"), ("simple", "Simple Syrup", "1")] {
+            search.tap()
+            search.typeText(text)
+            app.buttons["catalog.\(item)"].firstMatch.tap()
+            app.buttons["amount.\(amount)"].firstMatch.tap()
+        }
+        app.navigationBars["Add Ingredients"].buttons["Done"].tap()
+
+        // The suggestion sits under Base Spirit, so scroll back up to it.
+        let suggestion = app.buttons["suggestedTemplate"]
+        var swipes = 0
+        while !(suggestion.exists && suggestion.isHittable) && swipes < 4 {
+            app.swipeDown(velocity: .slow)
+            swipes += 1
+        }
+        XCTAssertTrue(suggestion.exists, "Old Fashioned is suggested")
+        XCTAssertTrue(suggestion.label.contains("Old Fashioned"))
+        suggestion.tap()
+
+        let formula = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Spirit, sugar and bitters")).firstMatch
+        XCTAssertTrue(formula.waitForExistence(timeout: 3), "The template is set and its formula shown")
+        XCTAssertFalse(suggestion.exists, "The suggestion goes once a template is chosen")
+        app.navigationBars["Add Cocktail"].buttons["Save"].tap()
+        let formClosed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Add Cocktail"])
+        wait(for: [formClosed], timeout: 5)
+    }
+
     /// Scrolls up until the element is on screen. Forms and lists only create the rows that are visible,
     /// so something further down doesn't exist until it's scrolled to.
     @discardableResult

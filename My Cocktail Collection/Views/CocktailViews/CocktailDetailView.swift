@@ -12,14 +12,14 @@ import SwiftData
 struct CocktailDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    private let cocktail: V1.Cocktail
+    private let cocktail: DB.Cocktail
 
     @AppStorage(PartSize.storageKey) private var partSize = PartSize.off
     @State private var showEdit = false
     @State private var confirmDelete = false
     @State private var errorMessage: String?
 
-    init(cocktail: V1.Cocktail) {
+    init(cocktail: DB.Cocktail) {
         self.cocktail = cocktail
     }
 
@@ -54,6 +54,14 @@ struct CocktailDetailView: View {
 
             Section("Details") {
                 LabeledContent("Base Spirit", value: baseSpiritText)
+                if let template = cocktail.template {
+                    LabeledContent {
+                        TemplateInline(template: template)
+                    } label: {
+                        Text("Template")
+                    }
+                    .accessibilityHint(template.formula)
+                }
                 LabeledContent("Source", value: cocktail.source.displayName)
             }
 
@@ -171,7 +179,7 @@ struct CocktailDetailView: View {
 #Preview {
     let container = try! CocktailModelContainer.make(inMemory: true)
     try? ModelSeeder.seedBuiltIns(context: container.mainContext, defaults: nil)
-    let negroni = try! container.mainContext.fetch(FetchDescriptor<V1.Cocktail>()).first { $0.name == "Negroni" }!
+    let negroni = try! container.mainContext.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Negroni" }!
     return NavigationStack {
         CocktailDetailView(cocktail: negroni)
     }

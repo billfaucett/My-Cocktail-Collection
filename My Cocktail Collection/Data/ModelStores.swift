@@ -12,9 +12,6 @@ import Foundation
 import SwiftData
 import UIKit
 
-/// Short name for the new schema while the refactor is in progress. Phase 5 replaces it with plain names.
-typealias V1 = CocktailSchemaV1
-
 // MARK: - Errors
 
 enum StoreError: LocalizedError, Equatable {
@@ -60,34 +57,34 @@ struct StyleStore {
     let context: ModelContext
 
     /// Every style, grouped by family in display order: built-in styles in catalog order, then yours A–Z.
-    func allStyles() throws -> [V1.SpiritStyle] {
-        try context.fetch(FetchDescriptor<V1.SpiritStyle>()).sorted(by: Self.displayOrder)
+    func allStyles() throws -> [DB.SpiritStyle] {
+        try context.fetch(FetchDescriptor<DB.SpiritStyle>()).sorted(by: Self.displayOrder)
     }
 
-    func styles(in family: SpiritFamily) throws -> [V1.SpiritStyle] {
+    func styles(in family: SpiritFamily) throws -> [DB.SpiritStyle] {
         try allStyles().filter { $0.family == family }
     }
 
     /// Finds a style by name, ignoring case and surrounding spaces.
-    func style(named name: String) throws -> V1.SpiritStyle? {
+    func style(named name: String) throws -> DB.SpiritStyle? {
         let key = trimmed(name).lowercased()
-        return try context.fetch(FetchDescriptor<V1.SpiritStyle>()).first { $0.name.lowercased() == key }
+        return try context.fetch(FetchDescriptor<DB.SpiritStyle>()).first { $0.name.lowercased() == key }
     }
 
     @discardableResult
-    func addStyle(name: String, family: SpiritFamily, isBuiltIn: Bool = false) throws -> V1.SpiritStyle {
+    func addStyle(name: String, family: SpiritFamily, isBuiltIn: Bool = false) throws -> DB.SpiritStyle {
         let clean = trimmed(name)
         guard !clean.isEmpty else { throw StoreError.missingName("style name") }
         if try self.style(named: clean) != nil {
             throw StoreError.duplicateName(clean)
         }
-        let newStyle = V1.SpiritStyle(name: clean, family: family, isBuiltIn: isBuiltIn)
+        let newStyle = DB.SpiritStyle(name: clean, family: family, isBuiltIn: isBuiltIn)
         context.insert(newStyle)
         try context.saveOrUndo()
         return newStyle
     }
 
-    func update(_ style: V1.SpiritStyle, name: String, family: SpiritFamily) throws {
+    func update(_ style: DB.SpiritStyle, name: String, family: SpiritFamily) throws {
         let clean = trimmed(name)
         guard !clean.isEmpty else { throw StoreError.missingName("style name") }
         if let existing = try self.style(named: clean), existing !== style {
@@ -99,12 +96,12 @@ struct StyleStore {
     }
 
     /// Deletes a style. Bottles, cocktails and ingredients that used it stay, without a style.
-    func delete(_ style: V1.SpiritStyle) throws {
+    func delete(_ style: DB.SpiritStyle) throws {
         context.delete(style)
         try context.saveOrUndo()
     }
 
-    static func displayOrder(_ first: V1.SpiritStyle, _ second: V1.SpiritStyle) -> Bool {
+    static func displayOrder(_ first: DB.SpiritStyle, _ second: DB.SpiritStyle) -> Bool {
         if first.family != second.family {
             return first.family.sortOrder < second.family.sortOrder
         }
@@ -125,15 +122,15 @@ struct BottleStore {
     @discardableResult
     func addBottle(
         brand: String,
-        style: V1.SpiritStyle?,
+        style: DB.SpiritStyle?,
         stock: StockLevel = .full,
         bottleCount: Int = 1,
         notes: String = "",
         isFavorite: Bool = false,
         rating: Int = 0,
         photo: UIImage? = nil
-    ) throws -> V1.Bottle {
-        let bottle = V1.Bottle(brand: brand, stock: stock, bottleCount: bottleCount)
+    ) throws -> DB.Bottle {
+        let bottle = DB.Bottle(brand: brand, stock: stock, bottleCount: bottleCount)
         context.insert(bottle)
         bottle.style = style
         bottle.notes = notes
@@ -146,12 +143,12 @@ struct BottleStore {
 
     /// Bottles sorted by brand. Every filter is optional and they can be combined.
     func bottles(
-        style: V1.SpiritStyle? = nil,
+        style: DB.SpiritStyle? = nil,
         family: SpiritFamily? = nil,
         stock: Set<StockLevel>? = nil,
         favoritesOnly: Bool = false
-    ) throws -> [V1.Bottle] {
-        try context.fetch(FetchDescriptor<V1.Bottle>())
+    ) throws -> [DB.Bottle] {
+        try context.fetch(FetchDescriptor<DB.Bottle>())
             .filter { bottle in
                 if let style, bottle.style !== style { return false }
                 if let family, bottle.style?.family != family { return false }
@@ -163,23 +160,23 @@ struct BottleStore {
     }
 
     /// Bottles that are Full, Half or Low.
-    func inStockBottles() throws -> [V1.Bottle] {
+    func inStockBottles() throws -> [DB.Bottle] {
         try bottles(stock: Set(StockLevel.allCases.filter(\.isInStock)))
     }
 
     /// Bottles that are Low or Out.
-    func shoppingList() throws -> [V1.Bottle] {
+    func shoppingList() throws -> [DB.Bottle] {
         try bottles(stock: Set(StockLevel.allCases.filter(\.needsRestock)))
     }
 
     /// Makes any changes to a bottle, then validates and saves them.
-    func update(_ bottle: V1.Bottle, _ changes: (V1.Bottle) -> Void) throws {
+    func update(_ bottle: DB.Bottle, _ changes: (DB.Bottle) -> Void) throws {
         changes(bottle)
         try validateAndSave(bottle)
     }
 
     /// Sets the stock level. Marking an empty bottle (count 0) as in stock sets the count to 1.
-    func setStock(_ level: StockLevel, for bottle: V1.Bottle) throws {
+    func setStock(_ level: StockLevel, for bottle: DB.Bottle) throws {
         try update(bottle) {
             $0.stock = level
             if level.isInStock && $0.bottleCount == 0 {
@@ -190,7 +187,7 @@ struct BottleStore {
 
     /// Adds one more bottle of a brand you already have, e.g. after scanning its label again.
     /// An Out bottle becomes Full, and the photo fills in a missing label photo.
-    func addAnotherBottle(to bottle: V1.Bottle, photo: UIImage? = nil) throws {
+    func addAnotherBottle(to bottle: DB.Bottle, photo: UIImage? = nil) throws {
         let photoData = bottle.photo == nil ? photo?.cocktailPhotoData() : nil
         try update(bottle) {
             $0.bottleCount += 1
@@ -204,25 +201,25 @@ struct BottleStore {
     }
 
     /// Sets the number of bottles. Setting it to 0 marks the bottle Out.
-    func setBottleCount(_ count: Int, for bottle: V1.Bottle) throws {
+    func setBottleCount(_ count: Int, for bottle: DB.Bottle) throws {
         try update(bottle) { $0.bottleCount = count }
     }
 
-    func setFavorite(_ isFavorite: Bool, for bottle: V1.Bottle) throws {
+    func setFavorite(_ isFavorite: Bool, for bottle: DB.Bottle) throws {
         try update(bottle) { $0.isFavorite = isFavorite }
     }
 
     /// Replaces the label photo, or removes it when `photo` is nil.
-    func setPhoto(_ photo: UIImage?, for bottle: V1.Bottle) throws {
+    func setPhoto(_ photo: UIImage?, for bottle: DB.Bottle) throws {
         try update(bottle) { $0.photo = photo?.cocktailPhotoData() }
     }
 
-    func delete(_ bottle: V1.Bottle) throws {
+    func delete(_ bottle: DB.Bottle) throws {
         context.delete(bottle)
         try context.saveOrUndo()
     }
 
-    private func validateAndSave(_ bottle: V1.Bottle) throws {
+    private func validateAndSave(_ bottle: DB.Bottle) throws {
         let brand = trimmed(bottle.brand)
         do {
             guard !brand.isEmpty else { throw StoreError.missingName("brand or name") }
@@ -253,13 +250,13 @@ struct IngredientInput: Identifiable, Equatable {
     var note: String?
     var isGarnish = false
     var isOptional = false
-    var style: V1.SpiritStyle?
+    var style: DB.SpiritStyle?
     /// True when the parser wasn't sure about this row. Editing it by hand clears this.
     var needsReview = false
 
     init(amount: Double? = nil, amountMax: Double? = nil, unit: IngredientUnit = .unspecified, name: String = "",
          note: String? = nil, isGarnish: Bool = false, isOptional: Bool = false,
-         style: V1.SpiritStyle? = nil, needsReview: Bool = false) {
+         style: DB.SpiritStyle? = nil, needsReview: Bool = false) {
         self.amount = amount
         self.amountMax = amountMax
         self.unit = unit
@@ -272,14 +269,14 @@ struct IngredientInput: Identifiable, Equatable {
     }
 
     /// A row read from text. Pass the style that matches its style name, if any.
-    init(parsed: ParsedIngredient, style: V1.SpiritStyle?) {
+    init(parsed: ParsedIngredient, style: DB.SpiritStyle?) {
         self.init(amount: parsed.amount, amountMax: parsed.amountMax, unit: parsed.unit, name: parsed.name,
                   note: parsed.note, isGarnish: parsed.isGarnish, isOptional: parsed.isOptional,
                   style: style, needsReview: parsed.needsReview)
     }
 
     /// A row copied from a saved ingredient.
-    init(stored: V1.RecipeIngredient, needsReview: Bool = false) {
+    init(stored: DB.RecipeIngredient, needsReview: Bool = false) {
         self.init(amount: stored.amount, amountMax: stored.amountMax, unit: stored.unit, name: stored.name,
                   note: stored.note, isGarnish: stored.isGarnish, isOptional: stored.isOptional,
                   style: stored.style, needsReview: needsReview)
@@ -314,17 +311,19 @@ struct CocktailStore {
     func addCocktail(
         name: String,
         source: CocktailSource = .original,
-        baseStyle: V1.SpiritStyle? = nil,
+        baseStyle: DB.SpiritStyle? = nil,
         ingredients: [ParsedIngredient] = [],
         rows: [IngredientInput] = [],
         method: String = "",
         rating: Int = 0,
         isFavorite: Bool = false,
-        photo: UIImage? = nil
-    ) throws -> V1.Cocktail {
-        let cocktail = V1.Cocktail(name: name, source: source, method: method)
+        photo: UIImage? = nil,
+        template: CocktailTemplate? = nil
+    ) throws -> DB.Cocktail {
+        let cocktail = DB.Cocktail(name: name, source: source, method: method)
         context.insert(cocktail)
         cocktail.baseStyle = baseStyle
+        cocktail.template = template
         cocktail.rating = rating
         cocktail.isFavorite = isFavorite
         cocktail.photo = photo?.cocktailPhotoData()
@@ -334,12 +333,12 @@ struct CocktailStore {
     }
 
     /// Replaces a cocktail's ingredients. Each is linked to its style when one matches.
-    func setIngredients(_ ingredients: [ParsedIngredient], for cocktail: V1.Cocktail) throws {
+    func setIngredients(_ ingredients: [ParsedIngredient], for cocktail: DB.Cocktail) throws {
         try setIngredients(inputs(from: ingredients), for: cocktail)
     }
 
     /// Replaces a cocktail's ingredients with edited rows, in order, keeping each row's own style.
-    func setIngredients(_ rows: [IngredientInput], for cocktail: V1.Cocktail) throws {
+    func setIngredients(_ rows: [IngredientInput], for cocktail: DB.Cocktail) throws {
         for old in cocktail.ingredients ?? [] {
             context.delete(old)
         }
@@ -354,7 +353,7 @@ struct CocktailStore {
     }
 
     /// Replaces a cocktail's ingredients by reading recipe text, one ingredient per line.
-    func setIngredients(fromText text: String, for cocktail: V1.Cocktail) throws {
+    func setIngredients(fromText text: String, for cocktail: DB.Cocktail) throws {
         try setIngredients(IngredientParser.parse(text).ingredients, for: cocktail)
     }
 
@@ -366,12 +365,12 @@ struct CocktailStore {
     func cocktails(
         matching search: String = "",
         family: SpiritFamily? = nil,
-        style: V1.SpiritStyle? = nil,
+        style: DB.SpiritStyle? = nil,
         favoritesOnly: Bool = false,
         sortedBy sort: CocktailSort = .name
-    ) throws -> [V1.Cocktail] {
+    ) throws -> [DB.Cocktail] {
         let query = trimmed(search)
-        return try context.fetch(FetchDescriptor<V1.Cocktail>())
+        return try context.fetch(FetchDescriptor<DB.Cocktail>())
             .filter { matches($0, query: query, family: family, style: style, favoritesOnly: favoritesOnly) }
             .sorted { first, second in
                 if sort == .rating && first.rating != second.rating {
@@ -382,30 +381,30 @@ struct CocktailStore {
     }
 
     /// Makes any changes to a cocktail, then validates and saves them.
-    func update(_ cocktail: V1.Cocktail, _ changes: (V1.Cocktail) -> Void) throws {
+    func update(_ cocktail: DB.Cocktail, _ changes: (DB.Cocktail) -> Void) throws {
         changes(cocktail)
         try validateAndSave(cocktail)
     }
 
-    func setFavorite(_ isFavorite: Bool, for cocktail: V1.Cocktail) throws {
+    func setFavorite(_ isFavorite: Bool, for cocktail: DB.Cocktail) throws {
         try update(cocktail) { $0.isFavorite = isFavorite }
     }
 
-    func toggleFavorite(_ cocktail: V1.Cocktail) throws {
+    func toggleFavorite(_ cocktail: DB.Cocktail) throws {
         try setFavorite(!cocktail.isFavorite, for: cocktail)
     }
 
-    func setPhoto(_ photo: UIImage?, for cocktail: V1.Cocktail) throws {
+    func setPhoto(_ photo: UIImage?, for cocktail: DB.Cocktail) throws {
         try update(cocktail) { $0.photo = photo?.cocktailPhotoData() }
     }
 
     /// Deletes a cocktail, its ingredients and its menu entries.
-    func delete(_ cocktail: V1.Cocktail) throws {
+    func delete(_ cocktail: DB.Cocktail) throws {
         context.delete(cocktail)
         try context.saveOrUndo()
     }
 
-    private func matches(_ cocktail: V1.Cocktail, query: String, family: SpiritFamily?, style: V1.SpiritStyle?, favoritesOnly: Bool) -> Bool {
+    private func matches(_ cocktail: DB.Cocktail, query: String, family: SpiritFamily?, style: DB.SpiritStyle?, favoritesOnly: Bool) -> Bool {
         if let family, cocktail.baseStyle?.family != family { return false }
         if let style, cocktail.baseStyle !== style { return false }
         if favoritesOnly && !cocktail.isFavorite { return false }
@@ -417,7 +416,7 @@ struct CocktailStore {
     /// Parsed lines as rows, each linked to the stored style named by the parser.
     private func inputs(from parsed: [ParsedIngredient]) -> [IngredientInput] {
         guard !parsed.isEmpty else { return [] }
-        let styles = (try? context.fetch(FetchDescriptor<V1.SpiritStyle>())) ?? []
+        let styles = (try? context.fetch(FetchDescriptor<DB.SpiritStyle>())) ?? []
         let stylesByName = Dictionary(styles.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
         return parsed.map { line in
             IngredientInput(parsed: line, style: line.styleName.flatMap { stylesByName[$0.lowercased()] })
@@ -425,9 +424,9 @@ struct CocktailStore {
     }
 
     /// Inserts rows in order, each with its own style link.
-    private func insertRows(_ rows: [IngredientInput], into cocktail: V1.Cocktail) {
+    private func insertRows(_ rows: [IngredientInput], into cocktail: DB.Cocktail) {
         for (position, row) in rows.enumerated() {
-            let ingredient = V1.RecipeIngredient(position: position, name: trimmed(row.name), amount: row.amount,
+            let ingredient = DB.RecipeIngredient(position: position, name: trimmed(row.name), amount: row.amount,
                                                  amountMax: row.amountMax, unit: row.unit,
                                                  note: row.note.map(trimmed).flatMap { $0.isEmpty ? nil : $0 },
                                                  isGarnish: row.isGarnish, isOptional: row.isOptional)
@@ -438,7 +437,7 @@ struct CocktailStore {
         cocktail.needsIngredientReview = rows.contains(where: \.needsReview)
     }
 
-    private func validateAndSave(_ cocktail: V1.Cocktail) throws {
+    private func validateAndSave(_ cocktail: DB.Cocktail) throws {
         let name = trimmed(cocktail.name)
         do {
             guard !name.isEmpty else { throw StoreError.missingName("cocktail name") }
@@ -458,21 +457,21 @@ struct MenuStore {
     let context: ModelContext
 
     @discardableResult
-    func addMenu(name: String) throws -> V1.Menu {
+    func addMenu(name: String) throws -> DB.Menu {
         let clean = trimmed(name)
         guard !clean.isEmpty else { throw StoreError.missingName("menu name") }
-        let menu = V1.Menu(name: clean)
+        let menu = DB.Menu(name: clean)
         context.insert(menu)
         try context.saveOrUndo()
         return menu
     }
 
     /// Menus, newest first.
-    func menus() throws -> [V1.Menu] {
-        try context.fetch(FetchDescriptor<V1.Menu>(sortBy: [SortDescriptor(\.dateCreated, order: .reverse)]))
+    func menus() throws -> [DB.Menu] {
+        try context.fetch(FetchDescriptor<DB.Menu>(sortBy: [SortDescriptor(\.dateCreated, order: .reverse)]))
     }
 
-    func rename(_ menu: V1.Menu, to name: String) throws {
+    func rename(_ menu: DB.Menu, to name: String) throws {
         let clean = trimmed(name)
         guard !clean.isEmpty else { throw StoreError.missingName("menu name") }
         menu.name = clean
@@ -480,11 +479,11 @@ struct MenuStore {
     }
 
     /// Adds cocktails to the end of a menu, in the order given. Cocktails already on it are skipped.
-    func add(_ cocktails: [V1.Cocktail], to menu: V1.Menu) throws {
+    func add(_ cocktails: [DB.Cocktail], to menu: DB.Menu) throws {
         var onMenu = Set((menu.entries ?? []).compactMap { $0.cocktail?.id })
         var nextPosition = ((menu.entries ?? []).map(\.position).max() ?? -1) + 1
         for cocktail in cocktails where !onMenu.contains(cocktail.id) {
-            let entry = V1.MenuEntry(position: nextPosition)
+            let entry = DB.MenuEntry(position: nextPosition)
             context.insert(entry)
             entry.menu = menu
             entry.cocktail = cocktail
@@ -495,7 +494,7 @@ struct MenuStore {
     }
 
     /// Takes a cocktail off a menu (the cocktail stays in the collection) and closes the gap.
-    func remove(_ entry: V1.MenuEntry, from menu: V1.Menu) throws {
+    func remove(_ entry: DB.MenuEntry, from menu: DB.Menu) throws {
         let remaining = menu.orderedEntries.filter { $0 !== entry }
         context.delete(entry)
         for (position, other) in remaining.enumerated() {
@@ -505,7 +504,7 @@ struct MenuStore {
     }
 
     /// Moves an entry to a new place in the menu (0 = first).
-    func move(_ entry: V1.MenuEntry, to index: Int, in menu: V1.Menu) throws {
+    func move(_ entry: DB.MenuEntry, to index: Int, in menu: DB.Menu) throws {
         var ordered = menu.orderedEntries
         guard let from = ordered.firstIndex(where: { $0 === entry }) else { return }
         ordered.remove(at: from)
@@ -517,7 +516,7 @@ struct MenuStore {
     }
 
     /// Deletes a menu and its entries. The cocktails stay in the collection.
-    func delete(_ menu: V1.Menu) throws {
+    func delete(_ menu: DB.Menu) throws {
         context.delete(menu)
         try context.saveOrUndo()
     }
