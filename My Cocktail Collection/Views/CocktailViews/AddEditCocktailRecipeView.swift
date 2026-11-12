@@ -23,6 +23,7 @@ struct AddEditCocktailRecipeView: View {
     @State private var source: CocktailSource = .original
     @State private var baseStyle: DB.SpiritStyle?
     @State private var isFavorite = false
+    @State private var template: CocktailTemplate?
     @State private var rows: [IngredientInput] = []
     @State private var loadedRows: [IngredientInput] = []
     @State private var editingRow: IngredientInput?
@@ -51,6 +52,7 @@ struct AddEditCocktailRecipeView: View {
                 TextField("Name (e.g. Old Fashioned)", text: $name)
                     .textInputAutocapitalization(.words)
                 StylePicker(selection: $baseStyle)
+                TemplatePicker(selection: $template, suggestion: TemplateSuggester.suggest(rows: rows))
                 Toggle("Favorite", isOn: $isFavorite)
             }
 
@@ -139,6 +141,7 @@ struct AddEditCocktailRecipeView: View {
         source = cocktail.source
         baseStyle = cocktail.baseStyle
         isFavorite = cocktail.isFavorite
+        template = cocktail.template
         rows = cocktail.orderedIngredients.map { ingredient in
             // Re-read each line to find the ones that still need checking.
             IngredientInput(stored: ingredient,
@@ -158,6 +161,7 @@ struct AddEditCocktailRecipeView: View {
                 $0.source = source
                 $0.baseStyle = baseStyle
                 $0.isFavorite = isFavorite
+                $0.template = template
                 $0.method = method
                 if photoChanged {
                     $0.photo = photoData
@@ -175,7 +179,8 @@ struct AddEditCocktailRecipeView: View {
                 rows: rows,
                 method: method,
                 isFavorite: isFavorite,
-                photo: photo
+                photo: photo,
+                template: template
             )
         }
     }

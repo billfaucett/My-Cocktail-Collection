@@ -2116,6 +2116,12 @@ final class CocktailTemplateTests: StoreTestCase {
         XCTAssertNil(cocktail.template, "Unknown text reads as no template")
     }
 
+    func testAddingACocktailWithATemplate() throws {
+        let cocktail = try CocktailStore(context: context).addCocktail(name: "House Highball", template: .highball)
+        XCTAssertEqual(cocktail.template, .highball)
+        XCTAssertEqual(try CocktailStore(context: context).cocktails().first?.templateRaw, "highball", "Saved with the cocktail")
+    }
+
     func testSeedingGivesTheClassicsTheirTemplates() throws {
         try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
         let cocktails = try CocktailStore(context: context).cocktails()

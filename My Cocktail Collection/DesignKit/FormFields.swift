@@ -95,6 +95,53 @@ struct RatingPicker: View {
     }
 }
 
+// MARK: - Template picker
+
+/// Picks a cocktail's Cocktail Codex template. When none is chosen and the ingredients point to one,
+/// offers it as a suggestion to tap; nothing is set until you do.
+struct TemplatePicker: View {
+    @Binding private var selection: CocktailTemplate?
+    private let suggestion: CocktailTemplate?
+
+    init(selection: Binding<CocktailTemplate?>, suggestion: CocktailTemplate?) {
+        _selection = selection
+        self.suggestion = suggestion
+    }
+
+    var body: some View {
+        Picker(selection: $selection) {
+            Text("Not Set").tag(nil as CocktailTemplate?)
+            ForEach(CocktailTemplate.allCases) { template in
+                Label(template.displayName, systemImage: template.symbolName)
+                    .tag(template as CocktailTemplate?)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Template")
+                if let selection {
+                    Text(selection.formula)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        if selection == nil, let suggestion {
+            Button {
+                selection = suggestion
+            } label: {
+                HStack {
+                    Label("Suggested: \(suggestion.displayName)", systemImage: "sparkles")
+                    Spacer()
+                    Text("Use")
+                        .fontWeight(.semibold)
+                }
+            }
+            .accessibilityLabel("Use suggested template, \(suggestion.displayName)")
+            .accessibilityIdentifier("suggestedTemplate")
+        }
+    }
+}
+
 // MARK: - Favorites toggle
 
 /// A "Favorites Only" switch for filtering a list inside a form.

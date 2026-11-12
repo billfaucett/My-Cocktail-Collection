@@ -317,11 +317,13 @@ struct CocktailStore {
         method: String = "",
         rating: Int = 0,
         isFavorite: Bool = false,
-        photo: UIImage? = nil
+        photo: UIImage? = nil,
+        template: CocktailTemplate? = nil
     ) throws -> DB.Cocktail {
         let cocktail = DB.Cocktail(name: name, source: source, method: method)
         context.insert(cocktail)
         cocktail.baseStyle = baseStyle
+        cocktail.template = template
         cocktail.rating = rating
         cocktail.isFavorite = isFavorite
         cocktail.photo = photo?.cocktailPhotoData()

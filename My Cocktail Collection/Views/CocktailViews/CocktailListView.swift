@@ -22,6 +22,8 @@ struct CocktailListView: View {
 
     @State private var searchText = ""
     @State private var filter = CocktailFilter.all
+    /// Only cocktails following this Cocktail Codex template, or all when nil.
+    @State private var templateFilter: CocktailTemplate?
     @State private var favoritesOnly = false
     @State private var showAddCocktail = false
     @State private var showSettings = false
@@ -64,6 +66,16 @@ struct CocktailListView: View {
                     }
                 } label: {
                     Label("Base Spirit", systemImage: "line.3.horizontal.decrease.circle")
+                }
+                .pickerStyle(.menu)
+
+                Picker(selection: $templateFilter) {
+                    Text("All Templates").tag(nil as CocktailTemplate?)
+                    ForEach(templatesInUse) { template in
+                        Label(template.displayName, systemImage: template.symbolName).tag(template as CocktailTemplate?)
+                    }
+                } label: {
+                    Label("Template", systemImage: "square.grid.3x2")
                 }
                 .pickerStyle(.menu)
 
@@ -120,12 +132,19 @@ struct CocktailListView: View {
                 case .family(let family): if cocktail.baseStyle?.family != family { return false }
                 case .style(let style): if cocktail.baseStyle !== style { return false }
                 }
+                if let templateFilter, cocktail.template != templateFilter { return false }
                 if favoritesOnly && !cocktail.isFavorite { return false }
                 if query.isEmpty { return true }
                 return cocktail.name.localizedCaseInsensitiveContains(query)
                     || (cocktail.ingredients ?? []).contains { $0.name.localizedCaseInsensitiveContains(query) }
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Templates at least one cocktail follows, in Cocktail Codex order.
+    private var templatesInUse: [CocktailTemplate] {
+        let used = Set(cocktails.compactMap(\.template))
+        return CocktailTemplate.allCases.filter { used.contains($0) }
     }
 
     /// Families that at least one cocktail uses as its base, in display order.
@@ -154,7 +173,7 @@ struct CocktailListView: View {
                               message: "Add your first recipe to start your collection.", actionTitle: "Add a Cocktail")
         }
         return EmptyState(title: "No Matches", systemImage: "magnifyingglass",
-                          message: "No cocktails match your search or base spirit filter.")
+                          message: "No cocktails match your search, base spirit or template filter.")
     }
 
     private func run(_ action: () throws -> Void) {
