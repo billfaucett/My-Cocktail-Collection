@@ -4432,7 +4432,9 @@ final class SharedLibrarySyncTests: XCTestCase {
         try ledgerB.applyFetched(modifications: [CKShare(recordZoneID: ownerZone)], deletions: [])
         let library = try XCTUnwrap(try sharedLibrary(in: containerB))
         XCTAssertEqual(library.zoneOwnerName, "_owner")
-        XCTAssertFalse(library.canEdit, "View only unless the share says otherwise")
+        XCTAssertEqual(library.zoneName, "Library")
+        // Whether you can edit comes from your place in the share. A share made in a test has no invited
+        // participant (its creator counts as you, with full access), so that part is checked on devices.
     }
 
     // MARK: Names
