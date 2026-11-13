@@ -21,6 +21,8 @@ struct PartSizeSettingsView: View {
     @State private var isShared = false
     @State private var isOpeningSharing = false
     @State private var sharingError: String?
+    /// The people My Library is shared with.
+    @State private var sharedPeople: [LibrarySharing.Person] = []
     /// Libraries other people have shared with you.
     @Query(sort: \DB.Library.name) private var libraries: [DB.Library]
 
@@ -67,6 +69,13 @@ struct PartSizeSettingsView: View {
                 Section {
                     LabeledContent("My Library", value: sharingRowText)
                         .accessibilityIdentifier("sharingSummary")
+                    ForEach(sharedPeople) { person in
+                        LabeledContent {
+                            Text(person.detail)
+                        } label: {
+                            Label(person.name, systemImage: "person.crop.circle")
+                        }
+                    }
                     Button {
                         Task { await openSharing() }
                     } label: {
@@ -128,11 +137,13 @@ extension PartSizeSettingsView {
     private func refreshSharing() async {
         guard syncStatus.state.canShare else {
             sharingSummary = nil
+            sharedPeople = []
             return
         }
         do {
             let share = try await LibrarySharing.existingShare()
             isShared = share != nil
+            sharedPeople = share.map { LibrarySharing.people(in: $0) } ?? []
             sharingSummary = LibrarySharing.summary(participantCount: share.map { LibrarySharing.participantCount(of: $0) })
             sharingError = nil
         } catch {

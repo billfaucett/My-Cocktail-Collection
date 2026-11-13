@@ -34,6 +34,7 @@ struct CocktailListView: View {
     /// Libraries other people share with you, listed in the More menu.
     @Query(sort: \DB.Library.name) private var libraries: [DB.Library]
     @State private var openLibrary: DB.Library?
+    private var syncStatus = CloudSyncStatus.shared
 
     var body: some View {
         let visible = visibleCocktails
@@ -138,6 +139,14 @@ struct CocktailListView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage ?? "")
+            }
+            .alert("No Longer Shared", isPresented: Binding(
+                get: { syncStatus.notice != nil },
+                set: { if !$0 { syncStatus.notice = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(syncStatus.notice ?? "")
             }
         }
     }

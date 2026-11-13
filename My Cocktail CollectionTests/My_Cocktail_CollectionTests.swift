@@ -4410,6 +4410,13 @@ final class SharedLibrarySyncTests: XCTestCase {
     }
 
     @MainActor
+    func testRemovingALibraryGivesItsNameForTheNotice() throws {
+        let ledgerB = try shareAToB(canEdit: false)
+        XCTAssertEqual(try ledgerB.removeLibrary(zoneID: ownerZone), "Bill's Library")
+        XCTAssertNil(try ledgerB.removeLibrary(zoneID: ownerZone), "Already gone: nothing to tell")
+    }
+
+    @MainActor
     func testAMissingSharedZoneMeansTheLibraryIsGone() throws {
         let ledgerB = try shareAToB(canEdit: true)
         let record = CloudRecords.record(for: try XCTUnwrap(try negronis(in: containerB).first { $0.library != nil }),
@@ -4498,6 +4505,131 @@ final class CopyToMyLibraryTests: StoreTestCase {
     func testMenuCocktailCount() {
         XCTAssertEqual(SharedLibraryView.cocktailCount(1), "1 cocktail")
         XCTAssertEqual(SharedLibraryView.cocktailCount(5), "5 cocktails")
+    }
+}
+
+/// Step 5 polish: who you share with, offline status, and built-ins you delete staying deleted.
+final class SyncPolishTests: XCTestCase {
+    private var container: ModelContainer!
+    private var context: ModelContext!
+    private var defaults: UserDefaults!
+    private var cloud: UserDefaults!
+    private var suites: [String] = []
+
+    override func setUpWithError() throws {
+        container = try CocktailModelContainer.make(inMemory: true)
+        context = ModelContext(container)
+        suites = ["SyncPolish-\(UUID().uuidString)", "SyncPolishCloud-\(UUID().uuidString)"]
+        defaults = UserDefaults(suiteName: suites[0])
+        cloud = UserDefaults(suiteName: suites[1])
+    }
+
+    override func tearDownWithError() throws {
+        suites.forEach { UserDefaults.standard.removePersistentDomain(forName: $0) }
+        context = nil
+        container = nil
+    }
+
+    private func cocktail(_ name: String) throws -> DB.Cocktail? {
+        try context.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == name && $0.library == nil }
+    }
+
+    // MARK: Who you share with
+
+    func testPeopleAreNamedAndDescribed() {
+        var components = PersonNameComponents()
+        components.givenName = "Jane"
+        components.familyName = "Doe"
+        XCTAssertEqual(LibrarySharing.displayName(nameComponents: components, email: "jane@example.com", phone: nil), "Jane Doe")
+        XCTAssertEqual(LibrarySharing.displayName(nameComponents: nil, email: "jane@example.com", phone: nil), "jane@example.com")
+        XCTAssertEqual(LibrarySharing.displayName(nameComponents: nil, email: nil, phone: "+1 555 0100"), "+1 555 0100")
+        XCTAssertEqual(LibrarySharing.displayName(nameComponents: nil, email: nil, phone: nil), "Invited person")
+        XCTAssertEqual(LibrarySharing.personDetail(canEdit: true, isPending: false), "Can edit")
+        XCTAssertEqual(LibrarySharing.personDetail(canEdit: false, isPending: true), "View only · Invited")
+    }
+
+    func testANewShareHasNoOneInIt() {
+        XCTAssertEqual(LibrarySharing.people(in: CKShare(recordZoneID: CloudSchema.libraryZoneID())), [])
+    }
+
+    // MARK: Offline
+
+    func testGoingOfflineAndComingBack() {
+        let offline = CloudSyncState.problem(CloudSyncState.offlineMessage)
+        XCTAssertEqual(CloudSyncState.upToDate(Date()).afterNetworkChange(isOnline: false), offline)
+        XCTAssertEqual(CloudSyncState.syncing.afterNetworkChange(isOnline: false), offline)
+        XCTAssertNil(CloudSyncState.notSignedIn.afterNetworkChange(isOnline: false), "Not signed in says more")
+        XCTAssertNil(CloudSyncState.off.afterNetworkChange(isOnline: false))
+        XCTAssertEqual(offline.afterNetworkChange(isOnline: true), .syncing, "Back online: sync again")
+        XCTAssertNil(CloudSyncState.problem("Storage full").afterNetworkChange(isOnline: true), "Other problems stay")
+        XCTAssertNil(CloudSyncState.upToDate(Date()).afterNetworkChange(isOnline: true))
+        XCTAssertEqual(CloudSync.message(for: CKError(.networkUnavailable)), CloudSyncState.offlineMessage)
+    }
+
+    // MARK: Deleted built-ins
+
+    func testDeletingABuiltInIsRememberedButNotYourOwn() throws {
+        try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
+        let negroni = try XCTUnwrap(try cocktail("Negroni"))
+        negroni.name = "Our Negroni" // Renamed built-ins still count.
+        BuiltInDeletions.noteDeleted(negroni, in: defaults)
+        let mine = try CocktailStore(context: context).addCocktail(name: "Bill's Sour")
+        BuiltInDeletions.noteDeleted(mine, in: defaults)
+        let londonDry = try XCTUnwrap(try StyleStore(context: context).style(named: "London Dry"))
+        BuiltInDeletions.noteDeleted(londonDry, in: defaults)
+
+        XCTAssertEqual(BuiltInDeletions.ids(in: defaults),
+                       [BuiltInID.cocktail(named: "Negroni"), BuiltInID.style(named: "London Dry")])
+        XCTAssertEqual(BuiltInDeletions.ids(in: nil), [], "Nothing is remembered without a store")
+    }
+
+    func testDeletedBuiltInsArentAddedAgain() throws {
+        BuiltInDeletions.record(BuiltInID.cocktail(named: "Negroni"), in: defaults)
+        try ModelSeeder.seedBuiltIns(context: context, defaults: defaults)
+        XCTAssertNil(try cocktail("Negroni"), "Deleted on another device")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.Cocktail>()), SeedData.classics.count - 1)
+    }
+
+    func testBuiltInsDeletedElsewhereAreRemovedHereButYourOwnStay() throws {
+        try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
+        let mine = try CocktailStore(context: context).addCocktail(name: "Bill's Sour")
+        try ModelSeeder.removeDeletedBuiltIns(context: context, deleted: [BuiltInID.cocktail(named: "Negroni"), mine.id])
+        XCTAssertNil(try cocktail("Negroni"))
+        XCTAssertNotNil(try cocktail("Bill's Sour"), "Only built-ins are removed")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.Cocktail>()), SeedData.classics.count)
+    }
+
+    func testAFavoriteAddedBackByHandStays() throws {
+        let favorite = try XCTUnwrap(SeedData.favorites.first)
+        let fixedID = BuiltInID.cocktail(named: favorite.name)
+        BuiltInDeletions.record(fixedID, in: defaults)
+
+        try ModelSeeder.addHouseFavorites(context: context, deletions: defaults)
+        let added = try XCTUnwrap(try cocktail(favorite.name))
+        XCTAssertNotEqual(added.id, fixedID, "A new ID, so it isn't removed as deleted")
+
+        try ModelSeeder.seedBuiltIns(context: context, defaults: defaults)
+        XCTAssertNotNil(try cocktail(favorite.name), "Starting up keeps it")
+        XCTAssertNotEqual(try cocktail(favorite.name)?.id, fixedID)
+    }
+
+    @MainActor
+    func testDeletedListsAreCombinedAcrossDevices() {
+        defaults.set(["A"], forKey: BuiltInDeletions.key)
+        cloud.set(["B"], forKey: BuiltInDeletions.key)
+        let sync = SettingsSync(local: defaults, cloud: cloud)
+        sync.mergeAtLaunch()
+        XCTAssertEqual(defaults.stringArray(forKey: BuiltInDeletions.key), ["A", "B"])
+        XCTAssertEqual(cloud.stringArray(forKey: BuiltInDeletions.key), ["A", "B"])
+
+        cloud.set(["A", "B", "C"], forKey: BuiltInDeletions.key)
+        XCTAssertTrue(sync.cloudDidChange(keys: [BuiltInDeletions.key]), "Another device deleted something")
+        XCTAssertEqual(defaults.stringArray(forKey: BuiltInDeletions.key), ["A", "B", "C"])
+        XCTAssertFalse(sync.cloudDidChange(keys: [BuiltInDeletions.key]), "Nothing new")
+
+        defaults.set(["A", "B", "C", "D"], forKey: BuiltInDeletions.key)
+        sync.localDidChange()
+        XCTAssertEqual(cloud.stringArray(forKey: BuiltInDeletions.key), ["A", "B", "C", "D"])
     }
 }
 

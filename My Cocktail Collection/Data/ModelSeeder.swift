@@ -25,25 +25,48 @@ enum ModelSeeder {
         try addMissingStyles(context: context, defaults: defaults)
         try addMissingClassics(context: context, defaults: defaults)
         try fillInTemplates(context: context)
-        try assignBuiltInIDs(context: context)
+        let deleted = BuiltInDeletions.ids(in: defaults)
+        try assignBuiltInIDs(context: context, skipping: deleted)
+        try removeDeletedBuiltIns(context: context, deleted: deleted)
+    }
+
+    /// Removes built-ins from My Library that you deleted on any device (see `BuiltInDeletions`), e.g. after
+    /// a new device added them before hearing about the deletion. Your own items are never touched.
+    static func removeDeletedBuiltIns(context: ModelContext, deleted: Set<UUID>) throws {
+        guard !deleted.isEmpty else { return }
+        var changed = false
+        for style in try context.fetch(FetchDescriptor<DB.SpiritStyle>()) where style.library == nil && deleted.contains(style.id) {
+            context.delete(style)
+            changed = true
+        }
+        for cocktail in try context.fetch(FetchDescriptor<DB.Cocktail>()) where cocktail.library == nil && deleted.contains(cocktail.id) {
+            context.delete(cocktail)
+            changed = true
+        }
+        if changed {
+            try context.saveOrUndo()
+        }
     }
 
     /// Gives built-in spirit types and recipes in My Library their fixed IDs (see `BuiltInID`), for databases
     /// made before IDs were fixed, or built-ins copied in by the old-database import. Matching is by name.
     /// If two items share a built-in's name, the oldest gets the ID. Safe to run at every launch.
-    static func assignBuiltInIDs(context: ModelContext) throws {
+    /// IDs in `deleted` aren't given out again, so a built-in you deleted and later added back by hand stays.
+    static func assignBuiltInIDs(context: ModelContext, skipping deleted: Set<UUID> = []) throws {
         let builtInStyles = Set(SpiritTaxonomy.builtInStyles.map { BuiltInID.key($0.name) })
         let styles = try context.fetch(FetchDescriptor<DB.SpiritStyle>(sortBy: [SortDescriptor(\.dateAdded)]))
             .filter { $0.library == nil }
         let changedStyles = assignFixedIDs(to: styles, id: \.id) { style in
-            builtInStyles.contains(BuiltInID.key(style.name)) ? BuiltInID.style(named: style.name) : nil
+            let fixed = BuiltInID.style(named: style.name)
+            return builtInStyles.contains(BuiltInID.key(style.name)) && !deleted.contains(fixed) ? fixed : nil
         }
 
         let builtInCocktails = Set((SeedData.classics + SeedData.favorites).map { BuiltInID.key($0.name) })
         let cocktails = try context.fetch(FetchDescriptor<DB.Cocktail>(sortBy: [SortDescriptor(\.dateAdded)]))
             .filter { $0.library == nil }
         let changedCocktails = assignFixedIDs(to: cocktails, id: \.id) { cocktail in
-            builtInCocktails.contains(BuiltInID.key(cocktail.name)) ? BuiltInID.cocktail(named: cocktail.name) : nil
+            let fixed = BuiltInID.cocktail(named: cocktail.name)
+            return builtInCocktails.contains(BuiltInID.key(cocktail.name)) && !deleted.contains(fixed) ? fixed : nil
         }
 
         if changedStyles || changedCocktails {
@@ -87,9 +110,11 @@ enum ModelSeeder {
         let existing = try context.fetch(FetchDescriptor<DB.SpiritStyle>()).filter { $0.library == nil }
         let existingNames = Set(existing.map { $0.name.lowercased() })
         let alreadyAdded = Set(defaults?.stringArray(forKey: seededStylesKey) ?? [])
+        let deleted = BuiltInDeletions.ids(in: defaults)
 
         for builtIn in SpiritTaxonomy.builtInStyles where !existingNames.contains(builtIn.name.lowercased()) {
             guard defaults == nil || existing.isEmpty || !alreadyAdded.contains(builtIn.name) else { continue }
+            guard !deleted.contains(BuiltInID.style(named: builtIn.name)) else { continue } // Deleted on some device.
             let style = DB.SpiritStyle(name: builtIn.name, family: builtIn.family, isBuiltIn: true)
             style.id = BuiltInID.style(named: builtIn.name)
             context.insert(style)
@@ -102,19 +127,23 @@ enum ModelSeeder {
         let existing = try context.fetch(FetchDescriptor<DB.Cocktail>()).filter { $0.library == nil }
         let existingNames = Set(existing.map { $0.name.lowercased() })
         let alreadyAdded = Set(defaults?.stringArray(forKey: seededClassicsKey) ?? [])
+        let deleted = BuiltInDeletions.ids(in: defaults)
 
         for seed in SeedData.classics where !existingNames.contains(seed.name.lowercased()) {
             guard defaults == nil || existing.isEmpty || !alreadyAdded.contains(seed.name) else { continue }
+            guard !deleted.contains(BuiltInID.cocktail(named: seed.name)) else { continue } // Deleted on some device.
             try add(seed, source: .classic, isFavorite: false, context: context)
         }
         defaults?.set(alreadyAdded.union(SeedData.classics.map(\.name)).sorted(), forKey: seededClassicsKey)
     }
 
-    /// Adds the house favorites that aren't already in the collection, marked as favorites.
-    static func addHouseFavorites(context: ModelContext) throws {
+    /// Adds the house favorites that aren't already in the collection, marked as favorites. You asked for
+    /// them, so ones you deleted before come back too (with new IDs, so they aren't removed again).
+    static func addHouseFavorites(context: ModelContext, deletions: UserDefaults? = BuiltInDeletions.store) throws {
         let existingNames = Set(try context.fetch(FetchDescriptor<DB.Cocktail>()).filter { $0.library == nil }.map { $0.name.lowercased() })
+        let deleted = BuiltInDeletions.ids(in: deletions)
         for seed in SeedData.favorites where !existingNames.contains(seed.name.lowercased()) {
-            try add(seed, source: .original, isFavorite: true, context: context)
+            try add(seed, source: .original, isFavorite: true, context: context, deleted: deleted)
         }
     }
 
@@ -123,7 +152,8 @@ enum ModelSeeder {
         SpiritTaxonomy.placement(forLegacySpirit: seed.spirit, type: .liquor).styleName
     }
 
-    private static func add(_ seed: SeedCocktail, source: CocktailSource, isFavorite: Bool, context: ModelContext) throws {
+    private static func add(_ seed: SeedCocktail, source: CocktailSource, isFavorite: Bool, context: ModelContext,
+                            deleted: Set<UUID> = []) throws {
         let baseStyle = try StyleStore(context: context).style(named: baseStyleName(for: seed))
         let cocktail = try CocktailStore(context: context).addCocktail(
             name: seed.name,
@@ -133,11 +163,62 @@ enum ModelSeeder {
             method: seed.methodText,
             isFavorite: isFavorite
         )
+        let fixedID = BuiltInID.cocktail(named: seed.name)
         try CocktailStore(context: context).update(cocktail) {
-            $0.id = BuiltInID.cocktail(named: seed.name)
+            if !deleted.contains(fixedID) {
+                $0.id = fixedID
+            }
             if let template = SeedData.templates[seed.name] {
                 $0.template = template
             }
+        }
+    }
+}
+
+// MARK: - Deleted built-ins
+
+/// Built-ins you've deleted, by fixed ID. Kept in UserDefaults and copied to your other devices through
+/// iCloud key-value storage (`SettingsSync`), so a new device doesn't add them back and send them to iCloud again.
+enum BuiltInDeletions {
+    static let key = "DeletedBuiltInIDs"
+
+    /// Where deletions are remembered: UserDefaults in the app, nothing in tests (which use their own suites).
+    static var store: UserDefaults? {
+        let process = ProcessInfo.processInfo
+        if process.environment["XCTestConfigurationFilePath"] != nil || process.arguments.contains("-uiTesting") {
+            return nil
+        }
+        return .standard
+    }
+
+    static func ids(in defaults: UserDefaults?) -> Set<UUID> {
+        Set((defaults?.stringArray(forKey: key) ?? []).compactMap(UUID.init(uuidString:)))
+    }
+
+    static func record(_ id: UUID, in defaults: UserDefaults?) {
+        guard let defaults else { return }
+        var list = defaults.stringArray(forKey: key) ?? []
+        guard !list.contains(id.uuidString) else { return }
+        list.append(id.uuidString)
+        defaults.set(list.sorted(), forKey: key)
+    }
+
+    /// Every built-in recipe's fixed ID (classics and house favorites).
+    static let cocktailIDs = Set((SeedData.classics + SeedData.favorites).map { BuiltInID.cocktail(named: $0.name) })
+    /// Every built-in spirit type's fixed ID.
+    static let styleIDs = Set(SpiritTaxonomy.builtInStyles.map { BuiltInID.style(named: $0.name) })
+
+    /// Remembers a deleted cocktail if it's one of My Library's built-ins (even if you renamed it).
+    static func noteDeleted(_ cocktail: DB.Cocktail, in defaults: UserDefaults? = store) {
+        if cocktail.library == nil && cocktailIDs.contains(cocktail.id) {
+            record(cocktail.id, in: defaults)
+        }
+    }
+
+    /// Remembers a deleted spirit type if it's one of My Library's built-ins.
+    static func noteDeleted(_ style: DB.SpiritStyle, in defaults: UserDefaults? = store) {
+        if style.library == nil && styleIDs.contains(style.id) {
+            record(style.id, in: defaults)
         }
     }
 }

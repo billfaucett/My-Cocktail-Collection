@@ -68,6 +68,50 @@ enum LibrarySharing {
 
     // MARK: Who it's shared with
 
+    /// Someone you've invited, as Settings lists them.
+    struct Person: Identifiable, Equatable {
+        let id: String
+        /// Their name, or email or phone number if their name isn't known yet.
+        let name: String
+        /// "Can edit" or "View only", with "Invited" until they accept.
+        let detail: String
+    }
+
+    /// Everyone you've invited (not you, and not people you've removed), names A–Z.
+    nonisolated static func people(in share: CKShare) -> [Person] {
+        share.participants
+            .filter { $0.role != .owner && $0.acceptanceStatus != .removed }
+            .map { participant in
+                let identity = participant.userIdentity
+                let name = displayName(nameComponents: identity.nameComponents,
+                                       email: identity.lookupInfo?.emailAddress,
+                                       phone: identity.lookupInfo?.phoneNumber)
+                let id = identity.userRecordID?.recordName ?? identity.lookupInfo?.emailAddress
+                    ?? identity.lookupInfo?.phoneNumber ?? name
+                return Person(id: id, name: name,
+                              detail: personDetail(canEdit: participant.permission == .readWrite,
+                                                   isPending: participant.acceptanceStatus == .pending))
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// A person's name, falling back to their email or phone number, then "Invited person".
+    nonisolated static func displayName(nameComponents: PersonNameComponents?, email: String?, phone: String?) -> String {
+        if let nameComponents {
+            let name = PersonNameComponentsFormatter.localizedString(from: nameComponents, style: .default)
+            if !name.isEmpty { return name }
+        }
+        if let email, !email.isEmpty { return email }
+        if let phone, !phone.isEmpty { return phone }
+        return "Invited person"
+    }
+
+    /// "Can edit", "View only", "View only · Invited".
+    nonisolated static func personDetail(canEdit: Bool, isPending: Bool) -> String {
+        let access = canEdit ? "Can edit" : "View only"
+        return isPending ? "\(access) · Invited" : access
+    }
+
     /// People invited, not counting you.
     nonisolated static func participantCount(of share: CKShare) -> Int {
         share.participants.filter { $0.role != .owner }.count

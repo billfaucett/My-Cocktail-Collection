@@ -27,7 +27,11 @@ enum AppStartup {
         prepare(container.mainContext, isUITesting: isUITesting)
         if !isUITesting && !isRunningTests {
             CloudSync.start(container: container)
-            SettingsSync.start()
+            SettingsSync.start {
+                // Another device deleted a built-in: remove it here too.
+                try? ModelSeeder.removeDeletedBuiltIns(context: container.mainContext,
+                                                       deleted: BuiltInDeletions.ids(in: .standard))
+            }
         }
         return container
     }

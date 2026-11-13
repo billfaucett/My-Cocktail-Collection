@@ -24,6 +24,7 @@
 
 import CloudKit
 import Foundation
+import Network
 import OSLog
 import SwiftData
 
@@ -269,10 +270,14 @@ final class CloudSyncLedger {
     }
 
     /// Removes a library shared with you and everything in it (its owner stopped sharing or removed you).
-    func removeLibrary(zoneID: CKRecordZone.ID) throws {
+    /// Returns its name, if it was here.
+    @discardableResult
+    func removeLibrary(zoneID: CKRecordZone.ID) throws -> String? {
         let context = makeContext()
-        if let library = try library(for: zoneID, in: context) {
-            context.delete(library)
+        let removed = try library(for: zoneID, in: context)
+        let name = removed?.name
+        if let removed {
+            context.delete(removed)
         }
         for record in try syncRecords(scope: .shared, in: context).values
         where record.zoneName == zoneID.zoneName && record.zoneOwnerName == zoneID.ownerName {
@@ -280,6 +285,7 @@ final class CloudSyncLedger {
         }
         waiting = waiting.filter { $0.key.zoneID != zoneID }
         try save(context)
+        return name
     }
 
     /// "Bill's Library", or "Shared Library" when the owner's name isn't known.
@@ -514,6 +520,8 @@ final class CloudSync: CKSyncEngineDelegate {
     private var sharedEngine: CKSyncEngine?
     private var cloudContainer: CKContainer?
     private var saveObserver: NSObjectProtocol?
+    /// Watches the internet connection, so Settings can say when the device is offline.
+    private let pathMonitor = NWPathMonitor()
     private let status = CloudSyncStatus.shared
     /// Why the last send left changes waiting (no connection, storage full), shown in Settings.
     private var waitingReason: String?
@@ -571,6 +579,12 @@ final class CloudSync: CKSyncEngineDelegate {
         status.state = .checking
         Task { await checkAccount(cloudContainer) }
 
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            let isOnline = path.status == .satisfied
+            Task { @MainActor in self?.networkChanged(isOnline: isOnline) }
+        }
+        pathMonitor.start(queue: DispatchQueue(label: "CloudSync.network"))
+
         let privateState = Self.loadState(from: Self.privateStateURL)
         privateEngine = CKSyncEngine(CKSyncEngine.Configuration(
             database: cloudContainer.privateCloudDatabase, stateSerialization: privateState, delegate: self))
@@ -594,6 +608,14 @@ final class CloudSync: CKSyncEngineDelegate {
             } else {
                 Task { @MainActor [weak self] in self?.queueLocalChanges(changed: identifiers) }
             }
+        }
+    }
+
+    private func networkChanged(isOnline: Bool) {
+        guard let next = status.state.afterNetworkChange(isOnline: isOnline) else { return }
+        status.state = next
+        if isOnline {
+            Task { await Self.syncNow() }
         }
     }
 
@@ -632,7 +654,7 @@ final class CloudSync: CKSyncEngineDelegate {
         guard let error = error as? CKError else { return error.localizedDescription }
         switch error.code {
         case .networkUnavailable, .networkFailure:
-            return "No internet connection. Your changes are saved on this device and will sync when you're back online."
+            return CloudSyncState.offlineMessage
         case .quotaExceeded:
             return "Your iCloud storage is full. Free up space in iCloud to keep syncing; your changes are saved on this device."
         case .notAuthenticated:
@@ -686,7 +708,9 @@ final class CloudSync: CKSyncEngineDelegate {
                 if isShared {
                     // A shared zone went away: its owner stopped sharing or removed you.
                     for deletion in changes.deletions {
-                        try ledger.removeLibrary(zoneID: deletion.zoneID)
+                        if let name = try ledger.removeLibrary(zoneID: deletion.zoneID) {
+                            status.notice = "\(name) is no longer shared with you, so it was removed from this device. Recipes you copied to My Cocktails are still yours."
+                        }
                     }
                 } else {
                     let ownZones = [CloudSchema.libraryZoneName, CloudSchema.myBarZoneName]

@@ -97,6 +97,7 @@ struct StyleStore {
 
     /// Deletes a style. Bottles, cocktails and ingredients that used it stay, without a style.
     func delete(_ style: DB.SpiritStyle) throws {
+        BuiltInDeletions.noteDeleted(style)
         context.delete(style)
         try context.saveOrUndo()
     }
@@ -442,6 +443,7 @@ struct CocktailStore {
 
     /// Deletes a cocktail, its ingredients and its menu entries.
     func delete(_ cocktail: DB.Cocktail) throws {
+        BuiltInDeletions.noteDeleted(cocktail)
         context.delete(cocktail)
         try context.saveOrUndo()
     }
