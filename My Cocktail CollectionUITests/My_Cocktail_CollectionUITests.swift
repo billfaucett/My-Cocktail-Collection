@@ -337,6 +337,22 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(row("Data Model, [0-9]+\\.[0-9]+\\.[0-9]+").exists, "The data model version is shown")
     }
 
+    /// Settings has an iCloud section with sync's status. UI tests run without iCloud, so it reads "Off".
+    func testSettingsShowsICloudStatus() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting"]
+        app.launch()
+
+        let more = app.navigationBars["My Cocktails"].buttons["More"]
+        XCTAssertTrue(more.waitForExistence(timeout: 5))
+        more.tap()
+        app.buttons["Settings…"].tap()
+        let status = scrollTo(app.descendants(matching: .any)["iCloudStatus"], in: app)
+        XCTAssertTrue(status.exists, "The iCloud status row is shown")
+        XCTAssertTrue(status.label.contains("Off"), "Sync doesn't run in UI tests")
+        XCTAssertFalse(app.buttons["Sync Now"].exists, "Nothing to sync while it's off")
+    }
+
     /// The cocktail form suggests a template from the ingredients, and tapping it sets the template.
     func testTemplateIsSuggestedFromTheIngredients() throws {
         let app = XCUIApplication()

@@ -5,6 +5,7 @@
 //  Data model refactor, phase 5: prepares the new SwiftData database when the app launches.
 //  On first launch it copies the old data in (LegacyImporter), then adds any missing built-ins.
 //  This runs before any screen appears, so nothing is writing to the old database while it's copied.
+//  Then iCloud sync starts (not in tests).
 //
 
 import Foundation
@@ -24,7 +25,16 @@ enum AppStartup {
             fatalError("The cocktail database couldn't be created: \(error)")
         }
         prepare(container.mainContext, isUITesting: isUITesting)
+        if !isUITesting && !isRunningTests {
+            CloudSync.start(container: container)
+            SettingsSync.start()
+        }
         return container
+    }
+
+    /// True when unit tests host the app. They use their own in-memory databases and never touch iCloud.
+    static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     /// Imports the old database once, then adds missing built-in styles and classics.

@@ -3,14 +3,17 @@
 //  My Cocktail Collection
 //
 //  Data model refactor, phase 6: pick how big a part is, so recipes also show ounces or millilitres.
+//  Sync and sharing, step 2c: iCloud sync status, with Sync Now.
 //
 
+import CloudKit
 import SwiftUI
 
 /// Settings for how recipes are shown. Changes apply straight away.
 struct PartSizeSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(PartSize.storageKey) private var partSize = PartSize.off
+    private var syncStatus = CloudSyncStatus.shared
 
     var body: some View {
         NavigationStack {
@@ -38,6 +41,21 @@ struct PartSizeSettingsView: View {
                 }
 
                 Section {
+                    CloudSyncStatusRow(state: syncStatus.state)
+                    if syncStatus.state.canSyncNow {
+                        Button {
+                            Task { await CloudSync.syncNow() }
+                        } label: {
+                            Label("Sync Now", systemImage: "arrow.clockwise")
+                        }
+                    }
+                } header: {
+                    Text("iCloud")
+                } footer: {
+                    Text("Your cocktails, menus, spirit types, My Bar and part size stay the same on every device signed in to your Apple ID.")
+                }
+
+                Section {
                     NavigationLink {
                         AboutView()
                     } label: {
@@ -55,6 +73,24 @@ struct PartSizeSettingsView: View {
                 }
             }
         }
+    }
+}
+
+/// iCloud sync's status: an icon and title, with a line of detail when there's more to say.
+struct CloudSyncStatusRow: View {
+    let state: CloudSyncState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(state.title, systemImage: state.systemImage)
+            if let detail = state.detail() {
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("iCloudStatus")
     }
 }
 
@@ -81,4 +117,14 @@ struct ConvertedIngredientRow: View {
 
 #Preview {
     PartSizeSettingsView()
+}
+
+#Preview("iCloud status") {
+    List {
+        CloudSyncStatusRow(state: .upToDate(Date().addingTimeInterval(-300)))
+        CloudSyncStatusRow(state: .syncing)
+        CloudSyncStatusRow(state: .notSignedIn)
+        CloudSyncStatusRow(state: .problem(CloudSync.message(for: CKError(.networkUnavailable))))
+        CloudSyncStatusRow(state: .off)
+    }
 }

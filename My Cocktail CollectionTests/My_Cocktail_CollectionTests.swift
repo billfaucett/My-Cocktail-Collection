@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import CloudKit
 import CoreData
 import SwiftData
 import UIKit
@@ -3551,6 +3552,649 @@ final class IngredientFormatterTests: XCTestCase {
         )
         XCTAssertEqual(IngredientFormatter.text(for: cocktail.orderedIngredients),
                        "1 part Gin\n1 part Campari\n1 part Sweet Vermouth\nOrange peel, to garnish")
+    }
+}
+
+// MARK: - iCloud records
+
+/// Items become iCloud records and come back unchanged on another device (sync and sharing, step 2a).
+final class CloudRecordsTests: XCTestCase {
+    /// Two databases, standing in for two devices. Both have the built-in types, with the same fixed IDs.
+    private var containerA: ModelContainer!
+    private var containerB: ModelContainer!
+    private var a: ModelContext!
+    private var b: ModelContext!
+
+    override func setUpWithError() throws {
+        containerA = try CocktailModelContainer.make(inMemory: true)
+        containerB = try CocktailModelContainer.make(inMemory: true)
+        a = ModelContext(containerA)
+        b = ModelContext(containerB)
+        try ModelSeeder.addMissingStyles(context: a, defaults: nil)
+        try ModelSeeder.addMissingStyles(context: b, defaults: nil)
+    }
+
+    override func tearDownWithError() throws {
+        a = nil
+        b = nil
+        containerA = nil
+        containerB = nil
+    }
+
+    private func style(_ name: String, in context: ModelContext) throws -> DB.SpiritStyle {
+        try XCTUnwrap(try StyleStore(context: context).style(named: name), "No style named \(name)")
+    }
+
+    private func cocktails(in context: ModelContext) throws -> [DB.Cocktail] {
+        try context.fetch(FetchDescriptor<DB.Cocktail>(sortBy: [SortDescriptor(\.name)]))
+    }
+
+    /// A sour with every kind of ingredient row, a base spirit, a template and a photo.
+    private func makeSour(in context: ModelContext) throws -> DB.Cocktail {
+        let bourbon = try style("Bourbon", in: context)
+        let cocktail = DB.Cocktail(name: "Test Sour", source: .website, method: "Dry shake\nShake with ice")
+        context.insert(cocktail)
+        cocktail.baseStyle = bourbon
+        cocktail.isFavorite = true
+        cocktail.template = .daiquiri
+        cocktail.originalIngredientsText = "2 oz bourbon"
+        cocktail.photo = Data([1, 2, 3, 4])
+        let rows = [
+            DB.RecipeIngredient(position: 0, name: "Bourbon", amount: 2, unit: .part),
+            DB.RecipeIngredient(position: 1, name: "Lemon Juice", amount: 0.75, amountMax: 1, unit: .part, note: "fresh"),
+            DB.RecipeIngredient(position: 2, name: "Egg White", amount: 1, isOptional: true),
+            DB.RecipeIngredient(position: 3, name: "Lemon Peel", isGarnish: true),
+        ]
+        for row in rows {
+            context.insert(row)
+            row.cocktail = cocktail
+        }
+        rows[0].style = bourbon
+        try context.save()
+        return cocktail
+    }
+
+    func testRecordsLiveInTheRightZones() {
+        let id = UUID()
+        XCTAssertEqual(CloudRecords.recordID(for: id, type: .cocktail).recordName, id.uuidString, "The record name is the item's ID")
+        XCTAssertEqual(CloudRecords.recordID(for: id, type: .cocktail).zoneID.zoneName, "Library")
+        XCTAssertEqual(CloudRecords.recordID(for: id, type: .style).zoneID.zoneName, "Library")
+        XCTAssertEqual(CloudRecords.recordID(for: id, type: .menu).zoneID.zoneName, "Library")
+        XCTAssertEqual(CloudRecords.recordID(for: id, type: .bottle).zoneID.zoneName, "MyBar", "My Bar is kept apart, never shared")
+        XCTAssertEqual(CloudRecords.recordID(for: id, type: .cocktail, libraryOwner: "_friend").zoneID.ownerName, "_friend")
+    }
+
+    func testCocktailComesBackUnchanged() throws {
+        let sour = try makeSour(in: a)
+        let record = CloudRecords.record(for: sour, systemFields: nil)
+        XCTAssertEqual(record.recordType, "Cocktail")
+
+        XCTAssertTrue(try CloudRecords.apply(record, in: b), "Every link was found")
+        try b.save()
+
+        let copy = try XCTUnwrap(try cocktails(in: b).first)
+        XCTAssertEqual(copy.id, sour.id)
+        XCTAssertEqual(copy.name, "Test Sour")
+        XCTAssertEqual(copy.source, .website)
+        XCTAssertEqual(copy.method, sour.method)
+        XCTAssertTrue(copy.isFavorite)
+        XCTAssertEqual(copy.template, .daiquiri)
+        XCTAssertEqual(copy.originalIngredientsText, "2 oz bourbon")
+        XCTAssertEqual(copy.photo, Data([1, 2, 3, 4]))
+        XCTAssertEqual(copy.dateAdded, sour.dateAdded)
+        XCTAssertEqual(copy.baseStyle?.name, "Bourbon")
+        XCTAssertNil(copy.library)
+        XCTAssertEqual(copy.orderedIngredients.map(\.displayText), sour.orderedIngredients.map(\.displayText))
+        XCTAssertEqual(copy.orderedIngredients.map(\.id), sour.orderedIngredients.map(\.id))
+        XCTAssertEqual(copy.orderedIngredients.map(\.isGarnish), [false, false, false, true])
+        XCTAssertEqual(copy.orderedIngredients.map(\.isOptional), [false, false, true, false])
+        XCTAssertEqual(copy.orderedIngredients.map(\.note), [nil, "fresh", nil, nil])
+        XCTAssertEqual(copy.orderedIngredients.first?.style?.name, "Bourbon")
+    }
+
+    func testReceivingAChangeReplacesTheIngredientsInsteadOfAddingThem() throws {
+        let sour = try makeSour(in: a)
+        try CloudRecords.apply(CloudRecords.record(for: sour, systemFields: nil), in: b)
+        try b.save()
+        try CloudRecords.apply(CloudRecords.record(for: sour, systemFields: nil), in: b)
+        try b.save()
+        XCTAssertEqual(try cocktails(in: b).count, 1)
+        XCTAssertEqual(try b.fetchCount(FetchDescriptor<DB.RecipeIngredient>()), 4, "Receiving the same recipe twice doesn't double it")
+
+        // Remove the garnish on device A and send again.
+        let garnish = try XCTUnwrap(sour.orderedIngredients.last)
+        sour.ingredients?.removeAll { $0 === garnish }
+        a.delete(garnish)
+        sour.name = "Test Sour No. 2"
+        try a.save()
+        try CloudRecords.apply(CloudRecords.record(for: sour, systemFields: nil), in: b)
+        try b.save()
+        let copy = try XCTUnwrap(try cocktails(in: b).first)
+        XCTAssertEqual(copy.name, "Test Sour No. 2")
+        XCTAssertEqual(copy.orderedIngredients.map(\.name), ["Bourbon", "Lemon Juice", "Egg White"])
+        XCTAssertEqual(try b.fetchCount(FetchDescriptor<DB.RecipeIngredient>()), 3)
+    }
+
+    func testALinkThatHasntArrivedIsReportedAndFixedLater() throws {
+        let barrelGin = DB.SpiritStyle(name: "Barrel Gin", family: .gin)
+        a.insert(barrelGin)
+        let cocktail = DB.Cocktail(name: "Barrel Martini")
+        a.insert(cocktail)
+        cocktail.baseStyle = barrelGin
+        try a.save()
+
+        let record = CloudRecords.record(for: cocktail, systemFields: nil)
+        XCTAssertFalse(try CloudRecords.apply(record, in: b), "Device B doesn't have Barrel Gin yet")
+        try b.save()
+        XCTAssertNil(try cocktails(in: b).first?.baseStyle)
+
+        try CloudRecords.apply(CloudRecords.record(for: barrelGin, systemFields: nil), in: b)
+        XCTAssertTrue(try CloudRecords.apply(record, in: b))
+        try b.save()
+        XCTAssertEqual(try cocktails(in: b).first?.baseStyle?.name, "Barrel Gin")
+    }
+
+    func testSpiritTypeComesBackUnchanged() throws {
+        let barrelGin = DB.SpiritStyle(name: "Barrel Gin", family: .gin)
+        a.insert(barrelGin)
+        try a.save()
+        try CloudRecords.apply(CloudRecords.record(for: barrelGin, systemFields: nil), in: b)
+        try b.save()
+        let copy = try XCTUnwrap(try CloudRecords.findStyle(barrelGin.id, library: nil, in: b))
+        XCTAssertEqual(copy.name, "Barrel Gin")
+        XCTAssertEqual(copy.family, .gin)
+        XCTAssertFalse(copy.isBuiltIn)
+        XCTAssertEqual(copy.dateAdded, barrelGin.dateAdded)
+
+        // A built-in type is the same record on both devices: updating it doesn't add a second one.
+        let londonDry = try style("London Dry", in: a)
+        try CloudRecords.apply(CloudRecords.record(for: londonDry, systemFields: nil), in: b)
+        try b.save()
+        XCTAssertEqual(try b.fetch(FetchDescriptor<DB.SpiritStyle>()).filter { $0.name == "London Dry" }.count, 1)
+    }
+
+    func testMenuComesBackWithItsCocktailsInOrder() throws {
+        let first = DB.Cocktail(name: "Aviation")
+        let second = DB.Cocktail(name: "Negroni")
+        a.insert(first)
+        a.insert(second)
+        let menu = DB.Menu(name: "Friday Night")
+        menu.notes = "Bring ice"
+        a.insert(menu)
+        for (position, cocktail) in [second, first].enumerated() {
+            let entry = DB.MenuEntry(position: position)
+            a.insert(entry)
+            entry.menu = menu
+            entry.cocktail = cocktail
+        }
+        try a.save()
+
+        let menuRecord = CloudRecords.record(for: menu, systemFields: nil)
+        XCTAssertFalse(try CloudRecords.apply(menuRecord, in: b), "The cocktails haven't arrived yet")
+        try CloudRecords.apply(CloudRecords.record(for: first, systemFields: nil), in: b)
+        try CloudRecords.apply(CloudRecords.record(for: second, systemFields: nil), in: b)
+        XCTAssertTrue(try CloudRecords.apply(menuRecord, in: b))
+        try b.save()
+
+        let copy = try XCTUnwrap(try b.fetch(FetchDescriptor<DB.Menu>()).first)
+        XCTAssertEqual(copy.name, "Friday Night")
+        XCTAssertEqual(copy.notes, "Bring ice")
+        XCTAssertEqual(copy.dateCreated, menu.dateCreated)
+        XCTAssertEqual(copy.orderedEntries.compactMap { $0.cocktail?.name }, ["Negroni", "Aviation"])
+        XCTAssertEqual(try b.fetchCount(FetchDescriptor<DB.MenuEntry>()), 2)
+    }
+
+    func testBottleComesBackUnchanged() throws {
+        let bottle = DB.Bottle(brand: "Tanqueray", stock: .low, bottleCount: 2)
+        bottle.notes = "Gift"
+        bottle.isFavorite = true
+        bottle.photo = Data([9, 8, 7])
+        a.insert(bottle)
+        bottle.style = try style("London Dry", in: a)
+        try a.save()
+
+        let record = CloudRecords.record(for: bottle, systemFields: nil)
+        XCTAssertEqual(record.recordID.zoneID.zoneName, "MyBar")
+        XCTAssertTrue(try CloudRecords.apply(record, in: b))
+        try b.save()
+
+        let copy = try XCTUnwrap(try b.fetch(FetchDescriptor<DB.Bottle>()).first)
+        XCTAssertEqual(copy.id, bottle.id)
+        XCTAssertEqual(copy.brand, "Tanqueray")
+        XCTAssertEqual(copy.stock, .low)
+        XCTAssertEqual(copy.bottleCount, 2)
+        XCTAssertEqual(copy.notes, "Gift")
+        XCTAssertTrue(copy.isFavorite)
+        XCTAssertEqual(copy.photo, Data([9, 8, 7]))
+        XCTAssertEqual(copy.style?.name, "London Dry")
+    }
+
+    func testRemovingAPhotoIsSentToo() throws {
+        let sour = try makeSour(in: a)
+        try CloudRecords.apply(CloudRecords.record(for: sour, systemFields: nil), in: b)
+        sour.photo = nil
+        try a.save()
+        try CloudRecords.apply(CloudRecords.record(for: sour, systemFields: nil), in: b)
+        try b.save()
+        XCTAssertNil(try cocktails(in: b).first?.photo)
+    }
+
+    func testDeletedRecordsRemoveTheItemAndItsRows() throws {
+        let sour = try makeSour(in: a)
+        try CloudRecords.apply(CloudRecords.record(for: sour, systemFields: nil), in: b)
+        try b.save()
+
+        try CloudRecords.deleteItem(type: .cocktail, id: sour.id, in: b)
+        try b.save()
+        XCTAssertEqual(try b.fetchCount(FetchDescriptor<DB.Cocktail>()), 0)
+        XCTAssertEqual(try b.fetchCount(FetchDescriptor<DB.RecipeIngredient>()), 0)
+
+        // Deleting something that isn't here does nothing.
+        try CloudRecords.deleteItem(type: .menu, id: UUID(), in: b)
+    }
+
+    func testASharedLibrarysRecipesStaySeparateFromYourOwn() throws {
+        try ModelSeeder.seedBuiltIns(context: a, defaults: nil)
+        try ModelSeeder.seedBuiltIns(context: b, defaults: nil)
+        let theirNegroni = try XCTUnwrap(try cocktails(in: a).first { $0.name == "Negroni" })
+        theirNegroni.method = "Their way"
+        try a.save()
+
+        let library = DB.Library(name: "Friend's Library", ownerName: "Friend", zoneName: "Library", zoneOwnerName: "_friend")
+        b.insert(library)
+        let record = CloudRecords.record(for: theirNegroni, systemFields: nil, libraryOwner: "_friend")
+        try CloudRecords.apply(record, in: b, library: library)
+        try b.save()
+
+        let negronis = try cocktails(in: b).filter { $0.name == "Negroni" }
+        XCTAssertEqual(negronis.count, 2, "Same ID, but one is yours and one is theirs")
+        let mine = try XCTUnwrap(negronis.first { $0.library == nil })
+        let theirs = try XCTUnwrap(negronis.first { $0.library != nil })
+        XCTAssertNotEqual(mine.method, "Their way", "Your recipe isn't changed by theirs")
+        XCTAssertEqual(theirs.method, "Their way")
+        XCTAssertNil(theirs.baseStyle, "Their types come with their library, not from yours")
+    }
+
+    func testSavedSystemFieldsAreReused() throws {
+        let id = CloudRecords.recordID(for: UUID(), type: .cocktail)
+        let original = CKRecord(recordType: "Cocktail", recordID: id)
+        let data = CloudSystemFields.encode(original)
+
+        let decoded = try XCTUnwrap(CloudSystemFields.decode(data))
+        XCTAssertEqual(decoded.recordID, id)
+        XCTAssertEqual(decoded.recordType, "Cocktail")
+        XCTAssertEqual(CloudRecords.blankRecord(type: .cocktail, id: id, systemFields: data).recordID, id)
+
+        // Saved fields for a different record are ignored.
+        let otherID = CloudRecords.recordID(for: UUID(), type: .cocktail)
+        XCTAssertEqual(CloudRecords.blankRecord(type: .cocktail, id: otherID, systemFields: data).recordID, otherID)
+        XCTAssertNil(CloudSystemFields.decode(Data([0, 1, 2])), "Damaged data is ignored")
+    }
+}
+
+/// What gets sent to iCloud, what arrives, and how disagreements settle (sync and sharing, step 2b).
+/// Two in-memory databases stand in for two devices; records are passed between them by hand.
+final class CloudSyncLedgerTests: XCTestCase {
+    private var containerA: ModelContainer!
+    private var containerB: ModelContainer!
+
+    override func setUpWithError() throws {
+        containerA = try CocktailModelContainer.make(inMemory: true)
+        containerB = try CocktailModelContainer.make(inMemory: true)
+    }
+
+    override func tearDownWithError() throws {
+        containerA = nil
+        containerB = nil
+    }
+
+    // MARK: Helpers
+
+    /// Sends everything waiting on a device, as iCloud would accept it, and returns what was sent.
+    @MainActor
+    @discardableResult
+    private func sendAll(_ ledger: CloudSyncLedger) throws -> [CKRecord] {
+        let changes = try ledger.localChanges()
+        let records = try changes.saves.compactMap { try ledger.record(for: $0) }
+        for record in records {
+            try ledger.didSave(record)
+        }
+        for recordID in changes.deletes {
+            try ledger.didDelete(recordID)
+        }
+        return records
+    }
+
+    /// A user recipe with a user type, so the test controls every ID.
+    @MainActor
+    private func addRecipe(_ name: String, in container: ModelContainer) throws -> (cocktail: UUID, style: UUID) {
+        let context = ModelContext(container)
+        let style = DB.SpiritStyle(name: "Barrel Gin", family: .gin)
+        context.insert(style)
+        let cocktail = DB.Cocktail(name: name, method: "Stir")
+        context.insert(cocktail)
+        cocktail.baseStyle = style
+        let ingredient = DB.RecipeIngredient(position: 0, name: "Barrel Gin", amount: 2, unit: .part)
+        context.insert(ingredient)
+        ingredient.cocktail = cocktail
+        try context.save()
+        return (cocktail.id, style.id)
+    }
+
+    private func cocktail(_ id: UUID, in container: ModelContainer) throws -> DB.Cocktail? {
+        try CloudRecords.findCocktail(id, library: nil, in: ModelContext(container))
+    }
+
+    private func recordID(_ id: UUID, _ type: CloudRecordType) -> CKRecord.ID {
+        CloudRecords.recordID(for: id, type: type)
+    }
+
+    // MARK: Sending
+
+    @MainActor
+    func testFirstCheckQueuesEverythingUntilItIsSent() throws {
+        let context = ModelContext(containerA)
+        try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
+        context.insert(DB.Bottle(brand: "Tanqueray"))
+        try context.save()
+        let ledger = CloudSyncLedger(container: containerA)
+
+        let first = try ledger.localChanges()
+        XCTAssertEqual(first.saves.count, SpiritTaxonomy.builtInStyles.count + SeedData.classics.count + 1)
+        XCTAssertEqual(first.deletes, [])
+        XCTAssertEqual(try ledger.localChanges().saves.count, first.saves.count, "Still waiting until iCloud has it")
+        XCTAssertEqual(Set(first.saves.map(\.zoneID.zoneName)), ["Library", "MyBar"])
+
+        try sendAll(ledger)
+        XCTAssertTrue(try ledger.localChanges().isEmpty, "Nothing left to send")
+    }
+
+    @MainActor
+    func testChangesToARecipeOrItsIngredientsAreSent() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let ledger = CloudSyncLedger(container: containerA)
+        try sendAll(ledger)
+
+        let context = ModelContext(containerA)
+        let cocktail = try XCTUnwrap(try CloudRecords.findCocktail(ids.cocktail, library: nil, in: context))
+        cocktail.name = "Barrel Martini No. 2"
+        try context.save()
+        XCTAssertEqual(try ledger.localChanges(changed: [cocktail.persistentModelID]).saves, [recordID(ids.cocktail, .cocktail)])
+        let record = try XCTUnwrap(try ledger.record(for: recordID(ids.cocktail, .cocktail)))
+        XCTAssertEqual(record["name"] as? String, "Barrel Martini No. 2")
+        try ledger.didSave(record)
+
+        // Changing only an ingredient sends its recipe.
+        let ingredient = try XCTUnwrap(cocktail.ingredients?.first)
+        ingredient.amount = 3
+        try context.save()
+        XCTAssertEqual(try ledger.localChanges(changed: [ingredient.persistentModelID]).saves, [recordID(ids.cocktail, .cocktail)])
+    }
+
+    @MainActor
+    func testDeletionsAreSentOnlyForItemsICloudHas() throws {
+        let sent = try addRecipe("Sent Sour", in: containerA)
+        let ledger = CloudSyncLedger(container: containerA)
+        try sendAll(ledger)
+        let unsent = try addRecipe("Unsent Sour", in: containerA)
+        _ = try ledger.localChanges()
+
+        let context = ModelContext(containerA)
+        for id in [sent.cocktail, unsent.cocktail] {
+            context.delete(try XCTUnwrap(try CloudRecords.findCocktail(id, library: nil, in: context)))
+        }
+        try context.save()
+
+        let changes = try ledger.localChanges()
+        XCTAssertEqual(changes.deletes, [recordID(sent.cocktail, .cocktail)], "The unsent recipe never reached iCloud")
+        XCTAssertFalse(changes.saves.contains(recordID(unsent.cocktail, .cocktail)))
+        try ledger.didDelete(recordID(sent.cocktail, .cocktail))
+        XCTAssertEqual(try ledger.localChanges().deletes, [])
+    }
+
+    @MainActor
+    func testSentRecordsKeepTheirICloudDetails() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let ledger = CloudSyncLedger(container: containerA)
+        let id = recordID(ids.cocktail, .cocktail)
+        _ = try ledger.localChanges()
+        XCTAssertEqual(try ledger.bookkeeping(for: id), .init(needsUpload: true, hasSystemFields: false))
+        try sendAll(ledger)
+        XCTAssertEqual(try ledger.bookkeeping(for: id), .init(needsUpload: false, hasSystemFields: true))
+        XCTAssertEqual(try ledger.record(for: id)?.recordID, id)
+        XCTAssertNil(try ledger.record(for: recordID(UUID(), .cocktail)), "Nothing to send for an unknown item")
+    }
+
+    // MARK: Receiving
+
+    @MainActor
+    func testRecordsFromAnotherDeviceArriveAndArentSentBack() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let records = try sendAll(CloudSyncLedger(container: containerA))
+        let ledgerB = CloudSyncLedger(container: containerB)
+
+        // The cocktail comes before its type, as can happen; the type is put first.
+        try ledgerB.applyFetched(modifications: records.reversed(), deletions: [])
+        let copy = try XCTUnwrap(try cocktail(ids.cocktail, in: containerB))
+        XCTAssertEqual(copy.name, "Barrel Martini")
+        XCTAssertEqual(copy.baseStyle?.name, "Barrel Gin")
+        XCTAssertEqual(copy.orderedIngredients.map(\.displayText), ["2 parts Barrel Gin"])
+        XCTAssertTrue(try ledgerB.localChanges().isEmpty, "What arrived from iCloud isn't sent back")
+
+        try ledgerB.applyFetched(modifications: [], deletions: [(recordID: recordID(ids.cocktail, .cocktail), recordType: "Cocktail")])
+        XCTAssertNil(try cocktail(ids.cocktail, in: containerB), "Deleted on the other device")
+        XCTAssertNil(try ledgerB.bookkeeping(for: recordID(ids.cocktail, .cocktail)))
+    }
+
+    @MainActor
+    func testALinkThatArrivesLaterIsFilledIn() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let records = try sendAll(CloudSyncLedger(container: containerA))
+        let cocktailRecord = try XCTUnwrap(records.first { $0.recordType == "Cocktail" })
+        let styleRecord = try XCTUnwrap(records.first { $0.recordType == "SpiritStyle" })
+        let ledgerB = CloudSyncLedger(container: containerB)
+
+        try ledgerB.applyFetched(modifications: [cocktailRecord], deletions: [])
+        XCTAssertNil(try cocktail(ids.cocktail, in: containerB)?.baseStyle)
+        XCTAssertEqual(ledgerB.waiting.count, 1)
+
+        try ledgerB.applyFetched(modifications: [styleRecord], deletions: [])
+        XCTAssertEqual(try cocktail(ids.cocktail, in: containerB)?.baseStyle?.name, "Barrel Gin")
+        XCTAssertTrue(ledgerB.waiting.isEmpty)
+    }
+
+    @MainActor
+    func testAnIncomingChangeDoesntOverwriteOneWaitingToBeSent() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let ledgerA = CloudSyncLedger(container: containerA)
+        let ledgerB = CloudSyncLedger(container: containerB)
+        try ledgerB.applyFetched(modifications: try sendAll(ledgerA), deletions: [])
+
+        // Device B renames it but hasn't sent yet; device A's rename arrives.
+        let contextB = ModelContext(containerB)
+        let copy = try XCTUnwrap(try CloudRecords.findCocktail(ids.cocktail, library: nil, in: contextB))
+        copy.name = "B's Martini"
+        try contextB.save()
+        _ = try ledgerB.localChanges(changed: [copy.persistentModelID])
+
+        let contextA = ModelContext(containerA)
+        try XCTUnwrap(try CloudRecords.findCocktail(ids.cocktail, library: nil, in: contextA)).name = "A's Martini"
+        try contextA.save()
+        let fromA = try XCTUnwrap(try ledgerA.record(for: recordID(ids.cocktail, .cocktail)))
+        try ledgerB.applyFetched(modifications: [fromA], deletions: [])
+
+        XCTAssertEqual(try cocktail(ids.cocktail, in: containerB)?.name, "B's Martini")
+        XCTAssertEqual(try ledgerB.localChanges().saves, [recordID(ids.cocktail, .cocktail)], "B's change is still sent")
+    }
+
+    // MARK: Disagreements
+
+    @MainActor
+    func testABuiltInNewHereTakesTheVersionAlreadyInICloud() throws {
+        // Device A edited its Negroni and sent it; device B is new and has the original.
+        let contextA = ModelContext(containerA)
+        try ModelSeeder.seedBuiltIns(context: contextA, defaults: nil)
+        let negroniA = try XCTUnwrap(try contextA.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Negroni" })
+        negroniA.method = "Our house method"
+        try contextA.save()
+        let ledgerA = CloudSyncLedger(container: containerA)
+        try sendAll(ledgerA)
+        let inICloud = try XCTUnwrap(try ledgerA.record(for: recordID(negroniA.id, .cocktail)))
+
+        try ModelSeeder.seedBuiltIns(context: ModelContext(containerB), defaults: nil)
+        let ledgerB = CloudSyncLedger(container: containerB)
+        _ = try ledgerB.localChanges()
+        let fromB = try XCTUnwrap(try ledgerB.record(for: recordID(negroniA.id, .cocktail)))
+
+        let error = CKError(.serverRecordChanged, userInfo: [CKRecordChangedErrorServerRecordKey: inICloud])
+        XCTAssertEqual(try ledgerB.resolveFailedSave(fromB, error: error), .drop)
+        XCTAssertEqual(try cocktail(negroniA.id, in: containerB)?.method, "Our house method")
+        XCTAssertEqual(try ledgerB.bookkeeping(for: recordID(negroniA.id, .cocktail)), .init(needsUpload: false, hasSystemFields: true))
+    }
+
+    @MainActor
+    func testAnEditOnBothDevicesSendsThisDevicesVersionAgain() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let ledger = CloudSyncLedger(container: containerA)
+        let records = try sendAll(ledger)
+        let id = recordID(ids.cocktail, .cocktail)
+        let server = try XCTUnwrap(records.first { $0.recordID == id })
+
+        let context = ModelContext(containerA)
+        try XCTUnwrap(try CloudRecords.findCocktail(ids.cocktail, library: nil, in: context)).name = "Mine"
+        try context.save()
+        let mine = try XCTUnwrap(try ledger.record(for: id))
+        let error = CKError(.serverRecordChanged, userInfo: [CKRecordChangedErrorServerRecordKey: server])
+        XCTAssertEqual(try ledger.resolveFailedSave(mine, error: error), .resend)
+        XCTAssertEqual(try ledger.record(for: id)?["name"] as? String, "Mine", "This device's version goes again")
+    }
+
+    @MainActor
+    func testOtherFailures() throws {
+        let ids = try addRecipe("Barrel Martini", in: containerA)
+        let ledger = CloudSyncLedger(container: containerA)
+        let record = try XCTUnwrap(try sendAll(ledger).first { $0.recordType == "Cocktail" })
+        let id = record.recordID
+
+        XCTAssertEqual(try ledger.resolveFailedSave(record, error: CKError(.zoneNotFound)), .createZoneAndResend)
+        XCTAssertEqual(try ledger.resolveFailedSave(record, error: CKError(.networkFailure)), .wait)
+        XCTAssertEqual(try ledger.resolveFailedSave(record, error: CKError(.unknownItem)), .resend)
+        XCTAssertEqual(try ledger.bookkeeping(for: id)?.hasSystemFields, false, "Sent again as a new record")
+        XCTAssertNotNil(try cocktail(ids.cocktail, in: containerA))
+    }
+
+    // MARK: Resets
+
+    @MainActor
+    func testADeletedZoneAndSigningOutSendEverythingAgain() throws {
+        _ = try addRecipe("Barrel Martini", in: containerA)
+        let context = ModelContext(containerA)
+        context.insert(DB.Bottle(brand: "Tanqueray"))
+        try context.save()
+        let ledger = CloudSyncLedger(container: containerA)
+        try sendAll(ledger)
+
+        try ledger.forgetZone("Library")
+        let afterZone = try ledger.localChanges()
+        XCTAssertEqual(afterZone.saves.count, 2, "The recipe and its type; My Bar's zone is fine")
+        XCTAssertEqual(Set(afterZone.saves.map(\.zoneID.zoneName)), ["Library"])
+        try sendAll(ledger)
+
+        try ledger.resetAll()
+        XCTAssertEqual(try ledger.localChanges().saves.count, 3, "Everything goes again after signing back in")
+        XCTAssertEqual(try ModelContext(containerA).fetchCount(FetchDescriptor<DB.Cocktail>()), 1, "Signing out keeps your data")
+    }
+}
+
+/// What Settings says about iCloud sync (sync and sharing, step 2c).
+final class CloudSyncStatusTests: XCTestCase {
+    func testTitlesAndDetails() {
+        let now = Date()
+        XCTAssertEqual(CloudSyncState.upToDate(now).title, "Up to date")
+        XCTAssertEqual(CloudSyncState.upToDate(now.addingTimeInterval(-10)).detail(now: now), "Last synced just now")
+        XCTAssertTrue(CloudSyncState.upToDate(now.addingTimeInterval(-7200)).detail(now: now)?.hasPrefix("Last synced 2 hours") ?? false)
+        XCTAssertEqual(CloudSyncState.syncing.title, "Syncing…")
+        XCTAssertNil(CloudSyncState.syncing.detail())
+        XCTAssertEqual(CloudSyncState.notSignedIn.title, "Not signed in to iCloud")
+        XCTAssertTrue(CloudSyncState.notSignedIn.detail()?.contains("stays on this device") ?? false)
+        XCTAssertEqual(CloudSyncState.problem("No connection").detail(), "No connection")
+        XCTAssertEqual(CloudSyncState.off.title, "Off")
+    }
+
+    func testSyncNowIsOfferedOnlyWhenItCanHelp() {
+        XCTAssertTrue(CloudSyncState.upToDate(Date()).canSyncNow)
+        XCTAssertTrue(CloudSyncState.problem("x").canSyncNow)
+        XCTAssertFalse(CloudSyncState.syncing.canSyncNow)
+        XCTAssertFalse(CloudSyncState.notSignedIn.canSyncNow)
+        XCTAssertFalse(CloudSyncState.off.canSyncNow)
+    }
+
+    func testErrorMessages() {
+        XCTAssertTrue(CloudSync.message(for: CKError(.networkUnavailable)).hasPrefix("No internet connection"))
+        XCTAssertTrue(CloudSync.message(for: CKError(.quotaExceeded)).hasPrefix("Your iCloud storage is full"))
+        XCTAssertTrue(CloudSync.message(for: CKError(.zoneBusy)).hasPrefix("iCloud is busy"))
+    }
+}
+
+/// Part size follows you between devices through iCloud key-value storage (sync and sharing, step 2c).
+/// Two UserDefaults suites stand in for this device and iCloud.
+final class SettingsSyncTests: XCTestCase {
+    private var local: UserDefaults!
+    private var cloud: UserDefaults!
+    private var suites: [String] = []
+
+    override func setUpWithError() throws {
+        suites = ["SettingsSyncLocal-\(UUID().uuidString)", "SettingsSyncCloud-\(UUID().uuidString)"]
+        local = UserDefaults(suiteName: suites[0])
+        cloud = UserDefaults(suiteName: suites[1])
+    }
+
+    override func tearDownWithError() throws {
+        suites.forEach { UserDefaults.standard.removePersistentDomain(forName: $0) }
+        local = nil
+        cloud = nil
+    }
+
+    @MainActor
+    func testAtLaunchICloudsValueWins() {
+        local.set(PartSize.oneOunce.rawValue, forKey: PartSize.storageKey)
+        cloud.set(PartSize.thirtyMillilitres.rawValue, forKey: PartSize.storageKey)
+        SettingsSync(local: local, cloud: cloud).mergeAtLaunch()
+        XCTAssertEqual(local.string(forKey: PartSize.storageKey), "30ml", "Set on another device")
+    }
+
+    @MainActor
+    func testAtLaunchThisDevicesValueGoesUpWhenICloudHasNone() {
+        local.set(PartSize.twoOunces.rawValue, forKey: PartSize.storageKey)
+        SettingsSync(local: local, cloud: cloud).mergeAtLaunch()
+        XCTAssertEqual(cloud.string(forKey: PartSize.storageKey), "2oz")
+    }
+
+    @MainActor
+    func testChangesGoBothWays() {
+        let sync = SettingsSync(local: local, cloud: cloud)
+        local.set(PartSize.oneAndAHalfOunces.rawValue, forKey: PartSize.storageKey)
+        sync.localDidChange()
+        XCTAssertEqual(cloud.string(forKey: PartSize.storageKey), "1.5oz")
+
+        cloud.set(PartSize.fiftyMillilitres.rawValue, forKey: PartSize.storageKey)
+        sync.cloudDidChange(keys: [PartSize.storageKey])
+        XCTAssertEqual(local.string(forKey: PartSize.storageKey), "50ml")
+
+        cloud.removeObject(forKey: PartSize.storageKey)
+        sync.cloudDidChange(keys: nil)
+        XCTAssertNil(local.string(forKey: PartSize.storageKey), "Cleared on another device")
+    }
+
+    @MainActor
+    func testOnlyListedSettingsAreCopied() {
+        let sync = SettingsSync(local: local, cloud: cloud)
+        local.set("something", forKey: "SomeOtherSetting")
+        sync.localDidChange()
+        XCTAssertNil(cloud.object(forKey: "SomeOtherSetting"))
+        cloud.set("else", forKey: "AnotherSetting")
+        sync.cloudDidChange(keys: ["AnotherSetting"])
+        XCTAssertNil(local.object(forKey: "AnotherSetting"))
     }
 }
 
