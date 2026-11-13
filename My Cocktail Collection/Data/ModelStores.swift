@@ -58,7 +58,7 @@ struct StyleStore {
 
     /// Every style, grouped by family in display order: built-in styles in catalog order, then yours A–Z.
     func allStyles() throws -> [DB.SpiritStyle] {
-        try context.fetch(FetchDescriptor<DB.SpiritStyle>()).sorted(by: Self.displayOrder)
+        try context.fetch(FetchDescriptor<DB.SpiritStyle>()).filter { $0.library == nil }.sorted(by: Self.displayOrder)
     }
 
     func styles(in family: SpiritFamily) throws -> [DB.SpiritStyle] {
@@ -68,7 +68,7 @@ struct StyleStore {
     /// Finds a style by name, ignoring case and surrounding spaces.
     func style(named name: String) throws -> DB.SpiritStyle? {
         let key = trimmed(name).lowercased()
-        return try context.fetch(FetchDescriptor<DB.SpiritStyle>()).first { $0.name.lowercased() == key }
+        return try context.fetch(FetchDescriptor<DB.SpiritStyle>()).first { $0.library == nil && $0.name.lowercased() == key }
     }
 
     @discardableResult
@@ -371,6 +371,7 @@ struct CocktailStore {
     ) throws -> [DB.Cocktail] {
         let query = trimmed(search)
         return try context.fetch(FetchDescriptor<DB.Cocktail>())
+            .filter { $0.library == nil }
             .filter { matches($0, query: query, family: family, style: style, favoritesOnly: favoritesOnly) }
             .sorted { first, second in
                 if sort == .rating && first.rating != second.rating {
@@ -416,7 +417,7 @@ struct CocktailStore {
     /// Parsed lines as rows, each linked to the stored style named by the parser.
     private func inputs(from parsed: [ParsedIngredient]) -> [IngredientInput] {
         guard !parsed.isEmpty else { return [] }
-        let styles = (try? context.fetch(FetchDescriptor<DB.SpiritStyle>())) ?? []
+        let styles = ((try? context.fetch(FetchDescriptor<DB.SpiritStyle>())) ?? []).filter { $0.library == nil }
         let stylesByName = Dictionary(styles.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
         return parsed.map { line in
             IngredientInput(parsed: line, style: line.styleName.flatMap { stylesByName[$0.lowercased()] })
@@ -468,7 +469,7 @@ struct MenuStore {
 
     /// Menus, newest first.
     func menus() throws -> [DB.Menu] {
-        try context.fetch(FetchDescriptor<DB.Menu>(sortBy: [SortDescriptor(\.dateCreated, order: .reverse)]))
+        try context.fetch(FetchDescriptor<DB.Menu>(sortBy: [SortDescriptor(\.dateCreated, order: .reverse)])).filter { $0.library == nil }
     }
 
     func rename(_ menu: DB.Menu, to name: String) throws {

@@ -114,7 +114,9 @@ enum QuickMeasure: String, CaseIterable, Identifiable {
 struct QuickAddIngredientsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query private var styles: [DB.SpiritStyle]
+    @Query private var allStyles: [DB.SpiritStyle]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var styles: [DB.SpiritStyle] { allStyles.filter { $0.library == nil } }
     @Binding private var rows: [IngredientInput]
 
     @State private var catalog = IngredientCatalog()

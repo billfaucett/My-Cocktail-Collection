@@ -12,7 +12,9 @@ import SwiftData
 /// Pick one or more cocktails to add to a menu.
 struct AddMenuItemView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \DB.Cocktail.name) private var cocktails: [DB.Cocktail]
+    @Query(sort: \DB.Cocktail.name) private var allCocktails: [DB.Cocktail]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var cocktails: [DB.Cocktail] { allCocktails.filter { $0.library == nil } }
 
     private let menu: DB.Menu
 

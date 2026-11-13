@@ -244,7 +244,9 @@ struct SpiritPicker: View {
 /// Picks a style from the new database, grouped by family, with a button to add a new one.
 /// New styles appear in the picker right away.
 struct StylePicker: View {
-    @Query private var styles: [DB.SpiritStyle]
+    @Query private var allStyles: [DB.SpiritStyle]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var styles: [DB.SpiritStyle] { allStyles.filter { $0.library == nil } }
     @Binding private var selection: DB.SpiritStyle?
     @State private var showAddStyle = false
 

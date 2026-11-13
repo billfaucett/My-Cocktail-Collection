@@ -18,7 +18,9 @@ enum CocktailFilter: Hashable {
 /// The Cocktails tab. Reads the new SwiftData database (data model refactor, phase 5).
 struct CocktailListView: View {
     @Environment(\.modelContext) private var context
-    @Query(animation: .default) private var cocktails: [DB.Cocktail]
+    @Query(animation: .default) private var allCocktails: [DB.Cocktail]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var cocktails: [DB.Cocktail] { allCocktails.filter { $0.library == nil } }
 
     @State private var searchText = ""
     @State private var filter = CocktailFilter.all

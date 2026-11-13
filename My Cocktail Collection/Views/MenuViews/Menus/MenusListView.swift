@@ -13,7 +13,9 @@ import SwiftData
 struct MenusListView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \DB.Menu.dateCreated, order: .reverse, animation: .default)
-    private var menus: [DB.Menu]
+    private var allMenus: [DB.Menu]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var menus: [DB.Menu] { allMenus.filter { $0.library == nil } }
 
     @State private var path: [DB.Menu] = []
     @State private var showCreateMenu = false

@@ -10,10 +10,14 @@ import SwiftUI
 import SwiftData
 
 struct AboutView: View {
-    @Query private var cocktails: [DB.Cocktail]
+    @Query private var allCocktails: [DB.Cocktail]
     @Query private var bottles: [DB.Bottle]
-    @Query private var menus: [DB.Menu]
-    @Query private var styles: [DB.SpiritStyle]
+    @Query private var allMenus: [DB.Menu]
+    @Query private var allStyles: [DB.SpiritStyle]
+    /// Counts are for My Library; libraries shared with you aren't included.
+    private var cocktails: [DB.Cocktail] { allCocktails.filter { $0.library == nil } }
+    private var menus: [DB.Menu] { allMenus.filter { $0.library == nil } }
+    private var styles: [DB.SpiritStyle] { allStyles.filter { $0.library == nil } }
     @Query private var imports: [DB.ImportRecord]
 
     var body: some View {

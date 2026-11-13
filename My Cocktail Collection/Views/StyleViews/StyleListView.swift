@@ -11,7 +11,9 @@ import SwiftData
 
 struct StyleListView: View {
     @Environment(\.modelContext) private var context
-    @Query private var styles: [DB.SpiritStyle]
+    @Query private var allStyles: [DB.SpiritStyle]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var styles: [DB.SpiritStyle] { allStyles.filter { $0.library == nil } }
 
     @State private var searchText = ""
     @State private var showAddStyle = false

@@ -189,7 +189,7 @@ struct IngredientCatalog {
 
     /// Reads your recipes and My Bar from the database.
     static func load(context: ModelContext) throws -> IngredientCatalog {
-        let used = try context.fetch(FetchDescriptor<DB.RecipeIngredient>()).map {
+        let used = try context.fetch(FetchDescriptor<DB.RecipeIngredient>()).filter { $0.cocktail?.library == nil }.map {
             UsedIngredient(name: $0.name, styleName: $0.style?.name, family: $0.style?.family, unit: $0.unit, isGarnish: $0.isGarnish,
                            amount: $0.amount, recipe: $0.cocktail?.id.uuidString)
         }

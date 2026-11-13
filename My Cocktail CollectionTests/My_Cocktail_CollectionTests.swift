@@ -4239,3 +4239,211 @@ final class LibrarySharingTests: XCTestCase {
     }
 }
 
+/// Libraries other people share with you: kept apart from yours, edited only when allowed, and removed
+/// when sharing stops (sync and sharing, step 4). Device A is the owner; device B was invited.
+final class SharedLibrarySyncTests: XCTestCase {
+    private var containerA: ModelContainer!
+    private var containerB: ModelContainer!
+    /// The owner's Library zone as device B sees it in its shared database.
+    private let ownerZone = CKRecordZone.ID(zoneName: "Library", ownerName: "_owner")
+
+    override func setUpWithError() throws {
+        containerA = try CocktailModelContainer.make(inMemory: true)
+        containerB = try CocktailModelContainer.make(inMemory: true)
+    }
+
+    override func tearDownWithError() throws {
+        containerA = nil
+        containerB = nil
+    }
+
+    // MARK: Helpers
+
+    /// Device A's library as records in the owner's zone, as device B fetches them.
+    @MainActor
+    private func ownerRecords() throws -> [CKRecord] {
+        let context = ModelContext(containerA)
+        var records: [CKRecord] = []
+        records += try context.fetch(FetchDescriptor<DB.SpiritStyle>()).map { CloudRecords.record(for: $0, systemFields: nil, libraryOwner: "_owner") }
+        records += try context.fetch(FetchDescriptor<DB.Cocktail>()).map { CloudRecords.record(for: $0, systemFields: nil, libraryOwner: "_owner") }
+        records += try context.fetch(FetchDescriptor<DB.Menu>()).map { CloudRecords.record(for: $0, systemFields: nil, libraryOwner: "_owner") }
+        return records
+    }
+
+    /// Both devices have the built-ins; the owner changed their Negroni. Device B accepts and receives A's library.
+    @MainActor
+    private func shareAToB(canEdit: Bool) throws -> CloudSyncLedger {
+        let contextA = ModelContext(containerA)
+        try ModelSeeder.seedBuiltIns(context: contextA, defaults: nil)
+        try XCTUnwrap(try contextA.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Negroni" }).method = "Owner's way"
+        try contextA.save()
+        try ModelSeeder.seedBuiltIns(context: ModelContext(containerB), defaults: nil)
+
+        let ledgerB = CloudSyncLedger(container: containerB)
+        try ledgerB.libraryAccepted(zoneID: ownerZone, ownerName: "Bill", canEdit: canEdit)
+        try ledgerB.applyFetched(modifications: try ownerRecords(), deletions: [])
+        return ledgerB
+    }
+
+    private func sharedLibrary(in container: ModelContainer) throws -> DB.Library? {
+        try ModelContext(container).fetch(FetchDescriptor<DB.Library>()).first
+    }
+
+    private func negronis(in container: ModelContainer) throws -> [DB.Cocktail] {
+        try ModelContext(container).fetch(FetchDescriptor<DB.Cocktail>()).filter { $0.name == "Negroni" }
+    }
+
+    private func sharedNegroniID() -> CKRecord.ID {
+        CKRecord.ID(recordName: BuiltInID.cocktail(named: "Negroni").uuidString, zoneID: ownerZone)
+    }
+
+    // MARK: Arriving
+
+    @MainActor
+    func testASharedLibraryArrivesApartFromYours() throws {
+        let ledgerB = try shareAToB(canEdit: false)
+
+        let library = try XCTUnwrap(try sharedLibrary(in: containerB))
+        XCTAssertEqual(library.name, "Bill's Library")
+        XCTAssertFalse(library.canEdit)
+        XCTAssertEqual(library.cocktails?.count, SeedData.classics.count)
+        XCTAssertEqual(library.styles?.count, SpiritTaxonomy.builtInStyles.count)
+
+        let both = try negronis(in: containerB)
+        XCTAssertEqual(both.count, 2)
+        XCTAssertNotEqual(both.first { $0.library == nil }?.method, "Owner's way", "Your Negroni is untouched")
+        XCTAssertEqual(both.first { $0.library != nil }?.method, "Owner's way")
+        XCTAssertEqual(both.first { $0.library != nil }?.baseStyle?.library?.name, "Bill's Library", "Linked to the owner's types")
+
+        // Your lists and stores only show My Library.
+        let contextB = ModelContext(containerB)
+        XCTAssertEqual(try StyleStore(context: contextB).allStyles().count, SpiritTaxonomy.builtInStyles.count)
+        XCTAssertEqual(try CocktailStore(context: contextB).cocktails().count, SeedData.classics.count)
+        XCTAssertNil(try StyleStore(context: contextB).style(named: "London Dry")?.library)
+
+        // Nothing of theirs is sent as yours, and nothing is sent back to them unchanged.
+        let mine = try ledgerB.localChanges(scope: .private)
+        XCTAssertEqual(mine.saves.count, SpiritTaxonomy.builtInStyles.count + SeedData.classics.count)
+        XCTAssertTrue(mine.saves.allSatisfy { $0.zoneID.ownerName == CKCurrentUserDefaultName })
+        XCTAssertTrue(try ledgerB.localChanges(scope: .shared).isEmpty)
+    }
+
+    @MainActor
+    func testStartingUpDoesntTouchASharedLibrary() throws {
+        _ = try shareAToB(canEdit: true)
+        try ModelSeeder.seedBuiltIns(context: ModelContext(containerB), defaults: nil)
+        XCTAssertEqual(try sharedLibrary(in: containerB)?.cocktails?.count, SeedData.classics.count)
+        XCTAssertEqual(try negronis(in: containerB).count, 2, "No built-ins added to or removed from theirs")
+    }
+
+    // MARK: Editing
+
+    @MainActor
+    func testViewOnlyChangesAreNotSent() throws {
+        let ledgerB = try shareAToB(canEdit: false)
+        let context = ModelContext(containerB)
+        let theirs = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Negroni" && $0.library != nil })
+        theirs.method = "Changed"
+        try context.save()
+        XCTAssertTrue(try ledgerB.localChanges(changed: [theirs.persistentModelID], scope: .shared).isEmpty)
+        XCTAssertNil(try ledgerB.record(for: sharedNegroniID()), "Nothing to send to a view-only library")
+    }
+
+    @MainActor
+    func testEditsAreSentToTheOwnerWhenAllowed() throws {
+        let ledgerB = try shareAToB(canEdit: true)
+        let context = ModelContext(containerB)
+        let theirs = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Negroni" && $0.library != nil })
+        theirs.method = "Guest's way"
+        try context.save()
+
+        let changes = try ledgerB.localChanges(changed: [theirs.persistentModelID], scope: .shared)
+        XCTAssertEqual(changes.saves, [sharedNegroniID()])
+        let record = try XCTUnwrap(try ledgerB.record(for: sharedNegroniID()))
+        XCTAssertEqual(record.recordID.zoneID.ownerName, "_owner", "Sent to the owner's library")
+        XCTAssertEqual(record["method"] as? String, "Guest's way")
+        XCTAssertFalse(try ledgerB.localChanges(scope: .private).saves.contains { $0.zoneID.ownerName == "_owner" })
+
+        // A recipe added to their library goes there too.
+        let library = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Library>()).first)
+        let added = DB.Cocktail(name: "Guest Sour")
+        context.insert(added)
+        added.library = library
+        try context.save()
+        XCTAssertTrue(try ledgerB.localChanges(changed: [added.persistentModelID], scope: .shared).saves
+            .contains(CKRecord.ID(recordName: added.id.uuidString, zoneID: ownerZone)))
+    }
+
+    @MainActor
+    func testLosingEditPermissionMakesItViewOnly() throws {
+        let ledgerB = try shareAToB(canEdit: true)
+        let context = ModelContext(containerB)
+        let theirs = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Cocktail>()).first { $0.name == "Negroni" && $0.library != nil })
+        theirs.method = "Guest's way"
+        try context.save()
+        _ = try ledgerB.localChanges(changed: [theirs.persistentModelID], scope: .shared)
+        let record = try XCTUnwrap(try ledgerB.record(for: sharedNegroniID()))
+
+        XCTAssertEqual(try ledgerB.resolveFailedSave(record, error: CKError(.permissionFailure)), .nowViewOnly)
+        XCTAssertEqual(try sharedLibrary(in: containerB)?.canEdit, false)
+        XCTAssertTrue(try ledgerB.localChanges(scope: .shared).isEmpty)
+    }
+
+    // MARK: Owner's changes and removal
+
+    @MainActor
+    func testTheOwnersDeletionsArrive() throws {
+        let ledgerB = try shareAToB(canEdit: false)
+        try ledgerB.applyFetched(modifications: [], deletions: [(recordID: sharedNegroniID(), recordType: "Cocktail")])
+        let remaining = try negronis(in: containerB)
+        XCTAssertEqual(remaining.count, 1)
+        XCTAssertNil(remaining.first?.library, "Only theirs was deleted")
+    }
+
+    @MainActor
+    func testStoppingSharingRemovesTheLibraryAndKeepsYours() throws {
+        let ledgerB = try shareAToB(canEdit: false)
+        try ledgerB.removeLibrary(zoneID: ownerZone)
+        XCTAssertNil(try sharedLibrary(in: containerB))
+        XCTAssertEqual(try ModelContext(containerB).fetchCount(FetchDescriptor<DB.Cocktail>()), SeedData.classics.count)
+        XCTAssertNil(try ledgerB.bookkeeping(for: sharedNegroniID()))
+    }
+
+    @MainActor
+    func testAMissingSharedZoneMeansTheLibraryIsGone() throws {
+        let ledgerB = try shareAToB(canEdit: true)
+        let record = CloudRecords.record(for: try XCTUnwrap(try negronis(in: containerB).first { $0.library != nil }),
+                                         systemFields: nil, libraryOwner: "_owner")
+        XCTAssertEqual(try ledgerB.resolveFailedSave(record, error: CKError(.zoneNotFound)), .libraryRemoved)
+        XCTAssertNil(try sharedLibrary(in: containerB))
+    }
+
+    @MainActor
+    func testSigningOutRemovesSharedLibrariesOnly() throws {
+        let ledgerB = try shareAToB(canEdit: false)
+        try ledgerB.resetAll(scope: .shared)
+        XCTAssertNil(try sharedLibrary(in: containerB))
+        XCTAssertEqual(try negronis(in: containerB).count, 1, "Your own collection stays")
+    }
+
+    @MainActor
+    func testAShareRecordAloneCreatesTheLibrary() throws {
+        let ledgerB = CloudSyncLedger(container: containerB)
+        try ledgerB.applyFetched(modifications: [CKShare(recordZoneID: ownerZone)], deletions: [])
+        let library = try XCTUnwrap(try sharedLibrary(in: containerB))
+        XCTAssertEqual(library.zoneOwnerName, "_owner")
+        XCTAssertFalse(library.canEdit, "View only unless the share says otherwise")
+    }
+
+    // MARK: Names
+
+    func testLibraryNames() {
+        XCTAssertEqual(CloudSyncLedger.libraryName(ownerName: "Bill"), "Bill's Library")
+        XCTAssertEqual(CloudSyncLedger.libraryName(ownerName: "James"), "James' Library")
+        XCTAssertEqual(CloudSyncLedger.libraryName(ownerName: nil), "Shared Library")
+        XCTAssertEqual(CloudSyncLedger.libraryName(ownerName: "  "), "Shared Library")
+        XCTAssertEqual(SharedLibraryRow.detail(canEdit: true, cocktailCount: 42), "Can edit · 42 cocktails")
+        XCTAssertEqual(SharedLibraryRow.detail(canEdit: false, cocktailCount: 1), "View only · 1 cocktail")
+    }
+}
+

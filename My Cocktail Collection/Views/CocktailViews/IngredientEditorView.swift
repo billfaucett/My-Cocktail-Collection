@@ -130,7 +130,9 @@ struct IngredientEditorView: View {
     @State private var isOptional: Bool
     @State private var note: String
 
-    @Query private var styles: [DB.SpiritStyle]
+    @Query private var allStyles: [DB.SpiritStyle]
+    /// Only My Library; libraries shared with you are shown separately.
+    private var styles: [DB.SpiritStyle] { allStyles.filter { $0.library == nil } }
     @Environment(\.modelContext) private var context
     /// The ingredient list, for name suggestions while typing.
     @State private var catalog = IngredientCatalog()

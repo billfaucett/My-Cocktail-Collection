@@ -4,9 +4,11 @@
 //
 //  Data model refactor, phase 6: pick how big a part is, so recipes also show ounces or millilitres.
 //  Sync and sharing, step 2c: iCloud sync status, with Sync Now. Step 3: share My Library.
+//  Step 4: libraries shared with you.
 //
 
 import CloudKit
+import SwiftData
 import SwiftUI
 
 /// Settings for how recipes are shown. Changes apply straight away.
@@ -19,6 +21,8 @@ struct PartSizeSettingsView: View {
     @State private var isShared = false
     @State private var isOpeningSharing = false
     @State private var sharingError: String?
+    /// Libraries other people have shared with you.
+    @Query(sort: \DB.Library.name) private var libraries: [DB.Library]
 
     var body: some View {
         NavigationStack {
@@ -73,6 +77,19 @@ struct PartSizeSettingsView: View {
                     Text("Sharing")
                 } footer: {
                     Text(sharingError ?? "People you invite see your cocktails, menus and spirit types in their app. You choose whether each person can only view or can also edit. My Bar stays private.")
+                }
+
+                let sharedWithYou = libraries.filter { !$0.isOwned }
+                if !sharedWithYou.isEmpty {
+                    Section {
+                        ForEach(sharedWithYou) { library in
+                            SharedLibraryRow(library: library)
+                        }
+                    } header: {
+                        Text("Shared With You")
+                    } footer: {
+                        Text("Libraries other people share with you are kept apart from yours. They disappear if their owner stops sharing.")
+                    }
                 }
 
                 Section {
@@ -132,6 +149,27 @@ extension PartSizeSettingsView {
         } catch {
             sharingError = CloudSync.message(for: error)
         }
+    }
+}
+
+/// A library shared with you: its name, whether you can edit it, and how many cocktails it has.
+struct SharedLibraryRow: View {
+    let library: DB.Library
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(library.name, systemImage: "person.2")
+            Text(Self.detail(canEdit: library.canEdit, cocktailCount: library.cocktails?.count ?? 0))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "Can edit · 42 cocktails" or "View only · 1 cocktail".
+    static func detail(canEdit: Bool, cocktailCount: Int) -> String {
+        let access = canEdit ? "Can edit" : "View only"
+        return "\(access) · \(cocktailCount) \(cocktailCount == 1 ? "cocktail" : "cocktails")"
     }
 }
 

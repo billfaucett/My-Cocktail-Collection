@@ -70,7 +70,7 @@ enum ModelSeeder {
     /// Gives built-in recipes their template when they don't have one yet, e.g. classics added or imported
     /// before templates existed. A template that's already set, including one you chose, is never changed.
     static func fillInTemplates(context: ModelContext) throws {
-        let cocktails = try context.fetch(FetchDescriptor<DB.Cocktail>())
+        let cocktails = try context.fetch(FetchDescriptor<DB.Cocktail>()).filter { $0.library == nil }
         var changed = false
         for cocktail in cocktails where cocktail.template == nil {
             if let template = SeedData.templates[cocktail.name] {
@@ -84,7 +84,7 @@ enum ModelSeeder {
     }
 
     static func addMissingStyles(context: ModelContext, defaults: UserDefaults?) throws {
-        let existing = try context.fetch(FetchDescriptor<DB.SpiritStyle>())
+        let existing = try context.fetch(FetchDescriptor<DB.SpiritStyle>()).filter { $0.library == nil }
         let existingNames = Set(existing.map { $0.name.lowercased() })
         let alreadyAdded = Set(defaults?.stringArray(forKey: seededStylesKey) ?? [])
 
@@ -99,7 +99,7 @@ enum ModelSeeder {
     }
 
     static func addMissingClassics(context: ModelContext, defaults: UserDefaults?) throws {
-        let existing = try context.fetch(FetchDescriptor<DB.Cocktail>())
+        let existing = try context.fetch(FetchDescriptor<DB.Cocktail>()).filter { $0.library == nil }
         let existingNames = Set(existing.map { $0.name.lowercased() })
         let alreadyAdded = Set(defaults?.stringArray(forKey: seededClassicsKey) ?? [])
 
@@ -112,7 +112,7 @@ enum ModelSeeder {
 
     /// Adds the house favorites that aren't already in the collection, marked as favorites.
     static func addHouseFavorites(context: ModelContext) throws {
-        let existingNames = Set(try context.fetch(FetchDescriptor<DB.Cocktail>()).map { $0.name.lowercased() })
+        let existingNames = Set(try context.fetch(FetchDescriptor<DB.Cocktail>()).filter { $0.library == nil }.map { $0.name.lowercased() })
         for seed in SeedData.favorites where !existingNames.contains(seed.name.lowercased()) {
             try add(seed, source: .original, isFavorite: true, context: context)
         }
