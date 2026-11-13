@@ -1223,12 +1223,14 @@ final class SwiftDataModelTests: XCTestCase {
     // MARK: Schema
 
     func testSchemaVersions() {
-        XCTAssertEqual(DB.models.count, 7)
-        XCTAssertEqual(DB.versionIdentifier, Schema.Version(2, 0, 0), "The app uses version 2")
+        XCTAssertEqual(DB.models.count, 9, "Version 3 adds Library and SyncRecord")
+        XCTAssertEqual(DB.versionIdentifier, Schema.Version(3, 0, 0), "The app uses version 3")
         XCTAssertEqual(CocktailSchemaV1.versionIdentifier, Schema.Version(1, 0, 0), "Version 1 is kept for upgrades")
         XCTAssertEqual(CocktailSchemaV1.models.count, 7)
-        XCTAssertEqual(CocktailMigrationPlan.schemas.count, 2)
-        XCTAssertEqual(CocktailMigrationPlan.stages.count, 1, "One step: version 1 to version 2")
+        XCTAssertEqual(CocktailSchemaV2.versionIdentifier, Schema.Version(2, 0, 0), "Version 2 is kept for upgrades")
+        XCTAssertEqual(CocktailSchemaV2.models.count, 7)
+        XCTAssertEqual(CocktailMigrationPlan.schemas.count, 3)
+        XCTAssertEqual(CocktailMigrationPlan.stages.count, 2, "Two steps: version 1 to 2, then 2 to 3")
     }
 
     // MARK: Defaults and enums
@@ -2195,7 +2197,7 @@ final class TemplateSuggesterTests: XCTestCase {
     }
 }
 
-/// A database made with data model version 1 upgrades to version 2 with everything intact.
+/// Databases made with data model versions 1 and 2 upgrade to the current version with everything intact.
 final class SchemaMigrationTests: XCTestCase {
     private var folder: URL!
 
@@ -2253,6 +2255,7 @@ final class SchemaMigrationTests: XCTestCase {
         XCTAssertEqual(negroni.orderedIngredients.map(\.displayText), ["1 part Gin"])
         XCTAssertEqual(negroni.orderedIngredients.first?.style?.name, "London Dry")
         XCTAssertNil(negroni.template, "The new field starts empty")
+        XCTAssertNil(negroni.library, "Existing recipes are in My Library")
 
         let bottle = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Bottle>()).first)
         XCTAssertEqual(bottle.brand, "Tanqueray")
@@ -2266,6 +2269,257 @@ final class SchemaMigrationTests: XCTestCase {
         try ModelSeeder.fillInTemplates(context: context)
         XCTAssertEqual(negroni.template, .martini)
     }
+
+    /// Writes a small version 2 database: a style, a cocktail with a template and an ingredient, a bottle and a menu.
+    private func makeVersion2Store(at url: URL) throws {
+        let schema = Schema(versionedSchema: CocktailSchemaV2.self)
+        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
+        let context = ModelContext(container)
+        let bourbon = CocktailSchemaV2.SpiritStyle(name: "Bourbon", family: .whiskey, isBuiltIn: true)
+        context.insert(bourbon)
+        let renewal = CocktailSchemaV2.Cocktail(name: "Bourbon Renewal", source: .original, method: "Shake with ice")
+        context.insert(renewal)
+        renewal.baseStyle = bourbon
+        renewal.template = .sidecar
+        let whiskey = CocktailSchemaV2.RecipeIngredient(position: 0, name: "Bourbon", amount: 2, unit: .part)
+        context.insert(whiskey)
+        whiskey.cocktail = renewal
+        whiskey.style = bourbon
+        let bottle = CocktailSchemaV2.Bottle(brand: "Buffalo Trace", stock: .full, bottleCount: 1)
+        context.insert(bottle)
+        bottle.style = bourbon
+        let menu = CocktailSchemaV2.Menu(name: "Saturday")
+        context.insert(menu)
+        let entry = CocktailSchemaV2.MenuEntry(position: 0)
+        context.insert(entry)
+        entry.menu = menu
+        entry.cocktail = renewal
+        try context.save()
+    }
+
+    func testVersion2DatabaseUpgradesIntoMyLibrary() throws {
+        let url = folder.appendingPathComponent("Cocktails.store")
+        try makeVersion2Store(at: url)
+
+        let container = try CocktailModelContainer.make(url: url)
+        let context = ModelContext(container)
+        let renewal = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Cocktail>()).first)
+        XCTAssertEqual(renewal.name, "Bourbon Renewal")
+        XCTAssertEqual(renewal.template, .sidecar, "The template chosen in version 2 is kept")
+        XCTAssertEqual(renewal.baseStyle?.name, "Bourbon")
+        XCTAssertEqual(renewal.orderedIngredients.map(\.displayText), ["2 parts Bourbon"])
+        XCTAssertNil(renewal.library, "Existing recipes are in My Library")
+
+        let style = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.SpiritStyle>()).first)
+        XCTAssertNil(style.library)
+        let menu = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Menu>()).first)
+        XCTAssertNil(menu.library)
+        XCTAssertEqual(menu.orderedEntries.compactMap { $0.cocktail?.name }, ["Bourbon Renewal"])
+        let bottle = try XCTUnwrap(try context.fetch(FetchDescriptor<DB.Bottle>()).first)
+        XCTAssertEqual(bottle.brand, "Buffalo Trace")
+        XCTAssertEqual(bottle.style?.name, "Bourbon")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.Library>()), 0, "No shared libraries yet")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.SyncRecord>()), 0, "Nothing has synced yet")
+    }
+}
+
+/// Built-in spirit types and recipes get the same ID on every device, so iCloud keeps one copy of each.
+final class BuiltInIDTests: XCTestCase {
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    override func setUpWithError() throws {
+        container = try CocktailModelContainer.make(inMemory: true)
+        context = ModelContext(container)
+    }
+
+    override func tearDownWithError() throws {
+        context = nil
+        container = nil
+    }
+
+    func testIDsNeverChange() {
+        // These exact values may already be in iCloud; if this fails, the formula changed and must be put back.
+        XCTAssertEqual(BuiltInID.cocktail(named: "Negroni").uuidString, "8242F0B7-90A7-552F-8D9C-48B256915DEE")
+        XCTAssertEqual(BuiltInID.style(named: "London Dry").uuidString, "7785AE98-20F2-51BA-BDE0-F9BB927AA46C")
+    }
+
+    func testIDsIgnoreCaseAndSpacesAndDifferByKind() {
+        XCTAssertEqual(BuiltInID.cocktail(named: " negroni "), BuiltInID.cocktail(named: "Negroni"))
+        XCTAssertNotEqual(BuiltInID.cocktail(named: "Negroni"), BuiltInID.cocktail(named: "Boulevardier"))
+        XCTAssertNotEqual(BuiltInID.cocktail(named: "Bourbon"), BuiltInID.style(named: "Bourbon"))
+    }
+
+    func testFreshSeedUsesFixedIDs() throws {
+        try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
+
+        let cocktails = try context.fetch(FetchDescriptor<DB.Cocktail>())
+        XCTAssertEqual(cocktails.count, SeedData.classics.count)
+        for cocktail in cocktails {
+            XCTAssertEqual(cocktail.id, BuiltInID.cocktail(named: cocktail.name), cocktail.name)
+        }
+        let styles = try context.fetch(FetchDescriptor<DB.SpiritStyle>())
+        XCTAssertEqual(styles.count, SpiritTaxonomy.builtInStyles.count)
+        for style in styles {
+            XCTAssertEqual(style.id, BuiltInID.style(named: style.name), style.name)
+        }
+        XCTAssertEqual(Set(cocktails.map(\.id)).count, cocktails.count, "No two recipes share an ID")
+    }
+
+    func testHouseFavoritesUseFixedIDs() throws {
+        try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
+        try ModelSeeder.addHouseFavorites(context: context)
+        let cocktails = try context.fetch(FetchDescriptor<DB.Cocktail>())
+        for seed in SeedData.favorites {
+            let cocktail = try XCTUnwrap(cocktails.first { $0.name == seed.name }, seed.name)
+            XCTAssertEqual(cocktail.id, BuiltInID.cocktail(named: seed.name), seed.name)
+        }
+    }
+
+    func testExistingBuiltInsGetFixedIDsAndYourOwnKeepTheirs() throws {
+        // As in a database made before IDs were fixed: random IDs everywhere.
+        let londonDry = DB.SpiritStyle(name: "London Dry", family: .gin, isBuiltIn: true)
+        let negroni = DB.Cocktail(name: "Negroni", source: .classic)
+        let mine = DB.Cocktail(name: "Bill's Sour", source: .original)
+        let myStyle = DB.SpiritStyle(name: "Barrel-Aged Gin", family: .gin)
+        [londonDry, myStyle].forEach { context.insert($0) }
+        [negroni, mine].forEach { context.insert($0) }
+        let mineID = mine.id
+        let myStyleID = myStyle.id
+        try context.save()
+
+        try ModelSeeder.assignBuiltInIDs(context: context)
+        XCTAssertEqual(negroni.id, BuiltInID.cocktail(named: "Negroni"))
+        XCTAssertEqual(londonDry.id, BuiltInID.style(named: "London Dry"))
+        XCTAssertEqual(mine.id, mineID, "Your own recipes keep their IDs")
+        XCTAssertEqual(myStyle.id, myStyleID, "Your own types keep their IDs")
+
+        // Running again changes nothing.
+        try ModelSeeder.assignBuiltInIDs(context: context)
+        XCTAssertEqual(negroni.id, BuiltInID.cocktail(named: "Negroni"))
+        XCTAssertFalse(context.hasChanges)
+    }
+
+    func testUpgradedAndFreshDatabasesMatch() throws {
+        // Upgraded: classics seeded with random IDs, then fixed at launch.
+        for seed in SeedData.classics.prefix(5) {
+            context.insert(DB.Cocktail(name: seed.name, source: .classic))
+        }
+        try context.save()
+        try ModelSeeder.assignBuiltInIDs(context: context)
+        let upgraded = Set(try context.fetch(FetchDescriptor<DB.Cocktail>()).map(\.id))
+
+        // Fresh: a new database on another device.
+        let otherContainer = try CocktailModelContainer.make(inMemory: true)
+        let other = ModelContext(otherContainer)
+        try ModelSeeder.seedBuiltIns(context: other, defaults: nil)
+        let fresh = Set(try other.fetch(FetchDescriptor<DB.Cocktail>()).map(\.id))
+
+        XCTAssertEqual(upgraded.count, 5)
+        XCTAssertTrue(upgraded.isSubset(of: fresh), "The same recipes have the same IDs on both devices")
+    }
+
+    func testOnlyTheOldestDuplicateGetsTheFixedID() throws {
+        let first = DB.Cocktail(name: "Negroni", source: .classic)
+        first.dateAdded = Date(timeIntervalSince1970: 0)
+        let second = DB.Cocktail(name: "negroni", source: .original)
+        second.dateAdded = Date(timeIntervalSince1970: 100)
+        context.insert(second)
+        context.insert(first)
+        let secondID = second.id
+        try context.save()
+
+        try ModelSeeder.assignBuiltInIDs(context: context)
+        XCTAssertEqual(first.id, BuiltInID.cocktail(named: "Negroni"))
+        XCTAssertEqual(second.id, secondID, "IDs stay unique")
+    }
+
+    func testItemsInASharedLibraryAreLeftAlone() throws {
+        let library = DB.Library(name: "Shared Library", ownerName: "Friend", zoneName: "Library", zoneOwnerName: "_friend")
+        context.insert(library)
+        let negroni = DB.Cocktail(name: "Negroni", source: .classic)
+        context.insert(negroni)
+        negroni.library = library
+        let sharedID = negroni.id
+        try context.save()
+
+        try ModelSeeder.assignBuiltInIDs(context: context)
+        XCTAssertEqual(negroni.id, sharedID, "A shared library's IDs come from its owner")
+    }
+}
+
+/// Libraries shared with you hold their own cocktails, menus and types; My Library is everything else.
+final class LibraryTests: XCTestCase {
+    private var container: ModelContainer!
+    private var context: ModelContext!
+
+    override func setUpWithError() throws {
+        container = try CocktailModelContainer.make(inMemory: true)
+        context = ModelContext(container)
+    }
+
+    override func tearDownWithError() throws {
+        context = nil
+        container = nil
+    }
+
+    func testNewItemsAreInMyLibrary() throws {
+        try ModelSeeder.seedBuiltIns(context: context, defaults: nil)
+        let cocktail = try CocktailStore(context: context).addCocktail(name: "Bill's Sour")
+        XCTAssertNil(cocktail.library)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<DB.Cocktail>()).allSatisfy { $0.library == nil })
+        XCTAssertTrue(try context.fetch(FetchDescriptor<DB.SpiritStyle>()).allSatisfy { $0.library == nil })
+    }
+
+    func testYourOwnLibraryCanAlwaysBeEdited() {
+        let mine = DB.Library(name: "My Library", ownerName: "Bill", zoneName: "Library", zoneOwnerName: "_me", isOwned: true)
+        XCTAssertTrue(mine.canEdit)
+        let shared = DB.Library(name: "Friend's Library", ownerName: "Friend", zoneName: "Library", zoneOwnerName: "_friend")
+        XCTAssertFalse(shared.canEdit, "View only unless the owner allows editing")
+    }
+
+    func testRemovingASharedLibraryRemovesOnlyItsItems() throws {
+        let gin = DB.SpiritStyle(name: "London Dry", family: .gin, isBuiltIn: true)
+        let myNegroni = DB.Cocktail(name: "Negroni", source: .classic)
+        let bottle = DB.Bottle(brand: "Tanqueray")
+        context.insert(gin)
+        context.insert(myNegroni)
+        context.insert(bottle)
+        bottle.style = gin
+        myNegroni.baseStyle = gin
+
+        let library = DB.Library(name: "Friend's Library", ownerName: "Friend", zoneName: "Library", zoneOwnerName: "_friend")
+        context.insert(library)
+        let theirGin = DB.SpiritStyle(name: "London Dry", family: .gin, isBuiltIn: true)
+        let theirNegroni = DB.Cocktail(name: "Negroni", source: .classic)
+        let theirIngredient = DB.RecipeIngredient(position: 0, name: "Gin", amount: 1, unit: .part)
+        let theirMenu = DB.Menu(name: "Their Party")
+        let theirEntry = DB.MenuEntry(position: 0)
+        context.insert(theirGin)
+        context.insert(theirNegroni)
+        context.insert(theirIngredient)
+        context.insert(theirMenu)
+        context.insert(theirEntry)
+        theirGin.library = library
+        theirNegroni.library = library
+        theirNegroni.baseStyle = theirGin
+        theirIngredient.cocktail = theirNegroni
+        theirMenu.library = library
+        theirEntry.menu = theirMenu
+        theirEntry.cocktail = theirNegroni
+        try context.save()
+
+        context.delete(library)
+        try context.save()
+
+        XCTAssertEqual(try context.fetch(FetchDescriptor<DB.Cocktail>()).map(\.name), ["Negroni"])
+        XCTAssertNil(try context.fetch(FetchDescriptor<DB.Cocktail>()).first?.library, "Your Negroni stays")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.SpiritStyle>()), 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.Menu>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.MenuEntry>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DB.RecipeIngredient>()), 0)
+        XCTAssertEqual(bottle.style?.name, "London Dry", "My Bar keeps its links")
+    }
 }
 
 /// Version, build and data model version for the splash screen and Settings.
@@ -2273,7 +2527,7 @@ final class AppInfoTests: XCTestCase {
     func testVersionLines() {
         XCTAssertEqual(AppInfo.versionLine(version: "2.0", build: "3"), "Version 2.0 (3)")
         XCTAssertEqual(AppInfo.dataModelLine("1.0.0"), "Data model 1.0.0")
-        XCTAssertEqual(AppInfo.dataModelVersion, "2.0.0", "Matches the current schema (CocktailSchemaV2)")
+        XCTAssertEqual(AppInfo.dataModelVersion, "3.0.0", "Matches the current schema (CocktailSchemaV3)")
     }
 
     func testImportSummaryOnTheAboutScreen() {

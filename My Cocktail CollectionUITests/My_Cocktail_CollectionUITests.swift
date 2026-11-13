@@ -193,8 +193,7 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
 
         let name = app.textFields["Menu name (e.g. Friday Night)"]
         XCTAssertTrue(name.waitForExistence(timeout: 3))
-        name.tap()
-        name.typeText("Test Night")
+        name.tapAndType("Test Night", in: app)
         app.navigationBars["New Menu"].buttons["Create"].tap()
 
         XCTAssertTrue(app.navigationBars["Test Night"].waitForExistence(timeout: 3), "A new menu opens straight away")
@@ -426,5 +425,24 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
                 XCUIApplication().launch()
             }
         }
+    }
+}
+
+extension XCUIElement {
+    /// Taps a text field and types once it has focus. A tap that lands while a sheet is still sliding in can
+    /// miss, leaving the field without focus ("Neither element nor any descendant has keyboard focus"),
+    /// so it taps again until the field has focus.
+    func tapAndType(_ text: String, in app: XCUIApplication) {
+        for _ in 0..<3 where !hasFocus {
+            tap()
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"),
+                                                                object: self)], timeout: 2)
+        }
+        XCTAssertTrue(hasFocus, "The text field has focus")
+        typeText(text)
+    }
+
+    private var hasFocus: Bool {
+        (value(forKey: "hasKeyboardFocus") as? Bool) ?? false
     }
 }

@@ -4,14 +4,12 @@
 //
 //  Data model version 2: adds each cocktail's template, one of the six root cocktails from
 //  Cocktail Codex (Death & Co). Everything else is the same as version 1, which is kept so
-//  existing databases can be migrated. The app uses the current version through `DB`.
+//  existing databases can be migrated. Version 3 (CocktailSchemaV3.swift) is now current; this file keeps
+//  version 2 for upgrades, along with the `CocktailTemplate` enum used by every version.
 //
 
 import Foundation
 import SwiftData
-
-/// The app's current models. Use `DB.Cocktail`, `DB.Bottle`… so a new schema version only changes this line.
-typealias DB = CocktailSchemaV2
 
 // MARK: - Cocktail templates
 
@@ -283,39 +281,5 @@ enum CocktailSchemaV2: VersionedSchema {
             self.bottleCount = bottleCount
             self.menuCount = menuCount
         }
-    }
-}
-
-// MARK: - Migration plan
-
-/// Lists every schema version in order. New versions and their migration stages are added here.
-enum CocktailMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [CocktailSchemaV1.self, CocktailSchemaV2.self] }
-
-    /// Version 2 adds an optional field (Cocktail.templateRaw), which SwiftData migrates on its own.
-    static var stages: [MigrationStage] {
-        [.lightweight(fromVersion: CocktailSchemaV1.self, toVersion: CocktailSchemaV2.self)]
-    }
-}
-
-// MARK: - Container
-
-/// Creates the new database. It lives in its own file ("Cocktails.store"),
-/// separate from today's Core Data file, which the importer will read from.
-enum CocktailModelContainer {
-    static let storeName = "Cocktails"
-
-    /// - Parameters:
-    ///   - inMemory: Keeps everything in memory (tests and previews); nothing touches disk.
-    ///   - url: A specific file to open instead of the app's store (used by migration tests).
-    static func make(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: DB.self)
-        let configuration: ModelConfiguration
-        if let url {
-            configuration = ModelConfiguration(storeName, schema: schema, url: url, cloudKitDatabase: .none)
-        } else {
-            configuration = ModelConfiguration(storeName, schema: schema, isStoredInMemoryOnly: inMemory, cloudKitDatabase: .none)
-        }
-        return try ModelContainer(for: schema, migrationPlan: CocktailMigrationPlan.self, configurations: configuration)
     }
 }

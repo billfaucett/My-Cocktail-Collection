@@ -51,6 +51,8 @@ enum AppStartup {
         try context.delete(model: DB.Bottle.self)
         try context.delete(model: DB.SpiritStyle.self)
         try context.delete(model: DB.ImportRecord.self)
+        try context.delete(model: DB.Library.self)
+        try context.delete(model: DB.SyncRecord.self)
         try context.save()
         try LegacyImporter(context: context).importIfNeeded()
         try ModelSeeder.seedBuiltIns(context: context, defaults: .standard)
@@ -71,7 +73,7 @@ enum AppInfo {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
     }
 
-    /// The SwiftData schema version, e.g. "1.0.0". Changes when the database's design changes.
+    /// The SwiftData schema version, e.g. "3.0.0". Changes when the database's design changes.
     static var dataModelVersion: String {
         let version = DB.versionIdentifier
         return "\(version.major).\(version.minor).\(version.patch)"
