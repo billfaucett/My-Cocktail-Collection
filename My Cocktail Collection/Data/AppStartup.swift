@@ -44,10 +44,48 @@ enum AppStartup {
                 try LegacyImporter(context: context).importIfNeeded()
             }
             try ModelSeeder.seedBuiltIns(context: context, defaults: isUITesting ? nil : .standard)
+            if isUITesting && ProcessInfo.processInfo.arguments.contains("-uiTestingSharedLibrary") {
+                addSampleSharedLibrary(to: context)
+            }
         } catch {
             lastErrorMessage = error.localizedDescription
             print("Preparing the database failed: \(error)")
         }
+    }
+
+    /// A small library "shared by Bill" (view only), for previews and UI tests of shared libraries.
+    @discardableResult
+    static func addSampleSharedLibrary(to context: ModelContext) -> DB.Library {
+        let library = DB.Library(name: "Bill's Library", ownerName: "Bill", zoneName: CloudSchema.libraryZoneName,
+                                 zoneOwnerName: "_sampleOwner")
+        context.insert(library)
+        let gin = DB.SpiritStyle(name: "London Dry", family: .gin, isBuiltIn: true)
+        context.insert(gin)
+        gin.library = library
+        let sour = DB.Cocktail(name: "Shared Sour", source: .original, method: "Shake with ice\nStrain into a coupe")
+        context.insert(sour)
+        sour.library = library
+        sour.baseStyle = gin
+        sour.template = .daiquiri
+        let rows = [
+            DB.RecipeIngredient(position: 0, name: "Gin", amount: 2, unit: .part),
+            DB.RecipeIngredient(position: 1, name: "Lemon Juice", amount: 0.75, unit: .part),
+            DB.RecipeIngredient(position: 2, name: "Simple Syrup", amount: 0.5, unit: .part),
+        ]
+        for row in rows {
+            context.insert(row)
+            row.cocktail = sour
+        }
+        rows[0].style = gin
+        let menu = DB.Menu(name: "Bill's Party")
+        context.insert(menu)
+        menu.library = library
+        let entry = DB.MenuEntry(position: 0)
+        context.insert(entry)
+        entry.menu = menu
+        entry.cocktail = sour
+        try? context.save()
+        return library
     }
 
     #if DEBUG

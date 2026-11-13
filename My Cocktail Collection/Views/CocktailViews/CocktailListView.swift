@@ -31,6 +31,9 @@ struct CocktailListView: View {
     @State private var showSettings = false
     @State private var cocktailToDelete: DB.Cocktail?
     @State private var errorMessage: String?
+    /// Libraries other people share with you, listed in the More menu.
+    @Query(sort: \DB.Library.name) private var libraries: [DB.Library]
+    @State private var openLibrary: DB.Library?
 
     var body: some View {
         let visible = visibleCocktails
@@ -81,6 +84,19 @@ struct CocktailListView: View {
                 }
                 .pickerStyle(.menu)
 
+                let sharedWithYou = libraries.filter { !$0.isOwned }
+                if !sharedWithYou.isEmpty {
+                    Section("Shared With You") {
+                        ForEach(sharedWithYou) { library in
+                            Button {
+                                openLibrary = library
+                            } label: {
+                                Label(library.name, systemImage: "person.2")
+                            }
+                        }
+                    }
+                }
+
                 Divider()
                 Button {
                     showSettings = true
@@ -100,6 +116,9 @@ struct CocktailListView: View {
             .searchable(text: $searchText, prompt: "Search names and ingredients")
             .navigationDestination(for: DB.Cocktail.self) { cocktail in
                 CocktailDetailView(cocktail: cocktail)
+            }
+            .navigationDestination(item: $openLibrary) { library in
+                SharedLibraryView(library: library)
             }
             .sheet(isPresented: $showAddCocktail) {
                 AddEditCocktailRecipeView()

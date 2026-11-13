@@ -4449,3 +4449,55 @@ final class SharedLibrarySyncTests: XCTestCase {
     }
 }
 
+/// Copying a recipe from a library shared with you into My Library (sync and sharing, step 4b).
+final class CopyToMyLibraryTests: StoreTestCase {
+    @MainActor
+    private func sharedSour() throws -> DB.Cocktail {
+        let library = AppStartup.addSampleSharedLibrary(to: context)
+        return try XCTUnwrap(library.cocktails?.first { $0.name == "Shared Sour" })
+    }
+
+    @MainActor
+    func testACopyIsYoursAndUsesYourTypes() throws {
+        let original = try sharedSour()
+        let copy = try CocktailStore(context: context).copyToMyLibrary(original)
+
+        XCTAssertNil(copy.library, "The copy is in My Library")
+        XCTAssertNotEqual(copy.id, original.id)
+        XCTAssertEqual(copy.name, "Shared Sour")
+        XCTAssertEqual(copy.method, original.method)
+        XCTAssertEqual(copy.template, .daiquiri)
+        XCTAssertFalse(copy.isFavorite)
+        XCTAssertEqual(copy.orderedIngredients.map(\.displayText), original.orderedIngredients.map(\.displayText))
+        XCTAssertNil(copy.baseStyle?.library, "Linked to your London Dry, not theirs")
+        XCTAssertEqual(copy.baseStyle?.name, "London Dry")
+        XCTAssertNil(copy.orderedIngredients.first?.style?.library)
+
+        XCTAssertNotNil(original.library, "The original stays in their library")
+        XCTAssertTrue(try CocktailStore(context: context).cocktails().contains { $0 === copy })
+        XCTAssertFalse(try CocktailStore(context: context).cocktails().contains { $0 === original })
+    }
+
+    @MainActor
+    func testACopyOfANameYouHaveIsNamedAfterTheOwner() throws {
+        let original = try sharedSour()
+        try CocktailStore(context: context).addCocktail(name: "Shared Sour")
+        let store = CocktailStore(context: context)
+        XCTAssertEqual(try store.copyToMyLibrary(original).name, "Shared Sour (Bill)")
+        XCTAssertEqual(try store.copyToMyLibrary(original).name, "Shared Sour (Bill) 2")
+    }
+
+    @MainActor
+    func testACopyWithNoOwnerNameSaysCopy() throws {
+        let original = try sharedSour()
+        original.library?.ownerName = ""
+        try CocktailStore(context: context).addCocktail(name: "Shared Sour")
+        XCTAssertEqual(try CocktailStore(context: context).copyName(for: original), "Shared Sour (Copy)")
+    }
+
+    func testMenuCocktailCount() {
+        XCTAssertEqual(SharedLibraryView.cocktailCount(1), "1 cocktail")
+        XCTAssertEqual(SharedLibraryView.cocktailCount(5), "5 cocktails")
+    }
+}
+

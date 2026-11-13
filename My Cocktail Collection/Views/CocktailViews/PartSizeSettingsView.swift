@@ -83,7 +83,11 @@ struct PartSizeSettingsView: View {
                 if !sharedWithYou.isEmpty {
                     Section {
                         ForEach(sharedWithYou) { library in
-                            SharedLibraryRow(library: library)
+                            NavigationLink {
+                                SharedLibraryView(library: library)
+                            } label: {
+                                SharedLibraryRow(library: library)
+                            }
                         }
                     } header: {
                         Text("Shared With You")

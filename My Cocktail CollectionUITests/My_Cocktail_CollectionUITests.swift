@@ -359,6 +359,42 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["sharingSummary"].label.contains("Needs iCloud sync"))
     }
 
+    /// A view-only library shared with you opens from the More menu. Its recipe can't be edited or
+    /// favorited, but it can be copied into My Cocktails.
+    func testBrowsingAViewOnlySharedLibraryAndCopyingARecipe() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-uiTestingSharedLibrary"]
+        app.launch()
+
+        let myList = app.navigationBars["My Cocktails"]
+        XCTAssertTrue(myList.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Shared Sour"].exists, "Their recipes aren't in your list")
+
+        myList.buttons["More"].tap()
+        app.buttons["Bill's Library"].tap()
+        XCTAssertTrue(app.navigationBars["Bill's Library"].waitForExistence(timeout: 3))
+        app.buttons.containing(.staticText, identifier: "Shared Sour").firstMatch.tap()
+
+        let recipe = app.navigationBars["Shared Sour"]
+        XCTAssertTrue(recipe.waitForExistence(timeout: 3))
+        XCTAssertFalse(recipe.buttons["Edit"].exists, "View only: no Edit")
+        XCTAssertFalse(recipe.buttons["Add to Favorites"].exists, "Favorites are for your own recipes")
+        recipe.buttons["More"].tap()
+        XCTAssertFalse(app.buttons["Delete Cocktail"].exists, "View only: no Delete")
+        app.buttons["Copy to My Cocktails"].tap()
+        let copied = app.alerts["Copied to My Cocktails"]
+        XCTAssertTrue(copied.waitForExistence(timeout: 3))
+        copied.buttons["OK"].tap()
+
+        recipe.buttons.element(boundBy: 0).tap() // Back to the library
+        app.navigationBars["Bill's Library"].buttons.element(boundBy: 0).tap() // Back to My Cocktails
+        XCTAssertTrue(myList.waitForExistence(timeout: 3))
+        let search = app.searchFields.firstMatch
+        search.tap()
+        search.typeText("Shared Sour")
+        XCTAssertTrue(app.staticTexts["Shared Sour"].waitForExistence(timeout: 3), "The copy is in your list")
+    }
+
     /// The cocktail form suggests a template from the ingredients, and tapping it sets the template.
     func testTemplateIsSuggestedFromTheIngredients() throws {
         let app = XCUIApplication()

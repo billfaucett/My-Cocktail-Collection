@@ -8,7 +8,9 @@
 import SwiftUI
 import SwiftData
 
-/// A cocktail's recipe, in parts. Shown pushed from the cocktail list.
+/// A cocktail's recipe, in parts. Shown pushed from the cocktail list, or from a library shared with you.
+/// For a shared recipe: no favorite (favorites are yours), editing only if its owner allows it, and
+/// Copy to My Cocktails.
 struct CocktailDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -18,10 +20,18 @@ struct CocktailDetailView: View {
     @State private var showEdit = false
     @State private var confirmDelete = false
     @State private var errorMessage: String?
+    /// The name of the copy just made in My Cocktails, to confirm it.
+    @State private var copiedName: String?
 
     init(cocktail: DB.Cocktail) {
         self.cocktail = cocktail
     }
+
+    /// The library shared with you that this recipe is in, or nil for My Library.
+    private var sharedLibrary: DB.Library? { cocktail.library }
+
+    /// You can change your own recipes, and a shared library's when its owner allows it.
+    private var canEdit: Bool { sharedLibrary?.canEdit ?? true }
 
     private var shareText: String {
         var lines = [cocktail.name, ""]
@@ -63,6 +73,9 @@ struct CocktailDetailView: View {
                     .accessibilityHint(template.formula)
                 }
                 LabeledContent("Source", value: cocktail.source.displayName)
+                if let sharedLibrary {
+                    LabeledContent("Library", value: sharedLibrary.name)
+                }
             }
 
             Section {
@@ -96,7 +109,7 @@ struct CocktailDetailView: View {
                     .accessibilityLabel("Part Size")
                 }
             } footer: {
-                if cocktail.needsIngredientReview {
+                if cocktail.needsIngredientReview && canEdit {
                     Label("Some ingredients couldn't be read clearly. Tap Edit to check them.", systemImage: "exclamationmark.triangle")
                 }
             }
@@ -118,23 +131,36 @@ struct CocktailDetailView: View {
                     ShareLink(item: shareText) {
                         Label("Share Recipe", systemImage: "square.and.arrow.up")
                     }
-                    Button(role: .destructive) {
-                        confirmDelete = true
-                    } label: {
-                        Label("Delete Cocktail", systemImage: "trash")
+                    if sharedLibrary != nil {
+                        Button {
+                            run { copiedName = try CocktailStore(context: context).copyToMyLibrary(cocktail).name }
+                        } label: {
+                            Label("Copy to My Cocktails", systemImage: "doc.on.doc")
+                        }
+                    }
+                    if canEdit {
+                        Button(role: .destructive) {
+                            confirmDelete = true
+                        } label: {
+                            Label("Delete Cocktail", systemImage: "trash")
+                        }
                     }
                 } label: {
                     Label("More", systemImage: "ellipsis.circle")
                 }
-                Button {
-                    run { try CocktailStore(context: context).toggleFavorite(cocktail) }
-                } label: {
-                    Label(cocktail.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                          systemImage: cocktail.isFavorite ? "heart.fill" : "heart")
+                if sharedLibrary == nil {
+                    Button {
+                        run { try CocktailStore(context: context).toggleFavorite(cocktail) }
+                    } label: {
+                        Label(cocktail.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                              systemImage: cocktail.isFavorite ? "heart.fill" : "heart")
+                    }
+                    .tint(cocktail.isFavorite ? Theme.favorite : nil)
                 }
-                .tint(cocktail.isFavorite ? Theme.favorite : nil)
-                Button("Edit") {
-                    showEdit = true
+                if canEdit {
+                    Button("Edit") {
+                        showEdit = true
+                    }
                 }
             }
         }
@@ -150,7 +176,19 @@ struct CocktailDetailView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("It will be removed from your collection and from any menus.")
+            if let sharedLibrary {
+                Text("It will be removed from \(sharedLibrary.name) for everyone it's shared with.")
+            } else {
+                Text("It will be removed from your collection and from any menus.")
+            }
+        }
+        .alert("Copied to My Cocktails", isPresented: Binding(
+            get: { copiedName != nil },
+            set: { if !$0 { copiedName = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("\"\(copiedName ?? "")\" is now in your collection. Changes to it are yours alone.")
         }
         .alert("Something Went Wrong", isPresented: Binding(
             get: { errorMessage != nil },

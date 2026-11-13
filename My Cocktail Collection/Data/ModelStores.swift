@@ -332,6 +332,47 @@ struct CocktailStore {
         return cocktail
     }
 
+    /// Copies a recipe from a library shared with you into My Library. Spirit types are matched by name to
+    /// yours. If you already have a cocktail with that name, the copy is named after the library's owner,
+    /// e.g. "Negroni (Bill)". The copy isn't a favorite and isn't linked to the original.
+    @discardableResult
+    func copyToMyLibrary(_ cocktail: DB.Cocktail) throws -> DB.Cocktail {
+        let styles = StyleStore(context: context)
+        func mine(_ style: DB.SpiritStyle?) throws -> DB.SpiritStyle? {
+            guard let style else { return nil }
+            return try styles.style(named: style.name)
+        }
+        let rows = try cocktail.orderedIngredients.map { ingredient in
+            IngredientInput(amount: ingredient.amount, amountMax: ingredient.amountMax, unit: ingredient.unit,
+                            name: ingredient.name, note: ingredient.note, isGarnish: ingredient.isGarnish,
+                            isOptional: ingredient.isOptional, style: try mine(ingredient.style))
+        }
+        let copy = try addCocktail(name: try copyName(for: cocktail), source: cocktail.source,
+                                   baseStyle: try mine(cocktail.baseStyle), rows: rows, method: cocktail.method,
+                                   template: cocktail.template)
+        copy.photo = cocktail.photo
+        copy.originalIngredientsText = cocktail.originalIngredientsText
+        try validateAndSave(copy)
+        return copy
+    }
+
+    /// The name for a copy in My Library: the same name, or "Name (Owner)" if that's taken.
+    func copyName(for cocktail: DB.Cocktail) throws -> String {
+        let taken = Set(try context.fetch(FetchDescriptor<DB.Cocktail>())
+            .filter { $0.library == nil }
+            .map { $0.name.lowercased() })
+        guard taken.contains(cocktail.name.lowercased()) else { return cocktail.name }
+        let owner = cocktail.library?.ownerName.split(separator: " ").first.map(String.init) ?? ""
+        let base = owner.isEmpty ? "\(cocktail.name) (Copy)" : "\(cocktail.name) (\(owner))"
+        var candidate = base
+        var number = 2
+        while taken.contains(candidate.lowercased()) {
+            candidate = "\(base) \(number)"
+            number += 1
+        }
+        return candidate
+    }
+
     /// Replaces a cocktail's ingredients. Each is linked to its style when one matches.
     func setIngredients(_ ingredients: [ParsedIngredient], for cocktail: DB.Cocktail) throws {
         try setIngredients(inputs(from: ingredients), for: cocktail)
