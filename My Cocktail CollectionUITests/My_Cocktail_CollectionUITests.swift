@@ -351,6 +351,12 @@ final class My_Cocktail_CollectionUITests: XCTestCase {
         XCTAssertTrue(status.exists, "The iCloud status row is shown")
         XCTAssertTrue(status.label.contains("Off"), "Sync doesn't run in UI tests")
         XCTAssertFalse(app.buttons["Sync Now"].exists, "Nothing to sync while it's off")
+
+        // Sharing needs iCloud sync, so it can't be started here.
+        let share = scrollTo(app.buttons["Share My Library…"], in: app)
+        XCTAssertTrue(share.exists, "The Share My Library button is shown")
+        XCTAssertFalse(share.isEnabled, "Sharing needs iCloud sync")
+        XCTAssertTrue(app.descendants(matching: .any)["sharingSummary"].label.contains("Needs iCloud sync"))
     }
 
     /// The cocktail form suggests a template from the ingredients, and tapping it sets the template.

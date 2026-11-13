@@ -176,7 +176,10 @@ final class CloudSyncLedger {
     /// libraries shared with you arrive in step 4.
     func applyFetched(modifications: [CKRecord], deletions: [(recordID: CKRecord.ID, recordType: String)]) throws {
         let context = makeContext()
-        let records = modifications.filter { Self.isOwn($0.recordID) }.sorted(by: Self.inApplyOrder)
+        // Only the app's own record types; the library's share record ("cloudkit.share") is left alone.
+        let records = modifications
+            .filter { Self.isOwn($0.recordID) && CloudRecordType(rawValue: $0.recordType) != nil }
+            .sorted(by: Self.inApplyOrder)
         for record in records {
             let sync = try syncRecord(for: record.recordID, in: context)
             if sync?.needsUpload == true { continue } // This device's change is sent first.

@@ -4027,6 +4027,16 @@ final class CloudSyncLedgerTests: XCTestCase {
         XCTAssertEqual(try ledgerB.localChanges().saves, [recordID(ids.cocktail, .cocktail)], "B's change is still sent")
     }
 
+    @MainActor
+    func testTheLibrarysShareRecordIsLeftAlone() throws {
+        let ledger = CloudSyncLedger(container: containerA)
+        let share = CKShare(recordZoneID: CloudSchema.libraryZoneID())
+        try ledger.applyFetched(modifications: [share], deletions: [])
+        XCTAssertNil(try ledger.bookkeeping(for: share.recordID), "The share isn't one of the app's items")
+        XCTAssertTrue(try ledger.localChanges().isEmpty, "So it's never deleted as a missing item")
+        try ledger.applyFetched(modifications: [], deletions: [(recordID: share.recordID, recordType: "cloudkit.share")])
+    }
+
     // MARK: Disagreements
 
     @MainActor
@@ -4195,6 +4205,37 @@ final class SettingsSyncTests: XCTestCase {
         cloud.set("else", forKey: "AnotherSetting")
         sync.cloudDidChange(keys: ["AnotherSetting"])
         XCTAssertNil(local.object(forKey: "AnotherSetting"))
+    }
+}
+
+/// Sharing My Library as a whole (sync and sharing, step 3).
+final class LibrarySharingTests: XCTestCase {
+    func testTheWholeLibraryZoneIsShared() {
+        XCTAssertEqual(LibrarySharing.shareRecordID.recordName, CKRecordNameZoneWideShare)
+        XCTAssertEqual(LibrarySharing.shareRecordID.zoneID.zoneName, "Library", "My Bar's zone is never shared")
+    }
+
+    func testOnlyPeopleYouInviteCanOpenIt() {
+        let share = CKShare(recordZoneID: CloudSchema.libraryZoneID())
+        share.publicPermission = .readOnly
+        LibrarySharing.configure(share)
+        XCTAssertEqual(share.publicPermission, CKShare.ParticipantPermission.none, "No public link")
+        XCTAssertEqual(share[CKShare.SystemFieldKey.title] as? String, "Cocktail Library")
+        XCTAssertEqual(LibrarySharing.participantCount(of: share), 0, "You don't count")
+    }
+
+    func testSummary() {
+        XCTAssertEqual(LibrarySharing.summary(participantCount: nil), "Not shared")
+        XCTAssertEqual(LibrarySharing.summary(participantCount: 0), "No one invited yet")
+        XCTAssertEqual(LibrarySharing.summary(participantCount: 1), "Shared with 1 person")
+        XCTAssertEqual(LibrarySharing.summary(participantCount: 3), "Shared with 3 people")
+    }
+
+    func testSharingNeedsICloudSync() {
+        XCTAssertTrue(CloudSyncState.upToDate(Date()).canShare)
+        XCTAssertTrue(CloudSyncState.syncing.canShare)
+        XCTAssertFalse(CloudSyncState.notSignedIn.canShare)
+        XCTAssertFalse(CloudSyncState.off.canShare)
     }
 }
 

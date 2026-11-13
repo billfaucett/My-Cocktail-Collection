@@ -65,6 +65,14 @@ enum CloudSyncState: Equatable {
         }
     }
 
+    /// Whether sharing can be set up: signed in to iCloud, with sync running.
+    var canShare: Bool {
+        switch self {
+        case .syncing, .upToDate, .problem: return true
+        case .off, .checking, .notSignedIn, .unavailable: return false
+        }
+    }
+
     /// Whether "Sync Now" makes sense.
     var canSyncNow: Bool {
         switch self {

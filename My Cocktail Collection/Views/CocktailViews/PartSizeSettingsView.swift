@@ -3,7 +3,7 @@
 //  My Cocktail Collection
 //
 //  Data model refactor, phase 6: pick how big a part is, so recipes also show ounces or millilitres.
-//  Sync and sharing, step 2c: iCloud sync status, with Sync Now.
+//  Sync and sharing, step 2c: iCloud sync status, with Sync Now. Step 3: share My Library.
 //
 
 import CloudKit
@@ -14,6 +14,11 @@ struct PartSizeSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(PartSize.storageKey) private var partSize = PartSize.off
     private var syncStatus = CloudSyncStatus.shared
+    /// Who My Library is shared with, once checked ("Not shared", "Shared with 2 people").
+    @State private var sharingSummary: String?
+    @State private var isShared = false
+    @State private var isOpeningSharing = false
+    @State private var sharingError: String?
 
     var body: some View {
         NavigationStack {
@@ -56,6 +61,21 @@ struct PartSizeSettingsView: View {
                 }
 
                 Section {
+                    LabeledContent("My Library", value: sharingRowText)
+                        .accessibilityIdentifier("sharingSummary")
+                    Button {
+                        Task { await openSharing() }
+                    } label: {
+                        Label(isShared ? "Manage Sharing…" : "Share My Library…", systemImage: "person.crop.circle.badge.plus")
+                    }
+                    .disabled(!syncStatus.state.canShare || isOpeningSharing)
+                } header: {
+                    Text("Sharing")
+                } footer: {
+                    Text(sharingError ?? "People you invite see your cocktails, menus and spirit types in their app. You choose whether each person can only view or can also edit. My Bar stays private.")
+                }
+
+                Section {
                     NavigationLink {
                         AboutView()
                     } label: {
@@ -65,6 +85,7 @@ struct PartSizeSettingsView: View {
                     Text("\(AppInfo.versionLine()) · \(AppInfo.dataModelLine())")
                 }
             }
+            .task(id: syncStatus.state.canShare) { await refreshSharing() }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -72,6 +93,44 @@ struct PartSizeSettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+extension PartSizeSettingsView {
+    private var sharingRowText: String {
+        guard syncStatus.state.canShare else { return "Needs iCloud sync" }
+        return sharingSummary ?? "Checking…"
+    }
+
+    /// Asks iCloud who My Library is shared with.
+    private func refreshSharing() async {
+        guard syncStatus.state.canShare else {
+            sharingSummary = nil
+            return
+        }
+        do {
+            let share = try await LibrarySharing.existingShare()
+            isShared = share != nil
+            sharingSummary = LibrarySharing.summary(participantCount: share.map { LibrarySharing.participantCount(of: $0) })
+            sharingError = nil
+        } catch {
+            sharingError = CloudSync.message(for: error)
+        }
+    }
+
+    /// Opens Apple's sharing screen, creating the share first if My Library isn't shared yet.
+    private func openSharing() async {
+        isOpeningSharing = true
+        defer { isOpeningSharing = false }
+        do {
+            let share = try await LibrarySharing.shareForInviting()
+            LibrarySharing.presentSharingScreen(for: share) {
+                Task { await refreshSharing() }
+            }
+            await refreshSharing()
+        } catch {
+            sharingError = CloudSync.message(for: error)
         }
     }
 }
